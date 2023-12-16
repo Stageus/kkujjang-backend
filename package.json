@@ -1,0 +1,41 @@
+{
+  "name": "stageus-wordgame-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "npx babel-node server.js"
+  },
+  "author": "Godbell & GulSauce",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.470.0",
+    "@aws-sdk/credential-provider-env": "3.468.0",
+    "cookie-parser": "1.4.6",
+    "dotenv": "16.3.1",
+    "express": "4.18.2",
+    "express-asyncify": "2.1.2",
+    "mongodb": "6.3.0",
+    "mongoose": "8.0.3",
+    "multer": "2.0.0-rc.4",
+    "multer-s3": "3.0.1",
+    "passport": "0.7.0",
+    "passport-kakao": "1.0.1",
+    "pg": "8.11.3",
+    "redis": "4.6.11",
+    "uuid": "9.0.1",
+    "ws": "8.15.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "7.23.4",
+    "@babel/core": "7.23.5",
+    "@babel/node": "7.22.19",
+    "@babel/preset-env": "7.23.5",
+    "babel-plugin-module-resolver": "5.0.0",
+    "eslint": "8.55.0",
+    "eslint-config-airbnb-base": "15.0.0",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-import": "2.29.0",
+    "prettier": "3.1.1"
+  }
+}

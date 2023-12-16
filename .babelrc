@@ -1,0 +1,16 @@
+{
+  "presets": ["@babel/env"],
+  "plugins": [
+    [
+      "module-resolver",
+      {
+        "alias": {
+          "@router": ["./router"],
+          "@utility": ["./utility"],
+          "@model": ["./model"],
+          "@database": ["./database"]
+        }
+      }
+    ]
+  ]
+}
