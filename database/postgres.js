@@ -8,7 +8,10 @@ const dbConfig = {
   port: process.env.RDB_PORT,
   user: process.env.RDB_USER,
   password: process.env.RDB_PASSWORD,
-  database: process.env.RDB_NAME,
+  database:
+    process.env.NODE_ENV === 'production'
+      ? process.env.RDB_NAME
+      : process.env.RDB_TEST_NAME,
 }
 
 const pgPool = new Pool(dbConfig)

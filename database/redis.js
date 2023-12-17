@@ -7,7 +7,10 @@ const dbConfig = {
   host: process.env.CACHE_HOST,
   port: process.env.CACHE_PORT,
   password: process.env.CACHE_PASSWORD,
-  database: process.env.CACHE_DB,
+  database:
+    process.env.NODE_ENV === 'production'
+      ? process.env.CACHE_DB
+      : process.env.CACHE_TEST_DB,
 }
 
 const redisClient = redis.createClient({
