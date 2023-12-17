@@ -21,10 +21,10 @@ const mongoPool = mongoose.createConnection(
   },
 )
 
-export const useMongoModel = (modelName, schema) => {
-  return mongoPool.useDb(dbConfig.database).model(modelName, schema)
-}
-
 console.log(
   `Created MongoDB Pool to mongodb://${dbConfig.user}:[PASSWD]@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}.`,
 )
+
+export const useMongoModel = (modelName, schema) => {
+  return mongoPool.useDb(dbConfig.database).model(modelName, schema)
+}
