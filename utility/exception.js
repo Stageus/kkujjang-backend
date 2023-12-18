@@ -16,13 +16,11 @@ const combine = (f, iter) => {
   for (const func of funcs) {
     if (f(target, func) == false) {
       throw JSON.stringify({
-        errorCode: 400,
+        statusCode: 400,
         message: msg,
       });
     }
   }
-
-  return true;
 };
 
 const chkExist = curry((target) => {
@@ -44,4 +42,4 @@ const chkSame = curry((sameTarget, msg, target) => {
 
 const check = (...as) => combine((as, f) => f(as), as);
 
-export { check, chkExist, chkLength, chkStd, chkSame };
+export { chkExist, chkLength, chkStd, chkSame, check };
