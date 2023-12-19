@@ -1,5 +1,8 @@
 // curry는 inputValues의 개수에 따라
 // 다시 한번 inputValues를 요구하는 함수를 return해줄지
+
+import { json } from 'express'
+
 // 곧바로 inputValues를 func에 전달하여 실행해줄지 결정해줍니다.
 const curry =
   (func) =>

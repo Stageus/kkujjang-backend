@@ -43,8 +43,8 @@ testRouter.get('/redis/connection', async (req, res) => {
   res.send(`connection successful, test result: ${result}`)
 })
 
-testRouter.post('/user', async (req, res) => {
-  const { username, password, nickname, phone, authId } = req.body
+testRouter.post('/validation', async (req, res) => {
+  const { username, password, nickname, phone } = req.body
   v.check(
     username,
     `username checking`,
