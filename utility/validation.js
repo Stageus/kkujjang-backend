@@ -23,11 +23,11 @@ const combine = (f, iter) => {
   }, [])
 
   if (reason.length != 0) {
-    throw JSON.stringify({
+    throw {
       statusCode: 400,
       where: msg + ` 유효성 검사 중`,
       reason: reason,
-    })
+    }
   }
 }
 
