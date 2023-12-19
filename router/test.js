@@ -6,7 +6,7 @@ import { useMongoModel } from '../database/mongodb'
 import { testSchema } from '../models/test'
 import { redisClient } from '@database/redis'
 import { getFromRedis, setToRedis } from '../database/redis'
-import * as v from '../utility/validation'
+import * as validation from '@utility/validation'
 
 configDotenv()
 
@@ -45,34 +45,34 @@ testRouter.get('/redis/connection', async (req, res) => {
 
 testRouter.post('/validation', async (req, res) => {
   const { username, password, nickname, phone } = req.body
-  v.check(
+  validation.check(
     username,
-    `username checking`,
-    v.checkExist(),
-    v.checkLength(7, 30),
-    v.checkRegExp(/^(?=.*[a-z])(?=.*[0-9])[a-z0-9]+$/),
+    `username`,
+    validation.checkExist(),
+    validation.checkLength(7, 30),
+    validation.checkRegExp(/^(?=.*[a-z])(?=.*[0-9])[a-z0-9]+$/),
   )
-  v.check(
+  validation.check(
     password,
-    `password checking`,
-    v.checkExist(),
-    v.checkLength(7, 30),
-    v.checkRegExp(
+    `password`,
+    validation.checkExist(),
+    validation.checkLength(7, 30),
+    validation.checkRegExp(
       /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[@#$%^&+=!\(\)])[a-zA-Z0-9@#$%^&+=!\(\)]+$/,
     ),
   )
-  v.check(
+  validation.check(
     nickname,
-    `nickname checking`,
-    v.checkExist(),
-    v.checkLength(1, 15),
-    v.checkRegExp(/^[a-zA-Z0-9가-힣]+$/),
+    `nickname`,
+    validation.checkExist(),
+    validation.checkLength(1, 15),
+    validation.checkRegExp(/^[a-zA-Z0-9가-힣]+$/),
   )
-  v.check(
+  validation.check(
     phone,
-    `phone checking`,
-    v.checkExist(),
-    v.checkRegExp(/^010-\d{4}-\d{4}$/),
+    `phone`,
+    validation.checkExist(),
+    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
   )
   res.send(`validation check successful`)
 })
