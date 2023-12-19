@@ -25,7 +25,7 @@ const combine = (iter) => {
     return errors
   }, [])
 
-  if (reason.length != 0) {
+  if (messages.length != 0) {
     throw {
       statusCode: 400,
       targetString: targetType,
