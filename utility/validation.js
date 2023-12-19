@@ -26,11 +26,11 @@ const combine = (iter) => {
   }, [])
 
   if (messages.length != 0) {
-    throw JSON.stringify({
+    throw {
       statusCode: 400,
       targetString: targetType,
       messages,
-    })
+    }
   }
 }
 
