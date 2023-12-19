@@ -25,11 +25,11 @@ const combine = (iter) => {
   }, [])
 
   if (reason.length != 0) {
-    throw {
+    throw JSON.stringify({
       statusCode: 400,
       where: msg,
       reason: reason,
-    }
+    })
   }
 }
 
