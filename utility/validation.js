@@ -26,11 +26,11 @@ const combine = (iter) => {
   }, [])
 
   if (messages.length != 0) {
-    throw {
+    throw JSON.stringify({
       statusCode: 400,
       targetString: targetType,
       messages,
-    }
+    })
   }
 }
 
@@ -57,14 +57,14 @@ export const checkRegExp = curry((std, target) => {
   if (RegExp(std).test(target)) {
     return true
   }
-  return `checkRegExp에서 실패했습니다.`
+  return `checkRegExp: 정규표현식과 일치하지 않습니다.`
 })
 
 export const checkSame = curry((sameTarget, target) => {
   if (target == sameTarget) {
     return true
   }
-  return `checkSame에서 실패했습니다.`
+  return `checkSame: 비교 대상 문자열과 동일하지 않은 문자열입니다.`
 })
 
 export const check = (...args) => combine(args)
