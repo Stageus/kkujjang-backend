@@ -21,7 +21,7 @@ const combine = (iter) => {
 
   const messages = Array.from(funcs).reduce((errors, func) => {
     const result = func(target)
-    result !== true && errors.push(result)
+    result.isValid !== true && errors.push(result.message)
     return errors
   }, [])
 
@@ -35,36 +35,56 @@ const combine = (iter) => {
 }
 
 export const checkExist = curry((target) => {
-  if (target != '' && target != null && target != undefined) {
-    return true
+  let result = {
+    isValid: true,
   }
-  return `checkExist: 값이 존재하지 않습니다.`
+  if (target != '' && target != null && target != undefined) {
+    return result
+  }
+  result.isValid = false
+  result.message = `checkExist: 값이 존재하지 않습니다.`
+  return result
 })
 
 export const checkLength = curry((min, max, target) => {
-  if (min <= target.length && target.length <= max) {
-    return true
+  let result = {
+    isValid: true,
   }
+  if (min <= target.length && target.length <= max) {
+    return result
+  }
+  result.isValid = false
   if (target.length < min) {
-    return `checkLength: 길이가 너무 짧습니다.`
+    result.message = `checkLength: 길이가 너무 짧습니다.`
   }
   if (max < target.length) {
-    return `checkLength: 길이가 너무 깁니다.`
+    result.message = `checkLength: 길이가 너무 깁니다.`
   }
+  return result
 })
 
 export const checkRegExp = curry((std, target) => {
-  if (RegExp(std).test(target)) {
-    return true
+  let result = {
+    isValid: true,
   }
-  return `checkRegExp: 정규표현식과 일치하지 않습니다.`
+  if (RegExp(std).test(target)) {
+    return result
+  }
+  result.isValid = false
+  result.message = `checkRegExp: 정규표현식과 일치하지 않습니다.`
+  return result
 })
 
 export const checkSame = curry((sameTarget, target) => {
-  if (target == sameTarget) {
-    return true
+  let result = {
+    isValid: true,
   }
-  return `checkSame: 비교 대상 문자열과 동일하지 않은 문자열입니다.`
+  if (target == sameTarget) {
+    return result
+  }
+  result.isValid = false
+  result.message = `checkSame: 비교 대상 문자열과 동일하지 않은 문자열입니다.`
+  return result
 })
 
 export const check = (...args) => combine(args)
