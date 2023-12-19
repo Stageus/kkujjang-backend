@@ -1,3 +1,5 @@
+import { json } from 'express'
+
 // 주석의 내용
 const curry =
   (f) =>
@@ -14,40 +16,47 @@ const combine = (f, iter) => {
   const target = funcs.next().value
   const msg = funcs.next().value
 
-  let err = []
-  funcs.array.forEach((func) => {
-    const check = f(target, func)
-    if (check) err.push(check)
-  })
+  const reason = Array.from(funcs).reduce((errors, func) => {
+    const result = func(target)
+    result !== true && errors.push(result)
+    return errors
+  }, [])
 
-  if (err.length) {
-    throw {
+  if (reason.length != 0) {
+    throw JSON.stringify({
       statusCode: 400,
-      message: err,
-    }
+      where: msg + ` 유효성 검사 중`,
+      reason: reason,
+    })
   }
 }
 
 export const checkExist = curry((target) => {
-  return target != '' && target != null && target != undefined
+  if (target != '' && target != null && target != undefined) {
+    return true
+  }
+  return `checkExist에서 유효성 검사가 실패했습니다.`
 })
 
 export const checkLength = curry((min, max, target) => {
-  return min <= target.length && target.length <= max
-})
-
-export const checkStd = curry((std, target) => {
-  return RegExp(std).test(target)
-})
-
-export const checkSame = curry((sameTarget, msg, target) => {
-  if (target != sameTarget) {
-    throw JSON.stringify({
-      statusCode: 400,
-      message: msg,
-    })
+  if (min <= target.length && target.length <= max) {
+    return true
   }
-  return true
+  return `checkLength에서 유효성 검사가 실패했습니다.`
+})
+
+export const checkRegExp = curry((std, target) => {
+  if (RegExp(std).test(target)) {
+    return true
+  }
+  return `checkRegExp에서 유효성 검사가 실패했습니다.`
+})
+
+export const checkSame = curry((sameTarget, target) => {
+  if (target == sameTarget) {
+    return true
+  }
+  return `checkSame에서 유효성 검사가 실패했습니다.`
 })
 
 export const check = (...as) => combine((as, f) => f(as), as)
