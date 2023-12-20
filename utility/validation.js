@@ -28,7 +28,7 @@ const combine = (iter) => {
   if (messages.length != 0) {
     throw {
       statusCode: 400,
-      targetString: targetType,
+      message: `올바르지 않은 형식입니다: ${targetType}`,
       messages,
     }
   }
