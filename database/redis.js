@@ -16,6 +16,8 @@ const dbConfig = {
 export const redisClient = redis.createClient({
   url: `redis://:${dbConfig.password}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`,
 })
+
+// 코드 최상단에서 await을 사용하기 위해 async 익명 함수를 만들어 바로 호출하는 방식
 ;(async () => {
   await redisClient.connect()
 })()
