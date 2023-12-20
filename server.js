@@ -30,7 +30,7 @@ server.use(async (err, req, res, next) => {
   // messages만 값 존재 -> undefined error: {messages}
   // 둘 모두 값 존재 -> {message}: error1, error2, ...
   const errorMessage = `${message}${
-    messages.length > 0 && `: ${messages.join(', ')}`
+    messages.length > 0 ? `: ${messages.join(', ')}` : ''
   }`
 
   const result = {
