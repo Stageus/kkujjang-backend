@@ -5,7 +5,6 @@ import { configDotenv } from 'dotenv'
 import { useMongoModel } from '../database/mongodb'
 import { testSchema } from '../models/test'
 import { redisClient } from '@database/redis'
-import { getFromRedis, setToRedis } from '../database/redis'
 import * as validation from '@utility/validation'
 
 configDotenv()
@@ -37,8 +36,8 @@ testRouter.get('/redis/connection', async (req, res) => {
     `getting data from ... ${process.env.CACHE_HOST}:${process.env.CACHE_PORT}`,
   )
 
-  await setToRedis('test', 'connection successful')
-  const result = await getFromRedis('test')
+  await redisClient.set('test', 'connection successful')
+  const result = await redisClient.get('test')
 
   res.send(`connection successful, test result: ${result}`)
 })
