@@ -20,7 +20,27 @@ const sslOptions =
 
 server.use(express.json())
 server.use(cookieParser())
+
 server.use('/test', testRouter)
+
+server.use(async (err, req, res, next) => {
+  const { statusCode = 500, message = 'undefined error', messages = [] } = err
+
+  // message만 값 존재 -> message
+  // messages만 값 존재 -> undefined error: {messages}
+  // 둘 모두 값 존재 -> {message}: error1, error2, ...
+  const errorMessage = `${message}${
+    messages.length > 0 && `: ${messages.join(', ')}`
+  }`
+
+  const result = {
+    error: errorMessage,
+  }
+
+  err.stack && console.log(err.stack)
+
+  res.status(statusCode).json(result)
+})
 
 if (sslOptions) {
   https.createServer(sslOptions, server).listen(process.env.HTTPS_PORT, () => {
