@@ -75,3 +75,15 @@ testRouter.post('/validation', async (req, res) => {
   )
   res.send(`validation check successful`)
 })
+
+testRouter.get('/error/custom', async (req, res) => {
+  throw {
+    statusCode: 403,
+    message: 'error message',
+    messages: ['error 1', 'error 2', 'error 3'],
+  }
+})
+
+testRouter.get('/error/server', async (req, res) => {
+  await pgQuery(`invalidquery;`)
+})
