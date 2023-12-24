@@ -1,5 +1,5 @@
 import { configDotenv } from 'dotenv'
-import { redisClient } from '../database/redis'
+import { redisClient } from '@database/redis'
 import { pgQuery } from '@database/postgres'
 import express from 'express'
 import asyncify from 'express-asyncify'
