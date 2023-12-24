@@ -80,7 +80,7 @@ userRouter.get('/oauth/kakao', async (req, res) => {
     const dbIndex = Number(
       (
         await pgQuery(
-          `INSERT INTO kkujjang.user_profile (nickname) VALUES ('홓이') RETURNING id;`,
+          `INSERT INTO kkujjang.user_profile (nickname) VALUES (NULL) RETURNING id;`,
         )
       ).rows[0].id,
     )
