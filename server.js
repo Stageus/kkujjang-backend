@@ -4,6 +4,7 @@ import https from 'https'
 import asyncify from 'express-asyncify'
 import cookieParser from 'cookie-parser'
 import { testRouter } from '@router/test'
+import { userRouter } from '@router/user'
 
 configDotenv()
 
@@ -21,6 +22,7 @@ const sslOptions =
 server.use(express.json())
 server.use(cookieParser())
 server.use('/test', testRouter)
+server.use('/user', userRouter)
 
 if (sslOptions) {
   https.createServer(sslOptions, server).listen(process.env.HTTPS_PORT, () => {
