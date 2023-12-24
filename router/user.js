@@ -69,10 +69,11 @@ userRouter.get('/oauth/kakao', async (req, res) => {
 
   // 첫 로그인 여부 판단
   const firstSigninValidation = await pgQuery(
-    `SELECT count(*) AS count FROM kkujjang.user_auth_kakao WHERE kakao_id=$1;`,
+    `SELECT count(*) AS count FROM kkujjang.user_auth_kakao WHERE kakao_id=$1 AND is_deleted=FALSE;`,
     [kakaoId],
   )
 
+  // 첫 로그인 시 DB에 정보 저장
   if (firstSigninValidation.rows[0].count == 0) {
     console.log('First Login...')
 
@@ -127,4 +128,50 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   res.json({
     result: 'success',
   })
+})
+
+userRouter.get('/oauth/unlink', async (req, res) => {
+  const sessionId = req.cookies.sessionId
+
+  if (!sessionId) {
+    throw {
+      statusCode: 401,
+      message: '로그인하지 않은 상태입니다.',
+    }
+  }
+
+  const sessionKey = `session-${sessionId}`
+
+  const { userId, kakao_token: token } = await redisClient.hGetAll(sessionKey)
+
+  console.log(`User ID: ${userId}, token: ${token}`)
+
+  // 카카오 계정 연결 해제
+  await fetch('https://kapi.kakao.com/v1/user/unlink', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-type': 'application/x-www-form-urlencoded',
+    },
+  })
+
+  // 세션 삭제
+  await redisClient.del([`session-${sessionId}`])
+
+  await pgQuery(
+    `UPDATE kkujjang.user_auth_kakao SET is_deleted = TRUE WHERE user_id=$1`,
+    [userId],
+  )
+
+  await pgQuery(
+    `UPDATE kkujjang.user_profile SET is_deleted = TRUE WHERE id=$1`,
+    [userId],
+  )
+
+  // 세션 쿠키 삭제
+  res
+    .setHeader('Set-Cookie', `sessionId=none; HttpOnly; Secure; Max-Age=0`)
+    .json({
+      result: 'success',
+    })
 })
