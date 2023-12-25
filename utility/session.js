@@ -19,7 +19,7 @@ export const getSession = async (id) => {
   return session
 }
 
-export const setSession = async (userData) => {
+export const createSession = async (userData) => {
   const { userId, kakaoToken, authorityLevel } = userData
   const sessionId = uuid.v4()
 

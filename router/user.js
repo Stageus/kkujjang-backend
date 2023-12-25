@@ -3,7 +3,7 @@ import { redisClient } from '@database/redis'
 import { pgQuery } from '@database/postgres'
 import express from 'express'
 import asyncify from 'express-asyncify'
-import { getSession, setSession } from '@utility/session'
+import { getSession, createSession } from '@utility/session'
 
 configDotenv()
 
@@ -104,7 +104,7 @@ userRouter.get('/oauth/kakao', async (req, res) => {
 
   console.log(`User ID: ${userId}, Authority Level: ${authorityLevel}`)
 
-  const sessionId = await setSession({
+  const sessionId = await createSession({
     userId,
     kakaoToken: tokenData.access_token,
     authorityLevel,
