@@ -1,7 +1,7 @@
 import { redisClient } from '@database/redis'
 
 export const getSession = async (id) => {
-  const session = await redisClient.hGetAll(id)
+  const session = await redisClient.hGetAll(`session-${id}`)
 
   if (session || Object.keys(session).length == 0) {
     throw {
