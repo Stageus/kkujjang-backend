@@ -36,3 +36,7 @@ export const createSession = async (userData) => {
 
   return sessionId
 }
+
+export const destorySession = async (id) => {
+  await redisClient.del([`session-${id}`])
+}

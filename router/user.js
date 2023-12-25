@@ -3,7 +3,7 @@ import { redisClient } from '@database/redis'
 import { pgQuery } from '@database/postgres'
 import express from 'express'
 import asyncify from 'express-asyncify'
-import { getSession, createSession } from '@utility/session'
+import { getSession, createSession, destorySession } from '@utility/session'
 
 configDotenv()
 
@@ -148,7 +148,7 @@ userRouter.get('/oauth/unlink', async (req, res) => {
   })
 
   // 세션 삭제
-  await redisClient.del([`session-${sessionId}`])
+  await destorySession(sessionId)
 
   await pgQuery(
     `UPDATE kkujjang.user_auth_kakao SET is_deleted = TRUE WHERE user_id=$1`,
