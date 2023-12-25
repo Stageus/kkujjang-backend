@@ -21,7 +21,7 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   }
 
   // 토큰 발급
-  const tokenData = await kakao.getToken()
+  const tokenData = await kakao.getToken(req.query.code)
 
   tokenData.access_token ??
     (() => {
@@ -34,15 +34,7 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   console.log(`Access Token: ${tokenData.access_token}`)
 
   // 사용자 ID 조회
-  const kakaoUserResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${tokenData.access_token}`,
-      'Content-type': 'application/x-www-form-urlencoded',
-    },
-  })
-
-  const kakaoUserData = await kakaoUserResponse.json()
+  const kakaoUserData = await kakao.getUserData(tokenData.access_token)
 
   kakaoUserData.id ??
     (() => {
@@ -135,13 +127,7 @@ userRouter.get('/oauth/unlink', async (req, res) => {
   console.log(`User ID: ${userId}, token: ${token}`)
 
   // 카카오 계정 연결 해제
-  await fetch('https://kapi.kakao.com/v1/user/unlink', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-type': 'application/x-www-form-urlencoded',
-    },
-  })
+  await kakao.unlink(token)
 
   // 세션 삭제
   await redisClient.del([`session-${sessionId}`])
