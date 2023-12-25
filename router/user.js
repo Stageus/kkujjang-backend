@@ -4,6 +4,7 @@ import { pgQuery } from '@database/postgres'
 import express from 'express'
 import asyncify from 'express-asyncify'
 import * as uuid from 'uuid'
+import { getSession } from '@utility/session'
 
 configDotenv()
 
@@ -118,7 +119,7 @@ userRouter.get('/oauth/kakao', async (req, res) => {
 
   console.log('session successfully stored')
 
-  console.log(JSON.stringify(await redisClient.hGetAll(`session-${sessionId}`)))
+  console.log(JSON.stringify(await getSession(sessionId)))
 
   res.setHeader(
     'Set-Cookie',
@@ -140,9 +141,7 @@ userRouter.get('/oauth/unlink', async (req, res) => {
     }
   }
 
-  const sessionKey = `session-${sessionId}`
-
-  const { userId, kakao_token: token } = await redisClient.hGetAll(sessionKey)
+  const { userId, kakao_token: token } = await getSession(sessionId)
 
   console.log(`User ID: ${userId}, token: ${token}`)
 
