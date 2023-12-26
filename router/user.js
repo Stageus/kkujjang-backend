@@ -215,7 +215,12 @@ userRouter.post('/signin', async (req, res) => {
 })
 
 // 유저 검색
-userRouter.get('/search', async (req, res) => {})
+userRouter.get('/search', async (req, res) => {
+  const username = req.params.username
+  throw username
+  const nickname = req.params.nickname
+  const isBanned = req.params.isBanned
+})
 
 // 문자 인증정보 생성(임시)
 userRouter.get('/tempAuth-code', async (req, res) => {
@@ -315,7 +320,7 @@ userRouter.post('/', async (req, res) => {
   })
 })
 
-// 회원정보 조회
+// 인덱스를 이용한 사용자 검색
 userRouter.get('/:id', async (req, res) => {
   // Permission : 사용자, 관리자
   const sessionId = req.cookies.sessionId
@@ -327,9 +332,10 @@ userRouter.get('/:id', async (req, res) => {
   }
 
   const id = req.params.id
-  const queryString = `SELECT level, nickname, wins, loses, is_banned, banned_reason FROM kkujjang.user WHERE id = $1`
+  const queryString = `SELECT level, nickname, wins, loses, is_banned, banned_reason FROM kkujjang.user WHERE id = $1 AND is_deleted = false`
   const values = [id]
   const queryRes = await pgQuery(queryString, values)
+
   if (queryRes.rowCount == 0) {
     throw {
       statusCode: 400,
@@ -346,7 +352,28 @@ userRouter.get('/:id', async (req, res) => {
   const { level, nickname, wins, loses, is_banned, banned_reason } =
     queryRes.rows[0]
 
-  res.send(queryRes)
+  let winRate
+  if (wins == 0 && loses == 0) {
+    winRate = 0.0
+  } else if (loses == 0) {
+    winRate = 100.0
+  } else {
+    winRate = (wins / (wins + loses)) * 100
+    winRate = winRate.toFixed(1)
+    winRate = Number(winRate)
+  }
+  let result = {
+    level,
+    nickname,
+    winRate,
+  }
+
+  const authorityLevel = (await getSession(sessionId)).authorityLevel
+  if (authorityLevel == 1) {
+    result.isBanned = is_banned
+    result.bannedReason = banned_reason
+  }
+  res.send(result)
 })
 
 // 회원 탈퇴
@@ -360,8 +387,8 @@ userRouter.delete('/', async (req, res) => {
     }
   }
 
-  const id = await redisClient.hGet(`session-${sessionId}`, 'userId')
-  const queryString = `UPDATE kkujjang.user SET isDeleted = true WHERE id = $1`
+  const id = (await getSession(sessionId)).userId
+  const queryString = `UPDATE kkujjang.user SET is_deleted = true WHERE id = $1`
   const values = [id]
   await pgQuery(queryString, values)
 
@@ -369,7 +396,7 @@ userRouter.delete('/', async (req, res) => {
     'Set-Cookie',
     `sessionId=none; Path=/; HttpOnly; Secure; Max-Age=0`,
   )
-  await redisClient.del(`session-${sessionId}`)
+  await destorySession(sessionId)
 
   res.json({
     result: 'success',
@@ -387,7 +414,8 @@ userRouter.post('/', async (req, res) => {
     }
   }
 
-  const id = await redisClient.hGet(`session-${sessionId}`, 'userId')
+  const { nickname } = req.body
+  const id = (await getSession(sessionId)).userId
   const queryString = `UPDATE kkujjang.user SET nickname = $1 WHERE id = $2`
   const values = [nickname, id]
   await pgQuery(queryString, values)
