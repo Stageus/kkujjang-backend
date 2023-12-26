@@ -171,6 +171,7 @@ userRouter.get('/auth-code', async (req, res) => {
     receiverNumber,
     `끝짱 인증번호: ${authNumber}`,
   )
+
   console.log(snsResult)
 
   res
