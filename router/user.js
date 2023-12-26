@@ -113,9 +113,16 @@ userRouter.get('/oauth/unlink', async (req, res) => {
     }
   }
 
-  const { userId, kakaoToken } = await getSession(sessionId)
+  const { userId = null, kakaoToken = null } = await getSession(sessionId)
 
   console.log(`User ID: ${userId}, token: ${kakaoToken}`)
+
+  if (userId === null) {
+    throw {
+      statusCode: 401,
+      message: '유효하지 않은 세션 정보입니다.',
+    }
+  }
 
   // 카카오 계정 연결 해제
   await kakao.unlink(kakaoToken)
