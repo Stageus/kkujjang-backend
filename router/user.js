@@ -157,7 +157,7 @@ userRouter.get('/signout', async (req, res) => {
 
   await destorySession(`session-${sessionId}`)
 
-  res.setHeader('Set-Cookie', `sessionId=null; HttpOnly; Secure; Max-Age=0`)
+  res.setHeader('Set-Cookie', `sessionId=none; HttpOnly; Secure; Max-Age=0`)
 
   res.json({
     result: 'success',
@@ -205,7 +205,7 @@ userRouter.post('/signin', async (req, res) => {
 
   res.setHeader(
     'Set-Cookie',
-    `sessionId=${sessionId}; HttpOnly; Secure; Max-Age=7200`,
+    `sessionId=${sessionId}; Path=/; HttpOnly; Secure; Max-Age=7200`,
   )
 
   res.json({
@@ -216,17 +216,8 @@ userRouter.post('/signin', async (req, res) => {
 // 유저 검색
 userRouter.get('/search', async (req, res) => {})
 
-// 회원정보 조회
-userRouter.get('/:id', async (req, res) => {})
-
-// 회원 탈퇴
-userRouter.delete('/:id', async (req, res) => {})
-
-// 회원 정보 수정
-userRouter.post('/:id', async (req, res) => {})
-
 // 문자 인증정보 생성(임시)
-userRouter.get('/temp/auth-code', async (req, res) => {
+userRouter.get('/tempAuth-code', async (req, res) => {
   const authId = uuid.v4()
 
   const phone = '010-1111-1111'
@@ -239,7 +230,7 @@ userRouter.get('/temp/auth-code', async (req, res) => {
 
   res.setHeader(
     'Set-Cookie',
-    `smsAuthId=${authId}; HttpOnly; Secure; Max-Age=3600`,
+    `smsAuthId=${authId}; Path=/; HttpOnly; Secure; Max-Age=3600`,
   )
 
   res.json({
@@ -250,7 +241,6 @@ userRouter.get('/temp/auth-code', async (req, res) => {
 // 회원가입
 userRouter.post('/', async (req, res) => {
   const smsAuthId = req.cookies.smsAuthId
-  res.send(smsAuthId)
   const { username, password, phone } = req.body
 
   const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
@@ -288,11 +278,12 @@ userRouter.post('/', async (req, res) => {
   let queryString = `SELECT count(*) FROM  kkujjang.user_auth WHERE username = $1 AND phone = $2`
   let values = [username, phone]
   let queryRes = await pgQuery(queryString, values)
-  if (0 < queryRes.rows[0].count)
-    res.send({
-      result: 'fail',
+  if (0 < queryRes.rows[0].count) {
+    throw {
+      statusCode: 400,
       message: '중복된 계정 정보가 존재합니다.',
-    })
+    }
+  }
 
   queryString = `INSERT INTO kkujjang.user_profile (nickname) VALUES (null) RETURNING id`
   values = []
@@ -306,3 +297,12 @@ userRouter.post('/', async (req, res) => {
     result: 'success',
   })
 })
+
+// 회원정보 조회
+userRouter.get('/:id', async (req, res) => {})
+
+// 회원 탈퇴
+userRouter.delete('/:id', async (req, res) => {})
+
+// 회원 정보 수정
+userRouter.post('/:id', async (req, res) => {})
