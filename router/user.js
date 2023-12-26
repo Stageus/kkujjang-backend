@@ -49,7 +49,7 @@ userRouter.get('/oauth/kakao', async (req, res) => {
 
   // 첫 로그인 여부 판단
   const firstSigninValidation = await pgQuery(
-    `SELECT count(*) AS count FROM kkujjang.user_auth_kakao WHERE kakao_id=$1 AND is_deleted=FALSE;`,
+    `SELECT count(*) AS count FROM kkujjang.user WHERE kakao_id=$1 AND is_deleted=FALSE;`,
     [kakaoId],
   )
 
@@ -57,27 +57,14 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   if (firstSigninValidation.rows[0].count == 0) {
     console.log('First Login...')
 
-    const dbIndex = Number(
-      (
-        await pgQuery(
-          `INSERT INTO kkujjang.user_profile (nickname) VALUES (NULL) RETURNING id;`,
-        )
-      ).rows[0].id,
-    )
-    console.log(`DB INDEX: ${dbIndex}`)
-
-    await pgQuery(
-      `INSERT INTO kkujjang.user_auth_kakao (kakao_id, user_id) VALUES ($1, $2);`,
-      [kakaoId, dbIndex],
-    )
+    await pgQuery(`INSERT INTO kkujjang.user (kakao_id) VALUES ($1);`, [
+      kakaoId,
+    ])
   }
 
   const { id: userId, authority_level: authorityLevel } = (
     await pgQuery(
-      `SELECT kkujjang.user_profile.id, authority_level FROM kkujjang.user_profile
-    JOIN kkujjang.user_auth_kakao
-    ON kkujjang.user_profile.id = kkujjang.user_auth_kakao.user_id
-    WHERE kakao_id = $1;`,
+      `SELECT id, authority_level FROM kkujjang.user WHERE kakao_id = $1;`,
       [kakaoId],
     )
   ).rows[0]
@@ -130,15 +117,9 @@ userRouter.get('/oauth/unlink', async (req, res) => {
   // 세션 삭제
   await destorySession(sessionId)
 
-  await pgQuery(
-    `UPDATE kkujjang.user_auth_kakao SET is_deleted = TRUE WHERE user_id=$1`,
-    [userId],
-  )
-
-  await pgQuery(
-    `UPDATE kkujjang.user_profile SET is_deleted = TRUE WHERE id=$1`,
-    [userId],
-  )
+  await pgQuery(`UPDATE kkujjang.user SET is_deleted = TRUE WHERE id=$1`, [
+    userId,
+  ])
 
   // 세션 쿠키 삭제
   res
