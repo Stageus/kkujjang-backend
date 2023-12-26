@@ -3,6 +3,7 @@ import { redisClient } from '@database/redis'
 import { pgQuery } from '@database/postgres'
 import express from 'express'
 import asyncify from 'express-asyncify'
+import * as kakao from '@utility/kakao'
 import { getSession, createSession, destorySession } from '@utility/session'
 
 configDotenv()
@@ -20,20 +21,7 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   }
 
   // 토큰 발급
-  const tokenResponse = await fetch('https://kauth.kakao.com/oauth/token', {
-    method: 'POST',
-    headers: {
-      'Content-type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      grant_type: 'authorization_code',
-      client_id: process.env.KAKAO_REST_API_KEY,
-      redirect_uri: process.env.KAKAO_REDIRECT_URI,
-      code: req.query.code,
-    }).toString(),
-  })
-
-  const tokenData = await tokenResponse.json()
+  const tokenData = await kakao.getToken(req.query.code)
 
   tokenData.access_token ??
     (() => {
@@ -46,15 +34,7 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   console.log(`Access Token: ${tokenData.access_token}`)
 
   // 사용자 ID 조회
-  const kakaoUserResponse = await fetch('https://kapi.kakao.com/v2/user/me', {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${tokenData.access_token}`,
-      'Content-type': 'application/x-www-form-urlencoded',
-    },
-  })
-
-  const kakaoUserData = await kakaoUserResponse.json()
+  const kakaoUserData = await kakao.getUserData(tokenData.access_token)
 
   kakaoUserData.id ??
     (() => {
@@ -139,13 +119,7 @@ userRouter.get('/oauth/unlink', async (req, res) => {
   console.log(`User ID: ${userId}, token: ${kakaoToken}`)
 
   // 카카오 계정 연결 해제
-  await fetch('https://kapi.kakao.com/v1/user/unlink', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${kakaoToken}`,
-      'Content-type': 'application/x-www-form-urlencoded',
-    },
-  })
+  await kakao.unlink(token)
 
   // 세션 삭제
   await destorySession(sessionId)
