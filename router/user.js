@@ -144,6 +144,87 @@ userRouter.get('/oauth/unlink', async (req, res) => {
     })
 })
 
+// 로그아웃
+userRouter.get('/signout', async (req, res) => {
+  const sessionId = req.cookies.sessionId
+
+  if (!sessionId) {
+    throw {
+      statusCode: 401,
+      message: '로그인하지 않은 상태입니다.',
+    }
+  }
+
+  await destorySession(`session-${sessionId}`)
+
+  res.setHeader('Set-Cookie', `sessionId=null; HttpOnly; Secure; Max-Age=0`)
+
+  res.json({
+    result: 'success',
+  })
+})
+
+// 로그인
+userRouter.post('/signin', async (req, res) => {
+  if (req.cookies.sessionId) {
+    throw {
+      statusCode: 400,
+      message: '이미 로그인된 상태입니다.',
+    }
+  }
+
+  const { username, password } = req.body
+  const queryString = `SELECT kkujjang.user_profile.id, authority_level FROM kkujjang.user_profile
+  JOIN kkujjang.user_auth
+  ON kkujjang.user_profile.id = kkujjang.user_auth.user_id
+  WHERE username = $1 AND password = $2;`
+  const values = [username, password]
+  const queryRes = await pgQuery(queryString, values)
+
+  if (queryRes.rowCount == 0) {
+    res.send({
+      result: 'fail',
+      message: '존재하지 않는 계정 정보입니다.',
+    })
+  }
+
+  if (2 <= queryRes.rowCount) {
+    throw {
+      statusCode: 500,
+      message: '여러개의 동일한 계정이 user_auth 테이블에 존재합니다',
+    }
+  }
+
+  const { id: userId, authority_level: authorityLevel } = queryRes.rows[0]
+
+  const sessionId = await createSession({
+    userId,
+    kakaoToken: '',
+    authorityLevel,
+  })
+
+  res.setHeader(
+    'Set-Cookie',
+    `sessionId=${sessionId}; HttpOnly; Secure; Max-Age=7200`,
+  )
+
+  res.json({
+    result: 'suecess',
+  })
+})
+
+// 유저 검색
+userRouter.get('/search', async (req, res) => {})
+
+// 회원정보 조회
+userRouter.get('/:id', async (req, res) => {})
+
+// 회원 탈퇴
+userRouter.delete('/:id', async (req, res) => {})
+
+// 회원 정보 수정
+userRouter.post('/:id', async (req, res) => {})
+
 // 문자 인증정보 생성(임시)
 userRouter.get('/temp/auth-code', async (req, res) => {
   const authId = uuid.v4()
@@ -156,12 +237,20 @@ userRouter.get('/temp/auth-code', async (req, res) => {
 
   await redisClient.expire(`auth-${authId}`, 3600)
 
-  res.send(authId)
+  res.setHeader(
+    'Set-Cookie',
+    `smsAuthId=${authId}; HttpOnly; Secure; Max-Age=3600`,
+  )
+
+  res.json({
+    result: 'success',
+  })
 })
 
 // 회원가입
 userRouter.post('/', async (req, res) => {
   const smsAuthId = req.cookies.smsAuthId
+  res.send(smsAuthId)
   const { username, password, phone } = req.body
 
   const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
@@ -195,24 +284,25 @@ userRouter.post('/', async (req, res) => {
     validation.checkExist(),
     validation.checkRegExp(/^010-\d{4}-\d{4}$/),
   )
-  let queryString = `SELECT count(*) FROM  kkujjang.user_auth where username = $1 AND phone = $2 `
+
+  let queryString = `SELECT count(*) FROM  kkujjang.user_auth WHERE username = $1 AND phone = $2`
   let values = [username, phone]
-  let queryRes = await pgQuery({ text: queryString, values: values })
+  let queryRes = await pgQuery(queryString, values)
   if (0 < queryRes.rows[0].count)
     res.send({
       result: 'fail',
       message: '중복된 계정 정보가 존재합니다.',
     })
 
-  queryString = `INSERT INTO kkujjang.user_profile (nickname) values (null) RETURNING id`
+  queryString = `INSERT INTO kkujjang.user_profile (nickname) VALUES (null) RETURNING id`
   values = []
   const dbIndex = Number((await pgQuery(queryString)).rows[0].id)
 
-  queryString = `INSERT INTO kkujjang.user_auth (username, password, user_id, phone) values ($1, $2, $3, $4)`
+  queryString = `INSERT INTO kkujjang.user_auth (username, password, user_id, phone) VALUES ($1, $2, $3, $4)`
   values = [username, password, dbIndex, phone]
   await pgQuery(queryString, values)
 
-  res.send({
+  res.json({
     result: 'success',
   })
 })
