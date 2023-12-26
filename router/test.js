@@ -6,6 +6,7 @@ import { useMongoModel } from '@database/mongodb'
 import { testSchema } from '@model/test'
 import { redisClient } from '@database/redis'
 import * as validation from '@utility/validation'
+import { isSignedIn } from '@utility/session'
 
 configDotenv()
 
@@ -86,4 +87,16 @@ testRouter.get('/error/custom', async (req, res) => {
 
 testRouter.get('/error/server', async (req, res) => {
   await pgQuery(`invalidquery;`)
+})
+
+testRouter.get('/user/signed/:userId', async (req, res) => {
+  const { userId } = req.params
+
+  console.log(`Check if user ${userId} signed in...`)
+
+  const result = {
+    result: await isSignedIn(userId),
+  }
+
+  res.json(result)
 })
