@@ -5,6 +5,7 @@ import express from 'express'
 import asyncify from 'express-asyncify'
 import * as kakao from '@utility/kakao'
 import { getSession, createSession, destorySession } from '@utility/session'
+import * as uuid from 'uuid'
 
 configDotenv()
 
@@ -140,4 +141,19 @@ userRouter.get('/oauth/unlink', async (req, res) => {
     .json({
       result: 'success',
     })
+})
+
+// 문자 인증정보 생성(임시)
+userRouter.get('/temp/auth-code', async (req, res) => {
+  const authId = uuid.v4()
+
+  const phone = '010-1111-1111'
+  await redisClient.hSet(`auth-${authId}`, {
+    authNumber: phone,
+    fulfilled: 'true',
+  })
+
+  await redisClient.expire(`auth-${authId}`, 200)
+
+  res.send(authId)
 })
