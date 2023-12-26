@@ -167,7 +167,10 @@ userRouter.get('/auth-code', async (req, res) => {
   })
   await redisClient.expire(`auth-${smsAuthId}`, 300)
 
-  const snsResult = await sendSMS(receiverNumber, `인증번호: ${authNumber}`)
+  const snsResult = await sendSMS(
+    receiverNumber,
+    `끝짱 인증번호: ${authNumber}`,
+  )
   console.log(snsResult)
 
   res
@@ -178,4 +181,38 @@ userRouter.get('/auth-code', async (req, res) => {
     .json({
       result: 'success',
     })
+})
+
+userRouter.post('/auth-code/check', async (req, res) => {
+  const { smsAuthId } = req.cookies
+  validation.check(smsAuthId, '인증 정보가 없습니다.', validation.checkExist())
+
+  const { authNumber } = req.body
+  validation.check(
+    authNumber,
+    '잘못된 인증번호입니다.',
+    validation.checkExist(),
+    validation.checkRegExp(/\d{6}/),
+  )
+
+  const { authNumber: answer } = await redisClient.hGetAll(`auth-${smsAuthId}`)
+  const result = {
+    result: 'success',
+  }
+
+  if (authNumber === answer) {
+    result.result = 'success'
+
+    redisClient.hSet(`auth-${smsAuthId}`, {
+      fullfilled: 'true',
+    })
+    redisClient.expire(`auth-${smsAuthId}`, 1800)
+  } else {
+    throw {
+      result: 400,
+      message: '잘못된 인증번호입니다.',
+    }
+  }
+
+  res.json(result)
 })
