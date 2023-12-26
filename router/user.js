@@ -91,7 +91,6 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   })
 
   console.log('session successfully stored')
-
   console.log(JSON.stringify(await getSession(sessionId)))
 
   res.setHeader(
@@ -119,7 +118,7 @@ userRouter.get('/oauth/unlink', async (req, res) => {
   console.log(`User ID: ${userId}, token: ${kakaoToken}`)
 
   // 카카오 계정 연결 해제
-  await kakao.unlink(token)
+  await kakao.unlink(kakaoToken)
 
   // 세션 삭제
   await destorySession(sessionId)

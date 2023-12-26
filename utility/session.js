@@ -20,7 +20,7 @@ export const getSession = async (id) => {
 }
 
 export const createSession = async (userData) => {
-  const { userId, kakaoToken, authorityLevel } = userData
+  const { userId, kakaoToken = '', authorityLevel } = userData
   const sessionId = uuid.v4()
 
   await redisClient.hSet(`session-${sessionId}`, {
@@ -28,15 +28,20 @@ export const createSession = async (userData) => {
     authorityLevel: authorityLevel,
     kakaoToken: kakaoToken,
   })
+  await redisClient.set(`session:${userId}`, sessionId)
 
   await redisClient.expire(
     `session-${sessionId}`,
     process.env.SESSION_EXPIRES_IN,
   )
+  await redisClient.expire(`session:${userId}`, process.env.SESSION_EXPIRES_IN)
 
   return sessionId
 }
 
-export const destorySession = async (id) => {
-  await redisClient.del([`session-${id}`])
+export const destorySession = async (sessionId) => {
+  const { userId } = await getSession(sessionId)
+
+  await redisClient.del([`session-${sessionId}`])
+  await redisClient.del([`session:${userId}`])
 }
