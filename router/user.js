@@ -256,7 +256,7 @@ userRouter.post('/', async (req, res) => {
   // 휴대폰 인증 여부 처리(1) 검증
   const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
 
-  if (smsAuth.phone != phone || smsAuth.fulfilled != 'true') {
+  if (smsAuth.authNumber != phone || smsAuth.fulfilled != 'true') {
     throw {
       statusCode: 400,
       message: '휴대폰 인증이 되어있지 않습니다.',
