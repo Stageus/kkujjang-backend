@@ -96,7 +96,7 @@ userRouter.get('/oauth/kakao', async (req, res) => {
 
   res.setHeader(
     'Set-Cookie',
-    `sessionId=${sessionId}; HttpOnly; Secure; Max-Age=7200`,
+    `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=7200`,
   )
 
   res.json({
@@ -136,7 +136,10 @@ userRouter.get('/oauth/unlink', async (req, res) => {
 
   // 세션 쿠키 삭제
   res
-    .setHeader('Set-Cookie', `sessionId=none; HttpOnly; Secure; Max-Age=0`)
+    .setHeader(
+      'Set-Cookie',
+      `sessionId=none; HttpOnly; Path=/; Secure; Max-Age=0`,
+    )
     .json({
       result: 'success',
     })
