@@ -3,7 +3,7 @@ import { redisClient } from '@database/redis'
 import { pgQuery } from '@database/postgres'
 import express from 'express'
 import asyncify from 'express-asyncify'
-import * as uuid from 'uuid'
+import { getSession, createSession, destorySession } from '@utility/session'
 
 configDotenv()
 
@@ -104,21 +104,15 @@ userRouter.get('/oauth/kakao', async (req, res) => {
 
   console.log(`User ID: ${userId}, Authority Level: ${authorityLevel}`)
 
-  const sessionId = uuid.v4()
-
-  console.log(`Session ID: ${sessionId}`)
-
-  await redisClient.hSet(`session-${sessionId}`, {
-    userId: userId,
-    authorityLevel: authorityLevel,
-    kakao_token: tokenData.access_token,
+  const sessionId = await createSession({
+    userId,
+    kakaoToken: tokenData.access_token,
+    authorityLevel,
   })
-
-  await redisClient.expire(`session-${sessionId}`, 7200)
 
   console.log('session successfully stored')
 
-  console.log(JSON.stringify(await redisClient.hGetAll(`session-${sessionId}`)))
+  console.log(JSON.stringify(await getSession(sessionId)))
 
   res.setHeader(
     'Set-Cookie',
@@ -140,23 +134,21 @@ userRouter.get('/oauth/unlink', async (req, res) => {
     }
   }
 
-  const sessionKey = `session-${sessionId}`
+  const { userId, kakaoToken } = await getSession(sessionId)
 
-  const { userId, kakao_token: token } = await redisClient.hGetAll(sessionKey)
-
-  console.log(`User ID: ${userId}, token: ${token}`)
+  console.log(`User ID: ${userId}, token: ${kakaoToken}`)
 
   // 카카오 계정 연결 해제
   await fetch('https://kapi.kakao.com/v1/user/unlink', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${kakaoToken}`,
       'Content-type': 'application/x-www-form-urlencoded',
     },
   })
 
   // 세션 삭제
-  await redisClient.del([`session-${sessionId}`])
+  await destorySession(sessionId)
 
   await pgQuery(
     `UPDATE kkujjang.user_auth_kakao SET is_deleted = TRUE WHERE user_id=$1`,
