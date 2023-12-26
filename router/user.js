@@ -5,6 +5,9 @@ import express from 'express'
 import asyncify from 'express-asyncify'
 import * as kakao from '@utility/kakao'
 import { getSession, createSession, destorySession } from '@utility/session'
+import * as uuid from 'uuid'
+import { sendSMS } from '@utility/sms-auth'
+import * as validation from '@utility/validation'
 
 configDotenv()
 
@@ -137,6 +140,41 @@ userRouter.get('/oauth/unlink', async (req, res) => {
   // 세션 쿠키 삭제
   res
     .setHeader('Set-Cookie', `sessionId=none; HttpOnly; Secure; Max-Age=0`)
+    .json({
+      result: 'success',
+    })
+})
+
+userRouter.get('/auth-code', async (req, res) => {
+  const { receiverNumber } = req.query
+
+  validation.check(
+    receiverNumber,
+    '잘못된 전화번호입니다.',
+    validation.checkExist(),
+    validation.checkLength(8, 20),
+    validation.checkRegExp(/\d+-\d+-\d+/),
+  )
+
+  const smsAuthId = uuid.v4()
+  const authNumber = String(Math.floor(Math.random() * 900000) + 100000)
+
+  console.log(`smsAuthId: ${smsAuthId}, authNumber: ${authNumber}`)
+
+  await redisClient.hSet(`auth-${smsAuthId}`, {
+    authNumber: authNumber,
+    fullfilled: 'false',
+  })
+  await redisClient.expire(`auth-${smsAuthId}`, 300)
+
+  const snsResult = await sendSMS(receiverNumber, `인증번호: ${authNumber}`)
+  console.log(snsResult)
+
+  res
+    .setHeader(
+      'Set-Cookie',
+      `smsAuthId=${smsAuthId}; HttpOnly; Path=/; Secure; Max-Age=300`,
+    )
     .json({
       result: 'success',
     })
