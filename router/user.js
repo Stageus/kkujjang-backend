@@ -6,6 +6,7 @@ import asyncify from 'express-asyncify'
 import * as kakao from '@utility/kakao'
 import { getSession, createSession, destorySession } from '@utility/session'
 import * as uuid from 'uuid'
+import * as validation from '@utility/validation'
 
 configDotenv()
 
@@ -153,7 +154,65 @@ userRouter.get('/temp/auth-code', async (req, res) => {
     fulfilled: 'true',
   })
 
-  await redisClient.expire(`auth-${authId}`, 200)
+  await redisClient.expire(`auth-${authId}`, 3600)
 
   res.send(authId)
+})
+
+// 회원가입
+userRouter.post('/', async (req, res) => {
+  const smsAuthId = req.cookies.smsAuthId
+  const { username, password, phone } = req.body
+
+  const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
+
+  if (smsAuth.phone != phone && smsAuth.fulfilled != 'true') {
+    throw {
+      statusCode: 400,
+      message: '휴대폰 인증이 되어있지 않습니다.',
+    }
+  }
+
+  validation.check(
+    username,
+    'username',
+    validation.checkExist(),
+    validation.checkLength(7, 30),
+    validation.checkRegExp(/^(?=.*[a-z])(?=.*[0-9])[a-z0-9]+$/),
+  )
+  validation.check(
+    password,
+    'password',
+    validation.checkExist(),
+    validation.checkLength(7, 30),
+    validation.checkRegExp(
+      /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[@#$%^&+=!\(\)])[a-zA-Z0-9@#$%^&+=!\(\)]+$/,
+    ),
+  )
+  validation.check(
+    phone,
+    'phone',
+    validation.checkExist(),
+    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
+  )
+  let queryString = `SELECT count(*) FROM  kkujjang.user_auth where username = $1 AND phone = $2 `
+  let values = [username, phone]
+  let queryRes = await pgQuery({ text: queryString, values: values })
+  if (0 < queryRes.rows[0].count)
+    res.send({
+      result: 'fail',
+      message: '중복된 계정 정보가 존재합니다.',
+    })
+
+  queryString = `INSERT INTO kkujjang.user_profile (nickname) values (null) RETURNING id`
+  values = []
+  const dbIndex = Number((await pgQuery(queryString)).rows[0].id)
+
+  queryString = `INSERT INTO kkujjang.user_auth (username, password, user_id, phone) values ($1, $2, $3, $4)`
+  values = [username, password, dbIndex, phone]
+  await pgQuery(queryString, values)
+
+  res.send({
+    result: 'success',
+  })
 })
