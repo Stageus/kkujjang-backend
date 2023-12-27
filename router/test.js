@@ -6,7 +6,7 @@ import { useMongoModel } from '@database/mongodb'
 import { testSchema } from '@model/test'
 import { redisClient } from '@database/redis'
 import * as validation from '@utility/validation'
-import { isSignedIn } from '@utility/session'
+import { isSignedIn, createSession } from '@utility/session'
 
 configDotenv()
 
@@ -99,4 +99,36 @@ testRouter.get('/user/signed/:userId', async (req, res) => {
   }
 
   res.json(result)
+})
+
+testRouter.get('/user/session/admin', async (req, res) => {
+  const sessionId = await createSession({
+    userId: 1,
+    authorityLevel: process.env.AUTHORITY_LEVEL_MANAGER,
+  })
+
+  res
+    .setHeader(
+      'Set-Cookie',
+      `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=300`,
+    )
+    .json({
+      result: 'success',
+    })
+})
+
+testRouter.get('/user/session', async (req, res) => {
+  const sessionId = await createSession({
+    userId: 1,
+    authorityLevel: process.env.AUTHORITY_LEVEL_MANAGER,
+  })
+
+  res
+    .setHeader(
+      'Set-Cookie',
+      `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=300`,
+    )
+    .json({
+      result: 'success',
+    })
 })

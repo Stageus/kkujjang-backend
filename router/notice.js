@@ -12,7 +12,13 @@ export const noticeRouter = asyncify(express.Router())
 noticeRouter.post('/', async (req, res) => {
   const session = await getSession(req.cookies.sessionId)
 
-  if (!session || session.authorityLevel !== process.env.ADMIN_AUTHORITY) {
+  console.log(JSON.stringify(session))
+  console.log(process.env.ADMIN_AUTHORITY)
+
+  if (
+    !session ||
+    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
+  ) {
     throw {
       status: 401,
       message: '권한이 없습니다.',
@@ -24,8 +30,8 @@ noticeRouter.post('/', async (req, res) => {
   validtion.check(content, 'content', validtion.checkExist())
 
   await pgQuery(
-    `INSERT INTO kkujjang.notice (title, content) VALUES ($1, $2);`,
-    [title, content],
+    `INSERT INTO kkujjang.notice (title, content, author_id) VALUES ($1, $2, $3);`,
+    [title, content, session.userId],
   )
 
   res.json({ result: 'success' })
@@ -43,4 +49,33 @@ noticeRouter.get('/:noticeId', async (req, res) => {
   ).rows[0]
 
   res.json({ result })
+})
+
+noticeRouter.put('/:noticeId', async (req, res) => {
+  const session = await getSession(req.cookies.sessionId)
+
+  if (
+    !session ||
+    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
+  ) {
+    throw {
+      status: 401,
+      message: '권한이 없습니다.',
+    }
+  }
+
+  const { noticeId } = req.params
+  validtion.check(noticeId, 'noticeId', validtion.checkExist())
+
+  const { title, content } = req.body
+  validtion.check(title, 'title', validtion.checkExist())
+  validtion.check(content, 'content', validtion.checkExist())
+
+  await pgQuery(`UPDATE kkujjang.notice SET title=$1, content=$2 WHERE id=$3`, [
+    title,
+    content,
+    noticeId,
+  ])
+
+  res.json({ result: 'success' })
 })
