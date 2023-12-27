@@ -192,15 +192,13 @@ userRouter.post('/auth-code/check', async (req, res) => {
   }
 
   if (phoneNumber === targetPhoneNumber && authNumber === answer) {
-    result.result = 'success'
-
     redisClient.hSet(`auth-${smsAuthId}`, {
       fullfilled: 'true',
     })
     redisClient.expire(`auth-${smsAuthId}`, 1800)
   } else {
     throw {
-      result: 400,
+      statusCode: 400,
       message: '잘못된 인증 정보입니다.',
     }
   }
