@@ -61,7 +61,7 @@ noticeRouter.get('/search', async (req, res) => {
     validation,
     'keyword',
     validation.checkExist(),
-    validation.checkRegExp(/[a-zA-Z가-힣0-9 ].+/),
+    validation.checkRegExp(/^[a-zA-Z가-힣0-9 ].+$/),
   )
 
   const result = (
