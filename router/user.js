@@ -388,41 +388,6 @@ userRouter.post('/find/id', async (req, res) => {
   })
 })
 
-// 휴대폰 인증 성공 세션 생성(임시)
-userRouter.post('/tempAuth-code', async (req, res) => {
-  // Permission 체크 : 누구나
-  // Permission 체크 끝
-
-  const { phone } = req.body
-
-  // body 값 유효성 검증
-  validation.check(
-    phone,
-    'phone',
-    validation.checkExist(),
-    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
-  )
-  // body 값 유효성 검증 끝
-
-  const authId = uuid.v4()
-
-  // 휴대폰 인증 성공 세션 생성
-  await redisClient.hSet(`auth-${authId}`, {
-    phoeNumber: phone,
-    fulfilled: 'true',
-  })
-  await redisClient.expire(`auth-${authId}`, 3600)
-  res.setHeader(
-    'Set-Cookie',
-    `smsAuthId=${authId}; Path=/; Secure; HttpOnly; Max-Age=3600`,
-  )
-  // 휴대폰 인증 성공 세션 생성 끝
-
-  res.json({
-    result: 'success',
-  })
-})
-
 // 인덱스를 이용한 사용자 검색
 userRouter.get('/:id', async (req, res) => {
   // Permission 체크 : 사용자, 관리자
