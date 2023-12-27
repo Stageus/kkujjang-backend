@@ -43,7 +43,9 @@ noticeRouter.get('/:noticeId', async (req, res) => {
 
   const result = (
     await pgQuery(
-      `SELECT title, content, created_at, views FROM kkujjang.notice WHERE id=$1`,
+      `SELECT title, content, created_at, views 
+      FROM kkujjang.notice 
+      WHERE id=$1 AND is_deleted=FALSE`,
       [noticeId],
     )
   ).rows[0]
@@ -71,11 +73,11 @@ noticeRouter.put('/:noticeId', async (req, res) => {
   validtion.check(title, 'title', validtion.checkExist())
   validtion.check(content, 'content', validtion.checkExist())
 
-  await pgQuery(`UPDATE kkujjang.notice SET title=$1, content=$2 WHERE id=$3`, [
-    title,
-    content,
-    noticeId,
-  ])
+  await pgQuery(
+    `UPDATE kkujjang.notice SET title=$1, content=$2 
+    WHERE id=$3 AND is_deleted=FALSE`,
+    [title, content, noticeId],
+  )
 
   res.json({ result: 'success' })
 })
@@ -100,9 +102,10 @@ noticeRouter.delete('/:noticeId', async (req, res) => {
   validtion.check(title, 'title', validtion.checkExist())
   validtion.check(content, 'content', validtion.checkExist())
 
-  await pgQuery(`UPDATE kkujjang.notice SET is_deleted=TRUE WHERE id=$1`, [
-    noticeId,
-  ])
+  await pgQuery(
+    `UPDATE kkujjang.notice SET is_deleted=TRUE WHERE id=$1 AND is_deleted=FALSE`,
+    [noticeId],
+  )
 
   res.json({ result: 'success' })
 })
