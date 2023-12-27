@@ -111,7 +111,10 @@ testRouter.post('/tempAuth-code', async (req, res) => {
     phoeNumber: phone,
     fulfilled: 'true',
   })
-  await redisClient.expire(`auth-${authId}`, 3600)
+  await redisClient.expire(
+    `auth-${authId}`,
+    process.env.TEST_PHONE_VALIDATION_EXPIRES_IN,
+  )
   res.setHeader(
     'Set-Cookie',
     `smsAuthId=${authId}; Path=/; Secure; HttpOnly; Max-Age=3600`,
