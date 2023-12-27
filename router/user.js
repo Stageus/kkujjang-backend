@@ -278,10 +278,30 @@ userRouter.get('/search', async (req, res) => {
 })
 
 // 비밀번호 찾기
-userRouter.post('/find/pw', async (req, res) => {})
+userRouter.post('/find/pw', async (req, res) => {
+  // Permission : 게스트
+  if (req.cookies.sessionId) {
+    throw {
+      statusCode: 400,
+      message: '이미 로그인된 상태입니다.',
+    }
+  }
+
+  const smsAuthId = req.cookies.smsAuthId
+})
 
 // 아이디 찾기
-userRouter.post('/find/pw', async (req, res) => {})
+userRouter.post('/find/id', async (req, res) => {
+  // Permission : 게스트
+  if (req.cookies.sessionId) {
+    throw {
+      statusCode: 400,
+      message: '이미 로그인된 상태입니다.',
+    }
+  }
+
+  const smsAuthId = req.cookies.smsAuthId
+})
 
 // 문자 인증정보 생성(임시)
 userRouter.get('/tempAuth-code', async (req, res) => {
