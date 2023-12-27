@@ -241,6 +241,15 @@ userRouter.get('/search', async (req, res) => {
   const nickname = req.query.nickname
   const isBanned = req.query.isBanned
 
+  // 쿼리 파라미터 검증
+  validation.check(username, `username`, validation.checkRegExp(/^[a-z0-9]+$/))
+  validation.check(
+    nickname,
+    `nickname`,
+    validation.checkRegExp(/^[a-zA-Z0-9가-힣]+$/),
+  )
+  // 쿼리 파라미터 검증 끝
+
   const conditions = []
   const values = []
   let conditionCnt = 1
