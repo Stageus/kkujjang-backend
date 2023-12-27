@@ -37,6 +37,22 @@ noticeRouter.post('/', async (req, res) => {
   res.json({ result: 'success' })
 })
 
+noticeRouter.get('/list', async (req, res) => {
+  const page = Number(req.query.page ?? 1)
+
+  const result = (
+    await pgQuery(
+      `SELECT title, content, created_at, views 
+      FROM kkujjang.notice 
+      WHERE is_deleted=FALSE
+      ORDER BY created_at DESC
+      OFFSET ${(page - 1) * 10} LIMIT 10`,
+    )
+  ).rows
+
+  res.json({ result })
+})
+
 noticeRouter.get('/:noticeId', async (req, res) => {
   const { noticeId } = req.params
   validtion.check(noticeId, 'noticeId', validtion.checkExist())
