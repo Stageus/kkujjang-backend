@@ -152,8 +152,7 @@ userRouter.get('/auth-code', async (req, res) => {
     receiverNumber,
     'receiverNumber',
     validation.checkExist(),
-    validation.checkLength(8, 20),
-    validation.checkRegExp(/\d+-\d+-\d+/),
+    validation.checkRegExp(/010-\d{4}-\d{4}/),
   )
 
   const smsAuthId = uuid.v4()
