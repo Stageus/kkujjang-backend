@@ -5,6 +5,9 @@ import express from 'express'
 import asyncify from 'express-asyncify'
 import * as kakao from '@utility/kakao'
 import { getSession, createSession, destorySession } from '@utility/session'
+import * as uuid from 'uuid'
+import { sendSMS } from '@utility/sms-auth'
+import * as validation from '@utility/validation'
 
 configDotenv()
 
@@ -130,4 +133,75 @@ userRouter.get('/oauth/unlink', async (req, res) => {
     .json({
       result: 'success',
     })
+})
+
+userRouter.get('/auth-code', async (req, res) => {
+  const { receiverNumber } = req.query
+
+  validation.check(
+    receiverNumber,
+    'receiverNumber',
+    validation.checkExist(),
+    validation.checkRegExp(/010-\d{4}-\d{4}/),
+  )
+
+  const smsAuthId = uuid.v4()
+  const authNumber = String(Math.floor(Math.random() * 900000) + 100000)
+
+  console.log(`smsAuthId: ${smsAuthId}, authNumber: ${authNumber}`)
+
+  await redisClient.hSet(`auth-${smsAuthId}`, {
+    authNumber: authNumber,
+    fullfilled: 'false',
+  })
+  await redisClient.expire(`auth-${smsAuthId}`, 300)
+
+  const snsResult = await sendSMS(
+    receiverNumber,
+    `끝짱 인증번호: ${authNumber}`,
+  )
+  console.log(snsResult)
+
+  res
+    .setHeader(
+      'Set-Cookie',
+      `smsAuthId=${smsAuthId}; HttpOnly; Path=/; Secure; Max-Age=300`,
+    )
+    .json({
+      result: 'success',
+    })
+})
+
+userRouter.post('/auth-code/check', async (req, res) => {
+  const { smsAuthId } = req.cookies
+  validation.check(smsAuthId, 'smsAuthId', validation.checkExist())
+
+  const { authNumber } = req.body
+  validation.check(
+    authNumber,
+    'authNumber',
+    validation.checkExist(),
+    validation.checkRegExp(/\d{6}/),
+  )
+
+  const { authNumber: answer } = await redisClient.hGetAll(`auth-${smsAuthId}`)
+  const result = {
+    result: 'success',
+  }
+
+  if (authNumber === answer) {
+    result.result = 'success'
+
+    redisClient.hSet(`auth-${smsAuthId}`, {
+      fullfilled: 'true',
+    })
+    redisClient.expire(`auth-${smsAuthId}`, 1800)
+  } else {
+    throw {
+      result: 400,
+      message: '잘못된 인증번호입니다.',
+    }
+  }
+
+  res.json(result)
 })
