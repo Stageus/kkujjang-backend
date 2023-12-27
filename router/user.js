@@ -150,7 +150,7 @@ userRouter.get('/auth-code', async (req, res) => {
 
   validation.check(
     receiverNumber,
-    '잘못된 전화번호입니다.',
+    'receiverNumber',
     validation.checkExist(),
     validation.checkLength(8, 20),
     validation.checkRegExp(/\d+-\d+-\d+/),
@@ -185,12 +185,12 @@ userRouter.get('/auth-code', async (req, res) => {
 
 userRouter.post('/auth-code/check', async (req, res) => {
   const { smsAuthId } = req.cookies
-  validation.check(smsAuthId, '인증 정보가 없습니다.', validation.checkExist())
+  validation.check(smsAuthId, 'smsAuthId', validation.checkExist())
 
   const { authNumber } = req.body
   validation.check(
     authNumber,
-    '잘못된 인증번호입니다.',
+    'authNumber',
     validation.checkExist(),
     validation.checkRegExp(/\d{6}/),
   )
