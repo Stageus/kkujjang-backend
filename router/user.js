@@ -208,7 +208,6 @@ userRouter.post('/signin', async (req, res) => {
 
   const sessionId = await createSession({
     userId,
-    kakaoToken: '',
     authorityLevel,
   })
 
