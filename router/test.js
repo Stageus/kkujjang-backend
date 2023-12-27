@@ -5,6 +5,7 @@ import { configDotenv } from 'dotenv'
 import { useMongoModel } from '@database/mongodb'
 import { testSchema } from '@model/test'
 import { redisClient } from '@database/redis'
+import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn } from '@utility/session'
 
@@ -88,6 +89,43 @@ testRouter.get('/error/custom', async (req, res) => {
 testRouter.get('/error/server', async (req, res) => {
   await pgQuery(`invalidquery;`)
 })
+
+// 휴대폰 인증 성공 세션 생성(임시)
+testRouter.post('/tempAuth-code', async (req, res) => {
+  // Permission 체크 : 누구나
+  // Permission 체크 끝
+
+  const { phone } = req.body
+
+  // body 값 유효성 검증
+  validation.check(
+    phone,
+    'phone',
+    validation.checkExist(),
+    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
+  )
+  // body 값 유효성 검증 끝
+
+  const authId = uuid.v4()
+
+  // 휴대폰 인증 성공 세션 생성
+  await redisClient.hSet(`auth-${authId}`, {
+    phoeNumber: phone,
+    fulfilled: 'true',
+  })
+  await redisClient.expire(
+    `auth-${authId}`,
+    process.env.TEST_PHONE_VALIDATION_EXPIRES_IN,
+  )
+  res.setHeader(
+    'Set-Cookie',
+    `smsAuthId=${authId}; Path=/; Secure; HttpOnly; Max-Age=3600`,
+  )
+  // 휴대폰 인증 성공 세션 생성 끝
+
+  res.json({
+    result: 'success',
+  })
 
 testRouter.get('/user/signed/:userId', async (req, res) => {
   const { userId } = req.params
