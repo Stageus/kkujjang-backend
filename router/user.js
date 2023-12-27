@@ -245,12 +245,12 @@ userRouter.get('/search', async (req, res) => {
   const values = []
   let conditionCnt = 1
   if (username) {
-    conditions.push(`username = $${conditionCnt++}`)
-    values.push(username)
+    conditions.push(`username LIKE $${conditionCnt++}`)
+    values.push(`%${username}%`)
   }
   if (nickname) {
-    conditions.push(`nickname = $${conditionCnt++}`)
-    values.push(nickname)
+    conditions.push(`nickname LIKE $${conditionCnt++}`)
+    values.push(`%${nickname}%`)
   }
   if (isBanned) {
     conditions.push(`is_banned = $${conditionCnt++}`)
