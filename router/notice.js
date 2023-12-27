@@ -79,3 +79,30 @@ noticeRouter.put('/:noticeId', async (req, res) => {
 
   res.json({ result: 'success' })
 })
+
+noticeRouter.delete('/:noticeId', async (req, res) => {
+  const session = await getSession(req.cookies.sessionId)
+
+  if (
+    !session ||
+    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
+  ) {
+    throw {
+      status: 401,
+      message: '권한이 없습니다.',
+    }
+  }
+
+  const { noticeId } = req.params
+  validtion.check(noticeId, 'noticeId', validtion.checkExist())
+
+  const { title, content } = req.body
+  validtion.check(title, 'title', validtion.checkExist())
+  validtion.check(content, 'content', validtion.checkExist())
+
+  await pgQuery(`UPDATE kkujjang.notice SET is_deleted=TRUE WHERE id=$1`, [
+    noticeId,
+  ])
+
+  res.json({ result: 'success' })
+})
