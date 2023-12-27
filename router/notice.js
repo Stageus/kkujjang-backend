@@ -30,3 +30,17 @@ noticeRouter.post('/', async (req, res) => {
 
   res.json({ result: 'success' })
 })
+
+noticeRouter.get('/:noticeId', async (req, res) => {
+  const { noticeId } = req.params
+  validtion.check(noticeId, 'noticeId', validtion.checkExist())
+
+  const result = (
+    await pgQuery(
+      `SELECT title, content, created_at, views FROM kkujjang.notice WHERE id=$1`,
+      [noticeId],
+    )
+  ).rows[0]
+
+  res.json({ result })
+})
