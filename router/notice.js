@@ -50,6 +50,13 @@ noticeRouter.get('/:noticeId', async (req, res) => {
     )
   ).rows[0]
 
+  if (Object.keys(result).length == 0) {
+    throw {
+      statusCode: 404,
+      message: '공지를 찾을 수 없습니다.',
+    }
+  }
+
   res.json({ result })
 })
 
