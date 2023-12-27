@@ -153,6 +153,7 @@ userRouter.get('/auth-code', async (req, res) => {
   await redisClient.hSet(`auth-${smsAuthId}`, {
     authNumber: authNumber,
     fullfilled: 'false',
+    phoneNumber: receiverNumber,
   })
   await redisClient.expire(`auth-${smsAuthId}`, 300)
 
@@ -176,7 +177,7 @@ userRouter.post('/auth-code/check', async (req, res) => {
   const { smsAuthId } = req.cookies
   validation.check(smsAuthId, 'smsAuthId', validation.checkExist())
 
-  const { authNumber } = req.body
+  const { authNumber, phoneNumber } = req.body
   validation.check(
     authNumber,
     'authNumber',
@@ -184,22 +185,21 @@ userRouter.post('/auth-code/check', async (req, res) => {
     validation.checkRegExp(/\d{6}/),
   )
 
-  const { authNumber: answer } = await redisClient.hGetAll(`auth-${smsAuthId}`)
+  const { authNumber: answer, phoneNumber: targetPhoneNumber } =
+    await redisClient.hGetAll(`auth-${smsAuthId}`)
   const result = {
     result: 'success',
   }
 
-  if (authNumber === answer) {
-    result.result = 'success'
-
+  if (phoneNumber === targetPhoneNumber && authNumber === answer) {
     redisClient.hSet(`auth-${smsAuthId}`, {
       fullfilled: 'true',
     })
     redisClient.expire(`auth-${smsAuthId}`, 1800)
   } else {
     throw {
-      result: 400,
-      message: '잘못된 인증번호입니다.',
+      statusCode: 400,
+      message: '잘못된 인증 정보입니다.',
     }
   }
 
