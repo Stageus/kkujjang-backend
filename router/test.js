@@ -5,6 +5,7 @@ import { configDotenv } from 'dotenv'
 import { useMongoModel } from '@database/mongodb'
 import { testSchema } from '@model/test'
 import { redisClient } from '@database/redis'
+import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 
 configDotenv()
