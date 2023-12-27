@@ -194,13 +194,6 @@ userRouter.post('/signin', async (req, res) => {
     }
   }
 
-  if (2 <= queryRes.rowCount) {
-    throw {
-      statusCode: 500,
-      message: '여러개의 동일한 계정이 user_auth 테이블에 존재합니다.',
-    }
-  }
-
   const { id: userId, authority_level: authorityLevel } = queryRes.rows[0]
 
   if (await isSignedIn(userId.toString())) {
@@ -337,12 +330,6 @@ userRouter.post('/find/pw', async (req, res) => {
       message: '해당하는 계정 정보가 존재하지 않습니다.',
     }
   }
-  if (2 <= queryRes.rowCount) {
-    throw {
-      statusCode: 500,
-      message: '동일한 계정 정보가 2개 이상 존재합니다.',
-    }
-  }
 
   queryString = `UPDATE kkujjang.user SET password = crypt($1, gen_salt('bf')) WHERE username = $2 AND phone = $3`
   values = [newPassword, username, phone]
@@ -392,12 +379,6 @@ userRouter.post('/find/id', async (req, res) => {
     throw {
       statusCode: 400,
       message: '해당하는 계정 정보가 존재하지 않습니다.',
-    }
-  }
-  if (2 <= queryRes.rowCount) {
-    throw {
-      statusCode: 500,
-      message: '동일한 username이 2개 이상 존재합니다.',
     }
   }
 
@@ -463,12 +444,6 @@ userRouter.get('/:id', async (req, res) => {
     throw {
       statusCode: 400,
       message: '존재하지 않는 id입니다.',
-    }
-  }
-  if (2 <= queryRes.rowCount) {
-    throw {
-      statusCode: 500,
-      message: '동일한 id가 2개 이상 존재합니다.',
     }
   }
 
