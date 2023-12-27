@@ -229,7 +229,7 @@ userRouter.get('/search', async (req, res) => {
     }
   }
   const authorityLevel = (await getSession(sessionId)).authorityLevel
-  if (Number(authorityLevel) !== 1) {
+  if (authorityLevel !== process.env.ADMIN_AUTHORITY) {
     throw {
       statusCode: 401,
       message: '관리자 권한이 없습니다.',
@@ -447,7 +447,7 @@ userRouter.get('/:id', async (req, res) => {
   }
 
   const authorityLevel = (await getSession(sessionId)).authorityLevel
-  if (authorityLevel == process.env.ADMIN_AUTHORITY) {
+  if (authorityLevel === process.env.ADMIN_AUTHORITY) {
     result.isBanned = is_banned
     result.bannedReason = banned_reason
   }
@@ -467,7 +467,7 @@ userRouter.delete('/', async (req, res) => {
   // Permission 체크 끝
 
   const id = (await getSession(sessionId)).userId
-  const queryString = `UPDATE kkujjang.user SET kakao_id = NULL, username = NULL, phone = NULL, is_deleted = TRUE WHERE id = $1`
+  const queryString = `UPDATE kkujjang.user SET kakao_id = NULL, username = NULL, phone = NULL, nickname = NULL, is_deleted = TRUE WHERE id = $1`
   const values = [id]
   await pgQuery(queryString, values)
 
@@ -602,8 +602,8 @@ userRouter.post('/', async (req, res) => {
   )
   // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제 끝
 
-  queryString = `INSERT INTO kkujjang.user (username, password, phone) VALUES ($1, crypt($2, gen_salt('bf')), $3)`
-  values = [username, password, phone]
+  const queryString = `INSERT INTO kkujjang.user (username, password, phone) VALUES ($1, crypt($2, gen_salt('bf')), $3)`
+  const values = [username, password, phone]
   await pgQuery(queryString, values)
 
   res.json({
