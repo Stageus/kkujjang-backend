@@ -506,32 +506,10 @@ userRouter.put('/', async (req, res) => {
   )
   // body 값 유효성 검증 끝
 
-  // 이미 동일한 닉네임인지 체크
   const id = (await getSession(sessionId)).userId
-  let queryString = `SELECT count(*) FROM kkujjang.user WHERE nickname LIKE $1 AND id = $2`
-  let values = [`${nickname}#%`, id]
-  let count = (await pgQuery(queryString, values)).rows[0].count
-  count = Number(count)
-  if (count === 1) {
-    throw {
-      statusCode: 400,
-      message: '이미 동일한 닉네임입니다.',
-    }
-  }
-  // 이미 동일한 닉네임인지 체크 끝
-
-  // 동일한 닉네임의 개수 파악
-  queryString = `SELECT count(*) FROM kkujjang.user WHERE nickname LIKE $1`
-  values = [`${nickname}#%`]
-  count = (await pgQuery(queryString, values)).rows[0].count
-  count = Number(count)
-  // 동일한 닉네임의 개수 파악 끝
-
-  // count = 동일한 닉네임의 개수, nickname#count+1로 RDB에 저장해준다
-  queryString = `UPDATE kkujjang.user SET nickname = $1 WHERE id = $2`
-  values = [`${nickname}#${count + 1}`, id]
+  const queryString = `UPDATE kkujjang.user SET nickname = $1 WHERE id = $2`
+  const values = [`${nickname}#${id}`, id]
   await pgQuery(queryString, values)
-  // count = 동일한 닉네임의 개수, nickname#count+1로 RDB에 저장해준다 끝
 
   res.json({
     result: 'success',
