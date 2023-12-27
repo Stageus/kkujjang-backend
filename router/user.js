@@ -8,6 +8,7 @@ import { getSession, createSession, destorySession } from '@utility/session'
 import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn } from '@utility/session'
+import { sendSMS } from '@utility/sms-auth'
 
 configDotenv()
 
@@ -52,7 +53,7 @@ userRouter.get('/oauth/kakao', async (req, res) => {
 
   // 첫 로그인 여부 판단
   const firstSigninValidation = await pgQuery(
-    `SELECT count(*) AS count FROM kkujjang.user_auth_kakao WHERE kakao_id=$1 AND is_deleted=FALSE;`,
+    `SELECT count(*) AS count FROM kkujjang.user WHERE kakao_id=$1 AND is_deleted=FALSE;`,
     [kakaoId],
   )
 
@@ -60,27 +61,14 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   if (firstSigninValidation.rows[0].count == 0) {
     console.log('First Login...')
 
-    const dbIndex = Number(
-      (
-        await pgQuery(
-          `INSERT INTO kkujjang.user (nickname) VALUES (NULL) RETURNING id;`,
-        )
-      ).rows[0].id,
-    )
-    console.log(`DB INDEX: ${dbIndex}`)
-
-    await pgQuery(
-      `INSERT INTO kkujjang.user_auth_kakao (kakao_id, user_id) VALUES ($1, $2);`,
-      [kakaoId, dbIndex],
-    )
+    await pgQuery(`INSERT INTO kkujjang.user (kakao_id) VALUES ($1);`, [
+      kakaoId,
+    ])
   }
 
   const { id: userId, authority_level: authorityLevel } = (
     await pgQuery(
-      `SELECT kkujjang.user.id, authority_level FROM kkujjang.user
-    JOIN kkujjang.user_auth_kakao
-    ON kkujjang.user.id = kkujjang.user_auth_kakao.user_id
-    WHERE kakao_id = $1;`,
+      `SELECT id, authority_level FROM kkujjang.user WHERE kakao_id = $1;`,
       [kakaoId],
     )
   ).rows[0]
@@ -94,12 +82,11 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   })
 
   console.log('session successfully stored')
-
   console.log(JSON.stringify(await getSession(sessionId)))
 
   res.setHeader(
     'Set-Cookie',
-    `sessionId=${sessionId}; HttpOnly; Secure; Max-Age=7200`,
+    `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=7200`,
   )
 
   res.json({
@@ -117,20 +104,22 @@ userRouter.get('/oauth/unlink', async (req, res) => {
     }
   }
 
-  const { userId, kakaoToken } = await getSession(sessionId)
+  const { userId = null, kakaoToken = null } = await getSession(sessionId)
 
   console.log(`User ID: ${userId}, token: ${kakaoToken}`)
 
+  if (userId === null) {
+    throw {
+      statusCode: 401,
+      message: '유효하지 않은 세션 정보입니다.',
+    }
+  }
+
   // 카카오 계정 연결 해제
-  await kakao.unlink(token)
+  await kakao.unlink(kakaoToken)
 
   // 세션 삭제
   await destorySession(sessionId)
-
-  await pgQuery(
-    `UPDATE kkujjang.user_auth_kakao SET is_deleted = TRUE WHERE user_id=$1`,
-    [userId],
-  )
 
   await pgQuery(`UPDATE kkujjang.user SET is_deleted = TRUE WHERE id=$1`, [
     userId,
@@ -138,11 +127,84 @@ userRouter.get('/oauth/unlink', async (req, res) => {
 
   // 세션 쿠키 삭제
   res
-    .setHeader('Set-Cookie', `sessionId=none; HttpOnly; Secure; Max-Age=0`)
+    .setHeader(
+      'Set-Cookie',
+      `sessionId=none; HttpOnly; Path=/; Secure; Max-Age=0`,
+    )
     .json({
       result: 'success',
     })
 })
+
+userRouter.get('/auth-code', async (req, res) => {
+  const { receiverNumber } = req.query
+
+  validation.check(
+    receiverNumber,
+    'receiverNumber',
+    validation.checkExist(),
+    validation.checkRegExp(/010-\d{4}-\d{4}/),
+  )
+
+  const smsAuthId = uuid.v4()
+  const authNumber = String(Math.floor(Math.random() * 900000) + 100000)
+
+  console.log(`smsAuthId: ${smsAuthId}, authNumber: ${authNumber}`)
+
+  await redisClient.hSet(`auth-${smsAuthId}`, {
+    authNumber: authNumber,
+    fullfilled: 'false',
+    phoneNumber: receiverNumber,
+  })
+  await redisClient.expire(`auth-${smsAuthId}`, 300)
+
+  const snsResult = await sendSMS(
+    receiverNumber,
+    `끝짱 인증번호: ${authNumber}`,
+  )
+  console.log(snsResult)
+
+  res
+    .setHeader(
+      'Set-Cookie',
+      `smsAuthId=${smsAuthId}; HttpOnly; Path=/; Secure; Max-Age=300`,
+    )
+    .json({
+      result: 'success',
+    })
+})
+
+userRouter.post('/auth-code/check', async (req, res) => {
+  const { smsAuthId } = req.cookies
+  validation.check(smsAuthId, 'smsAuthId', validation.checkExist())
+
+  const { authNumber, phoneNumber } = req.body
+  validation.check(
+    authNumber,
+    'authNumber',
+    validation.checkExist(),
+    validation.checkRegExp(/\d{6}/),
+  )
+
+  const { authNumber: answer, phoneNumber: targetPhoneNumber } =
+    await redisClient.hGetAll(`auth-${smsAuthId}`)
+  const result = {
+    result: 'success',
+  }
+
+  if (phoneNumber === targetPhoneNumber && authNumber === answer) {
+    redisClient.hSet(`auth-${smsAuthId}`, {
+      fullfilled: 'true',
+    })
+    redisClient.expire(`auth-${smsAuthId}`, 1800)
+  } else {
+    throw {
+      statusCode: 400,
+      message: '잘못된 인증 정보입니다.',
+    }
+  }
+
+  res.json(result)
 
 // 로그아웃
 userRouter.get('/signout', async (req, res) => {

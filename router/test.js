@@ -7,6 +7,7 @@ import { testSchema } from '@model/test'
 import { redisClient } from '@database/redis'
 import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
+import { isSignedIn } from '@utility/session'
 
 configDotenv()
 
@@ -125,4 +126,15 @@ testRouter.post('/tempAuth-code', async (req, res) => {
   res.json({
     result: 'success',
   })
+
+testRouter.get('/user/signed/:userId', async (req, res) => {
+  const { userId } = req.params
+
+  console.log(`Check if user ${userId} signed in...`)
+
+  const result = {
+    result: await isSignedIn(userId),
+  }
+
+  res.json(result)
 })
