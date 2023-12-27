@@ -288,6 +288,13 @@ userRouter.post('/find/pw', async (req, res) => {
   // Permission 체크 끝
 
   const smsAuthId = req.cookies.smsAuthId
+  if (!smsAuthId) {
+    throw {
+      statusCode: 400,
+      message: '휴대폰 인증이 되어있지 않습니다.',
+    }
+  }
+
   const { username, newPassword, phone } = req.body
 
   // body 값 유효성 검증
@@ -352,6 +359,13 @@ userRouter.post('/find/id', async (req, res) => {
   // Permission 체크 끝
 
   const smsAuthId = req.cookies.smsAuthId
+  if (!smsAuthId) {
+    throw {
+      statusCode: 400,
+      message: '휴대폰 인증이 되어있지 않습니다.',
+    }
+  }
+
   const { phone } = req.body
 
   // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증
@@ -433,7 +447,7 @@ userRouter.get('/:id', async (req, res) => {
   }
 
   const authorityLevel = (await getSession(sessionId)).authorityLevel
-  if (authorityLevel == 1) {
+  if (authorityLevel == process.env.ADMIN_AUTHORITY) {
     result.isBanned = is_banned
     result.bannedReason = banned_reason
   }
@@ -453,7 +467,7 @@ userRouter.delete('/', async (req, res) => {
   // Permission 체크 끝
 
   const id = (await getSession(sessionId)).userId
-  const queryString = `UPDATE kkujjang.user SET kakao_id = null, username = NULL, phone = NULL, is_deleted = TRUE WHERE id = $1`
+  const queryString = `UPDATE kkujjang.user SET kakao_id = NULL, username = NULL, phone = NULL, is_deleted = TRUE WHERE id = $1`
   const values = [id]
   await pgQuery(queryString, values)
 
@@ -536,6 +550,13 @@ userRouter.post('/', async (req, res) => {
   // Permission 체크 끝
 
   const smsAuthId = req.cookies.smsAuthId
+  if (!smsAuthId) {
+    throw {
+      statusCode: 400,
+      message: '휴대폰 인증이 되어있지 않습니다.',
+    }
+  }
+
   const { username, password, phone } = req.body
 
   // body값 유효성 검증
@@ -580,18 +601,6 @@ userRouter.post('/', async (req, res) => {
     `smsAuthId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
   )
   // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제 끝
-
-  // 동일한 username 또는 phone이 이미 RDB에 존재하는지 체크
-  let queryString = `SELECT count(*) FROM  kkujjang.user WHERE username = $1 OR phone = $2`
-  let values = [username, phone]
-  let queryRes = await pgQuery(queryString, values)
-  if (0 < queryRes.rows[0].count) {
-    throw {
-      statusCode: 400,
-      message: '중복된 계정 정보가 존재합니다.',
-    }
-  }
-  // 동일한 username 또는 phone이 이미 RDB에 존재하는지 체크 끝
 
   queryString = `INSERT INTO kkujjang.user (username, password, phone) VALUES ($1, crypt($2, gen_salt('bf')), $3)`
   values = [username, password, phone]
