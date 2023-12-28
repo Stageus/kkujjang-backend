@@ -20,7 +20,7 @@ noticeRouter.post('/', async (req, res) => {
     Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
   ) {
     throw {
-      status: 401,
+      statusCode: 401,
       message: '권한이 없습니다.',
     }
   }
@@ -109,7 +109,7 @@ noticeRouter.put('/:noticeId', async (req, res) => {
     Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
   ) {
     throw {
-      status: 401,
+      statusCode: 401,
       message: '권한이 없습니다.',
     }
   }
@@ -138,7 +138,7 @@ noticeRouter.delete('/:noticeId', async (req, res) => {
     Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
   ) {
     throw {
-      status: 401,
+      statusCode: 401,
       message: '권한이 없습니다.',
     }
   }
