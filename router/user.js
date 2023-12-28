@@ -205,6 +205,7 @@ userRouter.post('/auth-code/check', async (req, res) => {
   }
 
   res.json(result)
+})
 
 // 로그아웃
 userRouter.get('/signout', async (req, res) => {
