@@ -8,6 +8,7 @@ import { redisClient } from '@database/redis'
 import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn, createSession } from '@utility/session'
+import { upload } from '@utility/multer.js'
 
 configDotenv()
 
@@ -170,4 +171,8 @@ testRouter.get('/user/session', async (req, res) => {
     .json({
       result: 'success',
     })
+})
+
+testRouter.post('/fileUpload', upload.array('img'), async (req, res) => {
+  res.send(req.files)
 })
