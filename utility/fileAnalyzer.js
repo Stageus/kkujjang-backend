@@ -128,7 +128,7 @@ export const fileAnalyzer = (req, limits, options) =>
           if (`.${type.ext}` !== path.extname(filename)) {
             errResult.push({
               valid: false,
-              message: `fileAnalyzer: ${filename} | 알 수 확장자 또는 확장자가 변조된 파일입니다`,
+              message: `fileAnalyzer: ${filename} | 알 수 없는 확장자 또는 확장자가 변조된 파일입니다`,
             })
             return fileStream.resume()
           }
