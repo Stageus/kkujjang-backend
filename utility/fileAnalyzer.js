@@ -7,7 +7,7 @@ import { PassThrough, pipeline } from 'stream'
 
 export const fileAnalyzer = (req, limits, options) =>
   new Promise(async (resolve, reject) => {
-    const { checkAuthor, allowedFileCount } = options
+    const { checkAuthor, allowedFileCount, allowedExtension } = options
     const bb = busboy({ headers: req.headers, limits })
 
     const params = {}
@@ -125,13 +125,21 @@ export const fileAnalyzer = (req, limits, options) =>
         fileStream.once('data', function (firstChunk) {
           const type = checkMagicNumber(firstChunk)
           // 불일치한다면 해당 파일 stream을 보내지 않는다
-          if (`.${type.ext}` !== path.extname(filename)) {
-            errResult.push({
-              valid: false,
-              message: `fileAnalyzer: ${filename} | 알 수 확장자 또는 확장자가 변조된 파일입니다`,
-            })
-            return fileStream.resume()
-          }
+          // if (`.${type.ext}` !== path.extname(filename)) {
+          //   errResult.push({
+          //     valid: false,
+          //     message: `fileAnalyzer: ${filename} | 알 수 확장자 또는 확장자가 변조된 파일입니다`,
+          //   })
+          //   return fileStream.resume()
+          // }
+
+          // if (!allowedExtension.includes(type.ext)) {
+          //   errResult.push({
+          //     valid: false,
+          //     message: `fileAnalyzer: ${filename} | 허용되지 않은 확장자입니다`,
+          //   })
+          //   return fileStream.resume()
+          // }
 
           // 일치한다면 pipeline 구성 작업
           passThrough.write(firstChunk)

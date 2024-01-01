@@ -16,6 +16,13 @@ export const upload = multer({
   }),
   limits: {
     files: 10,
-    fileSize: 1024 * 1024 * 5,
+    fileSize: 1024 * 1024 * 11,
+  },
+  fileFilter: (req, file, cb) => {
+    if (req.ip.split(':').pop() !== '127.0.0.1') {
+      req.body.badRequest = true
+      cb(null, false)
+    }
+    cb(null, true)
   },
 })

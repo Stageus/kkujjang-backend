@@ -196,6 +196,7 @@ testRouter.post('/fileUpload', async (req, res) => {
     checkAuthor: false,
     // 해당 id에 올라 갈 수 있는 최대 파일의 개수이다
     allowedFileCount: 3,
+    allowedExtension: ['jpg', 'jpeg', 'png'],
   }
 
   // 파일 하나당 10MB 제한
@@ -220,5 +221,11 @@ testRouter.post('/fileUpload', async (req, res) => {
 
 // 기본적인 multer를 이용한 S3에 업로드하는 라우터
 testRouter.post('/S3-fileUpload', upload.array('files'), async (req, res) => {
+  if (req.body.badRequest) {
+    throw {
+      statusCode: 400,
+      message: 'localhost에서만 요청할 수 있습니다',
+    }
+  }
   res.send(req.files[0].location)
 })
