@@ -8,7 +8,9 @@ import { redisClient } from '@database/redis'
 import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn, createSession } from '@utility/session'
+import { fileAnalyzer } from '@utility/fileAnalyzer'
 import { upload } from '@utility/multer.js'
+import { checkFileCount } from '@database/s3'
 
 configDotenv()
 
@@ -173,6 +175,50 @@ testRouter.get('/user/session', async (req, res) => {
     })
 })
 
-testRouter.post('/fileUpload', upload.array('img'), async (req, res) => {
-  res.send(req.files)
+testRouter.get('/fileCount', async (req, res) => {
+  const cnt = await checkFileCount('')
+  res.send(`s3://${process.env.AWS_BUCKET_NAME}: ${cnt} files`)
+})
+
+testRouter.get('/fileCount/:id', async (req, res) => {
+  const key = req.params.id
+  const cnt = await checkFileCount(`${key}/`)
+  res.send(`s3://${process.env.AWS_BUCKET_NAME}/${key}: ${cnt} files`)
+})
+
+// 요청 방법 : form-data
+// 필수 key : id(text) process.env.AWS_BUCKET_NAME/id 에 업로드 하기 위함
+// 필수 아닌 key : files(File)
+// 파일 검증 후 검증된 파일만 S3-fileUpload 라우터에 fetch 요청을 한다
+testRouter.post('/fileUpload', async (req, res) => {
+  const options = {
+    // true로하면 해당 id에 해당하는 폴더에 쓰기 권한이 있는지 검증한다
+    checkAuthor: false,
+    // 해당 id에 올라 갈 수 있는 최대 파일의 개수이다
+    allowedFileCount: 3,
+  }
+
+  // 파일 하나당 10MB 제한
+  const bbConfig = {
+    // 파일 하나당 사이즈
+    fileSize: 1024 * 1024 * 11,
+    // 파일 이름 최대 크기
+    fieldNameSize: 100,
+  }
+
+  // message : S3에 업로드된 경로
+  // fileAnalyzer : 검사 통과한 파일만 S3-fileUpload 라우터에 fetch 요청
+  const message = await fileAnalyzer(req, bbConfig, options).catch((err) => {
+    throw err
+  })
+
+  res.send({
+    result: 'success',
+    message,
+  })
+})
+
+// 기본적인 multer를 이용한 S3에 업로드하는 라우터
+testRouter.post('/S3-fileUpload', upload.array('files'), async (req, res) => {
+  res.send(req.files[0].location)
 })
