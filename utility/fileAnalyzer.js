@@ -17,7 +17,7 @@ export const fileAnalyzer = (req, limits, options) =>
     let fetchPromises = []
 
     const abortController = new AbortController()
-    const { signal } = abortController // fetch 요청 취소
+    const { signal } = abortController // fetch 요청 취소용
     // text 값 가져오기
     bb.on(
       'field',
@@ -197,8 +197,8 @@ export const fileAnalyzer = (req, limits, options) =>
     bb.on('finish', async () => {
       // 모든 fetch 요청이 완료되었는지 확인
       let resultMessages = await Promise.all(fetchPromises)
-      let result = []
-      result.push(params)
+      let result = {}
+      result['text'] = params
       for (const resultMessage of resultMessages) {
         result.push({
           valid: true,
@@ -206,7 +206,7 @@ export const fileAnalyzer = (req, limits, options) =>
         })
       }
 
-      result = result.concat(errResult)
+      result['files'] = errResult
       resolve(result)
     })
 
