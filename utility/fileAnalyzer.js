@@ -125,7 +125,10 @@ export const fileAnalyzer = (req, limits, options) =>
         fileStream.once('data', function (firstChunk) {
           const type = checkMagicNumber(firstChunk)
           // 불일치한다면 해당 파일 stream을 보내지 않는다
-          if (`.${type.ext}` !== path.extname(filename)) {
+          if (
+            `.${type.ext}` !== path.extname(filename) ||
+            type.ext === 'unknown'
+          ) {
             errResult.push({
               valid: false,
               message: `fileAnalyzer: ${filename} | 알 수 없는 확장자 또는 확장자가 변조된 파일입니다`,
@@ -199,14 +202,15 @@ export const fileAnalyzer = (req, limits, options) =>
       let resultMessages = await Promise.all(fetchPromises)
       let result = {}
       result['text'] = params
+      let filesResult = []
       for (const resultMessage of resultMessages) {
-        result.push({
+        filesResult.push({
           valid: true,
           message: resultMessage,
         })
       }
-
-      result['files'] = errResult
+      filesResult = filesResult.concat(errResult)
+      result['files'] = filesResult
       resolve(result)
     })
 
