@@ -5,6 +5,8 @@ import asyncify from 'express-asyncify'
 import cookieParser from 'cookie-parser'
 import { testRouter } from '@router/test'
 import { userRouter } from '@router/user'
+import { noticeRouter } from '@router/notice'
+import { reportRouter } from '@router/report'
 
 configDotenv()
 
@@ -24,6 +26,8 @@ server.use(cookieParser())
 
 server.use('/test', testRouter)
 server.use('/user', userRouter)
+server.use('/notice', noticeRouter)
+server.use('/report', reportRouter)
 
 server.use(async (err, req, res, next) => {
   const { statusCode = 500, message = 'undefined error', messages = [] } = err
