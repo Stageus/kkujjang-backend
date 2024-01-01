@@ -10,7 +10,7 @@ export const upload = multer({
     key: (req, file, cb) => {
       const prefix = req.body.id
       const filename = req.body.filename
-      const key = `${prefix}/${filename}`
+      const key = `${prefix}/${Date.now()}-${filename}`
       cb(null, key)
     },
   }),
