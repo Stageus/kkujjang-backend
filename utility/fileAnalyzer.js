@@ -18,40 +18,37 @@ export const fileAnalyzer = (req, limits, options) =>
 
     const params = {}
 
-    let errResult = []
+    const errResult = []
     let fileCount = -1
-    let fetchPromises = []
+    const fetchPromises = []
 
     // text 값 가져오기
-    bb.on(
-      'field',
-      function (fieldname, value, { nameTruncated, valueTruncated }) {
-        if (fieldname == null) {
-          reject({
-            statusCode: 400,
-            message: 'MISSING_FIELD_NAME',
-          })
-        }
-        if (nameTruncated) {
-          reject({
-            statusCode: 400,
-            message: 'LIMIT_FIELD_KEY',
-          })
-        }
-        if (valueTruncated) {
-          reject({
-            statusCode: 400,
-            message: 'LIMIT_FIELD_VALUE',
-          })
-        }
+    bb.on('field', (fieldname, value, { nameTruncated, valueTruncated }) => {
+      if (fieldname == null) {
+        reject({
+          statusCode: 400,
+          message: 'MISSING_FIELD_NAME',
+        })
+      }
+      if (nameTruncated) {
+        reject({
+          statusCode: 400,
+          message: 'LIMIT_FIELD_KEY',
+        })
+      }
+      if (valueTruncated) {
+        reject({
+          statusCode: 400,
+          message: 'LIMIT_FIELD_VALUE',
+        })
+      }
 
-        if (fieldname === 'id') {
-          params['id'] = value
-        } else {
-          params[fieldname] = value
-        }
-      },
-    )
+      if (fieldname === 'id') {
+        params['id'] = value
+      } else {
+        params[fieldname] = value
+      }
+    })
 
     bb.on(
       'file',
@@ -224,10 +221,10 @@ export const fileAnalyzer = (req, limits, options) =>
 
     bb.on('finish', async () => {
       // 모든 fetch 요청이 완료되었는지 확인
-      let resultMessages = await Promise.all(fetchPromises)
-      let result = {}
+      const resultMessages = await Promise.all(fetchPromises)
+      const result = {}
       result['text'] = params
-      let filesResult = []
+      const filesResult = []
       for (const resultMessage of resultMessages) {
         filesResult.push({
           url: resultMessage,
@@ -240,7 +237,7 @@ export const fileAnalyzer = (req, limits, options) =>
     })
 
     // busboy 기본 예외 이벤트 리스너 등록
-    bb.on('error', function (err) {
+    bb.on('error', (err) => {
       reject(err)
     })
     bb.on('partsLimit', function () {

@@ -33,7 +33,7 @@ inquiryRouter.post('/', async (req, res) => {
   const options = {
     // 값을 전달하면 해당 사용자가 주어진 폴더(${id}/)에 쓰기 권한이 있는지 검증한다
     checkAuthor:
-      type == 0
+      type === 0
         ? {
             // 사용자의 인덱스 아이디
             authorId: session.userId,
@@ -88,27 +88,31 @@ inquiryRouter.post('/', async (req, res) => {
   }
 
   queryString = `INSERT INTO kkujjang.inquiry_file (inquiry_id, file_order, key) `
-  values = [queryRes.rows[0].id]
-  let fileOrder = 1
-  let conditionCnt = 0
-  for (const file of message.files) {
-    values.push(fileOrder++)
-    values.push(file.url)
-    conditionCnt += 2
-  }
+  const fileAttributes = message.files.map((file, index) => ({
+    order: index + 1,
+    url: file.url,
+    argOrder: (index + 1) * 2,
+  }))
 
-  for (let start = 2; start <= conditionCnt; start += 2) {
-    if (start == 2) {
-      queryString += `VALUES `
-    }
-    queryString += `($1, $${start}, $${start + 1}), `
-  }
+  values = [
+    1,
+    ...fileAttributes.reduce(
+      (prev, fileAttribute) => [
+        ...prev,
+        fileAttribute.order,
+        fileAttribute.url,
+      ],
+      [],
+    ),
+  ]
 
-  if (conditionCnt) {
-    queryString = queryString.slice(0, -2)
-  }
+  const valueStrings = fileAttributes.map(
+    (fileAttribute) =>
+      `VALUES ($1, $${fileAttribute.argOrder}, $${fileAttribute.argOrder + 1})`,
+  )
 
-  await pgQuery(queryString, values)
+  const inquiryFileUploadQuery = [queryString, ...valueStrings].join(' ')
+  await pgQuery(inquiryFileUploadQuery, values)
 
-  res.json({ result: id })
+  res.json({ result: 'success' })
 })
