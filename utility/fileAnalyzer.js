@@ -1,5 +1,6 @@
 import path from 'path'
 import busboy from 'busboy'
+import * as uuid from 'uuid'
 import FormData from 'form-data'
 import fetch from 'node-fetch-commonjs'
 import { checkFileCount } from '@database/s3'
@@ -16,8 +17,6 @@ export const fileAnalyzer = (req, limits, options) =>
     let fileCount = -1
     let fetchPromises = []
 
-    const abortController = new AbortController()
-    const { signal } = abortController // fetch 요청 취소용
     // text 값 가져오기
     bb.on(
       'field',
@@ -41,7 +40,7 @@ export const fileAnalyzer = (req, limits, options) =>
           })
         }
 
-        if (fieldname === 'id' || fieldname === 'threadId') {
+        if (fieldname === 'id') {
           params['id'] = value
         } else {
           params[fieldname] = value
@@ -67,18 +66,15 @@ export const fileAnalyzer = (req, limits, options) =>
         }
         // busyboy 매개변수 기본 예외처리 끝
 
-        if (!params.id) {
-          reject({
-            statusCode: 400,
-            message:
-              'fileAnalyzer: 필수 key(id)가 존재하지 않습니다 | id는 files보다 먼저 form-data에 등록해야합니다',
-          })
-          return fileStream.resume()
-        }
+        // limit event 발생 시 fetch 취소 요청할 abortController 정의
+        const abortController = new AbortController()
+        const { signal } = abortController
 
+        if (!params.id) {
+          params['id'] = uuid.v4()
+        }
         if (fieldname !== 'files') {
           errResult.push({
-            valid: false,
             message: `fileAnalyzer: ${filename} | filedname은 'files'여야합니다`,
           })
           return fileStream.resume()
@@ -93,15 +89,14 @@ export const fileAnalyzer = (req, limits, options) =>
         if (checkAuthor) {
           // SELECT FROM ...
           errResult.push({
-            valid: false,
             message: `fileAnalyzer: ${filename} | /${params.id}에 저장할 권한이 없습니다`,
           })
           return fileStream.resume()
         }
+
         // 해당 id의 저장 공간이 개수 초과라면 해당 파일 stream을 보내지 않는다
         if (allowedFileCount < fileCount) {
           errResult.push({
-            valid: false,
             message: `fileAnalyzer: ${filename} | 저장 개수 한도 초과로 저장되지 않았습니다`,
           })
           return fileStream.resume()
@@ -110,9 +105,9 @@ export const fileAnalyzer = (req, limits, options) =>
         // 업로드하다가 파일 사이즈 한계 도래
         fileStream.on('limit', function () {
           errResult.push({
-            valid: false,
             message: `fileAnalyzer: ${filename} | 파일 용량 초과로 저장되지 않았습니다`,
           })
+          fileCount--
           abortController.abort()
           return fileStream.resume()
         })
@@ -130,17 +125,17 @@ export const fileAnalyzer = (req, limits, options) =>
             type.ext === 'unknown'
           ) {
             errResult.push({
-              valid: false,
               message: `fileAnalyzer: ${filename} | 알 수 없는 확장자 또는 확장자가 변조된 파일입니다`,
             })
+            fileCount--
             return fileStream.resume()
           }
 
           if (!allowedExtension.includes(type.ext)) {
             errResult.push({
-              valid: false,
               message: `fileAnalyzer: ${filename} | 허용되지 않은 확장자입니다`,
             })
+            fileCount--
             return fileStream.resume()
           }
 
@@ -181,7 +176,14 @@ export const fileAnalyzer = (req, limits, options) =>
             .then((data) => {
               return data
             })
-            .catch((err) => reject(err))
+            .catch((err) => {
+              console.log(err)
+              errResult.push({
+                filename,
+                message: err,
+              })
+              return reject(err)
+            })
 
           fetchPromises.push(fetchPromise)
         })
@@ -205,12 +207,12 @@ export const fileAnalyzer = (req, limits, options) =>
       let filesResult = []
       for (const resultMessage of resultMessages) {
         filesResult.push({
-          valid: true,
-          message: resultMessage,
+          url: resultMessage,
         })
       }
-      filesResult = filesResult.concat(errResult)
+
       result['files'] = filesResult
+      result['err'] = errResult
       resolve(result)
     })
 
