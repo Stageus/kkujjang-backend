@@ -3,12 +3,17 @@ import busboy from 'busboy'
 import * as uuid from 'uuid'
 import FormData from 'form-data'
 import fetch from 'node-fetch-commonjs'
+import { pgQuery } from '@database/postgres'
 import { checkFileCount } from '@database/s3'
 import { PassThrough, pipeline } from 'stream'
 
 export const fileAnalyzer = (req, limits, options) =>
   new Promise(async (resolve, reject) => {
-    const { checkAuthor, allowedFileCount, allowedExtension } = options
+    let { checkAuthor, type, allowedFileCount, allowedExtension } = options
+    if (checkAuthor) {
+      checkAuthor['isChecked'] = false
+      checkAuthor['authored'] = false
+    }
     const bb = busboy({ headers: req.headers, limits })
 
     const params = {}
@@ -72,6 +77,10 @@ export const fileAnalyzer = (req, limits, options) =>
 
         if (!params.id) {
           params['id'] = uuid.v4()
+          if (checkAuthor) {
+            // 새로운 글을 쓰면 checkAuthor 비활성화
+            checkAuthor = false
+          }
         }
         if (fieldname !== 'files') {
           errResult.push({
@@ -81,17 +90,32 @@ export const fileAnalyzer = (req, limits, options) =>
         }
 
         if (fileCount === -1) {
-          fileCount = await checkFileCount(params.id)
+          if (type == 'edit') fileCount = await checkFileCount(params.id)
         }
         fileCount++
 
         // 권한 체크 모드라면 해당 id에 대해 권한 검증
         if (checkAuthor) {
-          // SELECT FROM ...
-          errResult.push({
-            message: `fileAnalyzer: ${filename} | /${params.id}에 저장할 권한이 없습니다`,
-          })
-          return fileStream.resume()
+          let { authorId, table, columnName, isChecked } = checkAuthor
+          if (!isChecked) {
+            checkAuthor.authored = (
+              await pgQuery(
+                `SELECT count(*)
+                FROM kkujjang.${table}
+                WHERE ${columnName} = $1 AND author_id=$2`,
+                [params.id, authorId],
+              )
+            ).rows[0].count
+            console.log(authorId, checkAuthor.authored)
+            checkAuthor.isChecked = true
+          }
+          if (!Number(checkAuthor.authored)) {
+            console.log('123')
+            errResult.push({
+              message: `fileAnalyzer: ${filename} | ${params.id}/에 저장할 권한이 없습니다`,
+            })
+            return fileStream.resume()
+          }
         }
 
         // 해당 id의 저장 공간이 개수 초과라면 해당 파일 stream을 보내지 않는다
@@ -177,7 +201,6 @@ export const fileAnalyzer = (req, limits, options) =>
               return data
             })
             .catch((err) => {
-              console.log(err)
               errResult.push({
                 filename,
                 message: err,
