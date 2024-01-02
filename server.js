@@ -7,7 +7,6 @@ import { testRouter } from '@router/test'
 import { userRouter } from '@router/user'
 import { noticeRouter } from '@router/notice'
 import { reportRouter } from '@router/report'
-import { inquiryRouter } from '@router/inquiry'
 
 configDotenv()
 
@@ -29,7 +28,6 @@ server.use('/test', testRouter)
 server.use('/user', userRouter)
 server.use('/notice', noticeRouter)
 server.use('/report', reportRouter)
-server.use('/inquiry', inquiryRouter)
 
 server.use(async (err, req, res, next) => {
   const { statusCode = 500, message = 'undefined error', messages = [] } = err
