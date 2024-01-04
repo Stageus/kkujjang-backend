@@ -1,6 +1,5 @@
 import express from 'express'
 import asyncify from 'express-asyncify'
-import { getSession } from '@utility/session'
 import { configDotenv } from 'dotenv'
 import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
