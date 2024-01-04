@@ -3,6 +3,15 @@ import { configDotenv } from 'dotenv'
 
 configDotenv()
 
+export const allowGuestOnly = async (req, res, next) => {
+  if (req.cookies.sessionId) {
+    throw {
+      statusCode: 400,
+      message: '이미 로그인 상태입니다.',
+    }
+  }
+}
+
 export const requireSignin = async (req, res, next) => {
   const session = await getSession(req.cookies.sessionId)
 
