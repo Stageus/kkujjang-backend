@@ -8,9 +8,13 @@ import { redisClient } from '@database/redis'
 import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn, createSession } from '@utility/session'
-import { fileAnalyzer } from '@utility/fileAnalyzer'
+import { fileAnalyzer } from '@utility/file-analyzer'
 import { upload } from '@utility/multer.js'
 import { checkFileCount } from '@database/s3'
+import {
+  requireSignin,
+  requireAdminAuthority,
+} from '@utility/kkujjang-middleware'
 
 configDotenv()
 
@@ -229,3 +233,12 @@ testRouter.post('/S3-fileUpload', upload.array('files'), async (req, res) => {
   }
   res.send(req.files[0].location)
 })
+
+testRouter.get(
+  '/middleware',
+  requireSignin,
+  requireAdminAuthority,
+  (req, res) => {
+    res.json(res.locals.session)
+  },
+)
