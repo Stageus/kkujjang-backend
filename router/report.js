@@ -1,26 +1,22 @@
 import express from 'express'
 import asyncify from 'express-asyncify'
-import { getSession } from '@utility/session'
 import { configDotenv } from 'dotenv'
 import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
+import {
+  requireAdminAuthority,
+  requireSignin,
+} from '@utility/kkujjang-middleware'
 
 configDotenv()
 
 export const reportRouter = asyncify(express.Router())
 
-reportRouter.post('/', async (req, res) => {
-  const session = await getSession(req.cookies.sessionId)
+reportRouter.post('/', requireSignin, async (req, res) => {
+  const session = res.locals.session
 
   console.log(JSON.stringify(session))
   console.log(process.env.ADMIN_AUTHORITY)
-
-  if (!session) {
-    throw {
-      statusCode: 401,
-      message: '로그인이 필요합니다.',
-    }
-  }
 
   const {
     reporteeId = null,
@@ -64,19 +60,7 @@ reportRouter.post('/', async (req, res) => {
   res.json({ result: 'success' })
 })
 
-reportRouter.get('/search', async (req, res) => {
-  const session = await getSession(req.cookies.sessionId)
-
-  if (
-    !session ||
-    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
-  ) {
-    throw {
-      statusCode: 401,
-      message: '권한이 없습니다.',
-    }
-  }
-
+reportRouter.get('/search', requireAdminAuthority, async (req, res) => {
   const {
     page = 1,
     reporterId = null,
@@ -126,20 +110,10 @@ reportRouter.get('/search', async (req, res) => {
   res.json({ result })
 })
 
-reportRouter.put('/:reportId', async (req, res) => {
-  const session = await getSession(req.cookies.sessionId)
-
-  if (
-    !session ||
-    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
-  ) {
-    throw {
-      statusCode: 401,
-      message: '권한이 없습니다.',
-    }
-  }
-
+reportRouter.put('/:reportId', requireAdminAuthority, async (req, res) => {
   const reportId = Number(req.params.reportId)
+
+  // TODO: load reportStatus from body not from query
   const reportStatus = Number(req.query.reportStatus)
 
   if (
@@ -161,19 +135,7 @@ reportRouter.put('/:reportId', async (req, res) => {
   res.json({ result: 'success' })
 })
 
-reportRouter.get('/:reportId', async (req, res) => {
-  const session = await getSession(req.cookies.sessionId)
-
-  if (
-    !session ||
-    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
-  ) {
-    throw {
-      statusCode: 401,
-      message: '권한이 없습니다.',
-    }
-  }
-
+reportRouter.get('/:reportId', requireAdminAuthority, async (req, res) => {
   const { reportId } = req.params
   validation.check(reportId, 'reportId', validation.checkExist())
 
