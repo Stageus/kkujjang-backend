@@ -10,6 +10,8 @@ export const allowGuestOnly = async (req, res, next) => {
       message: '이미 로그인 상태입니다.',
     }
   }
+
+  next()
 }
 
 export const requireSignin = async (req, res, next) => {
