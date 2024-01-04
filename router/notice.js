@@ -4,26 +4,17 @@ import { getSession } from '@utility/session'
 import { configDotenv } from 'dotenv'
 import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
+import { requireAdminAuthority } from '@utility/kkujjang-middleware'
 
 configDotenv()
 
 export const noticeRouter = asyncify(express.Router())
 
-noticeRouter.post('/', async (req, res) => {
-  const session = await getSession(req.cookies.sessionId)
+noticeRouter.post('/', requireAdminAuthority, async (req, res) => {
+  const session = res.locals.session
 
   console.log(JSON.stringify(session))
   console.log(process.env.ADMIN_AUTHORITY)
-
-  if (
-    !session ||
-    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
-  ) {
-    throw {
-      statusCode: 401,
-      message: '권한이 없습니다.',
-    }
-  }
 
   const { title, content } = req.body
   validation.check(title, 'title', validation.checkExist())
@@ -101,19 +92,7 @@ noticeRouter.get('/:noticeId', async (req, res) => {
   res.json({ result })
 })
 
-noticeRouter.put('/:noticeId', async (req, res) => {
-  const session = await getSession(req.cookies.sessionId)
-
-  if (
-    !session ||
-    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
-  ) {
-    throw {
-      statusCode: 401,
-      message: '권한이 없습니다.',
-    }
-  }
-
+noticeRouter.put('/:noticeId', requireAdminAuthority, async (req, res) => {
   const { noticeId } = req.params
   validation.check(noticeId, 'noticeId', validation.checkExist())
 
@@ -130,22 +109,11 @@ noticeRouter.put('/:noticeId', async (req, res) => {
   res.json({ result: 'success' })
 })
 
-noticeRouter.delete('/:noticeId', async (req, res) => {
-  const session = await getSession(req.cookies.sessionId)
-
-  if (
-    !session ||
-    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
-  ) {
-    throw {
-      statusCode: 401,
-      message: '권한이 없습니다.',
-    }
-  }
-
+noticeRouter.delete('/:noticeId', requireAdminAuthority, async (req, res) => {
   const { noticeId } = req.params
   validation.check(noticeId, 'noticeId', validation.checkExist())
 
+  // TODO: remove line 117-119
   const { title, content } = req.body
   validation.check(title, 'title', validation.checkExist())
   validation.check(content, 'content', validation.checkExist())
