@@ -9,7 +9,12 @@ export const getSession = async (id) => {
     return null
   }
 
-  const session = (await redisClient.hGetAll(`session-${id}`)) ?? {}
+  const session = await redisClient.hGetAll(`session-${id}`)
+
+  if (!session || Object.keys(session).length === 0) {
+    return null
+  }
+
   return session
 }
 
