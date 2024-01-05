@@ -16,10 +16,10 @@ import {
   requireSmsAuth,
 } from '@middleware/auth'
 import {
-  valdiateSignUpForm,
+  valdiateSignUp,
   validateAuthCodeCheck,
-  validateAuthCodeQuery,
-  validateSignInForm,
+  validateAuthCode as validateReceiverNumber,
+  validateSignIn,
 } from '@middleware/user'
 
 configDotenv()
@@ -126,7 +126,7 @@ userRouter.get('/oauth/unlink', requireSignin, async (req, res) => {
     })
 })
 
-userRouter.get('/auth-code', validateAuthCodeQuery, async (req, res) => {
+userRouter.get('/auth-code', validateReceiverNumber, async (req, res) => {
   const { receiverNumber } = req.query
 
   const smsAuthId = uuid.v4()
@@ -199,49 +199,44 @@ userRouter.get('/signout', requireSignin, async (req, res) => {
 })
 
 // 로그인
-userRouter.post(
-  '/signin',
-  allowGuestOnly,
-  validateSignInForm,
-  async (req, res) => {
-    const { username, password } = req.body
+userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
+  const { username, password } = req.body
 
-    const queryString = `SELECT id, authority_level FROM kkujjang.user
+  const queryString = `SELECT id, authority_level FROM kkujjang.user
   WHERE username = $1 AND password = crypt($2, password)`
-    const values = [username, password]
-    const queryRes = await pgQuery(queryString, values)
+  const values = [username, password]
+  const queryRes = await pgQuery(queryString, values)
 
-    if (queryRes.rowCount == 0) {
-      throw {
-        statusCode: 401,
-        message: '존재하지 않는 계정 정보입니다.',
-      }
+  if (queryRes.rowCount == 0) {
+    throw {
+      statusCode: 401,
+      message: '존재하지 않는 계정 정보입니다.',
     }
+  }
 
-    const { id: userId, authority_level: authorityLevel } = queryRes.rows[0]
+  const { id: userId, authority_level: authorityLevel } = queryRes.rows[0]
 
-    if (await isSignedIn(userId.toString())) {
-      throw {
-        statusCode: 400,
-        message: '접속중인 계정입니다.',
-      }
+  if (await isSignedIn(userId.toString())) {
+    throw {
+      statusCode: 400,
+      message: '접속중인 계정입니다.',
     }
+  }
 
-    const sessionId = await createSession({
-      userId,
-      authorityLevel,
-    })
+  const sessionId = await createSession({
+    userId,
+    authorityLevel,
+  })
 
-    res.setHeader(
-      'Set-Cookie',
-      `sessionId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=7200`,
-    )
+  res.setHeader(
+    'Set-Cookie',
+    `sessionId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=7200`,
+  )
 
-    res.json({
-      result: 'suecess',
-    })
-  },
-)
+  res.json({
+    result: 'suecess',
+  })
+})
 
 // 특정 조건에 맞는 사용자 검색
 userRouter.get('/search', requireAdminAuthority, async (req, res) => {
@@ -529,7 +524,7 @@ userRouter.post(
   '/',
   allowGuestOnly,
   requireSmsAuth,
-  valdiateSignUpForm,
+  valdiateSignUp,
   async (req, res) => {
     const { username, password, phone } = req.body
 

@@ -1,6 +1,6 @@
 import * as validation from '@utility/validation'
 
-export const validateSignInForm = (req, res, next) => {
+export const validateSignIn = (req, res, next) => {
   const { id = null, password = null } = req.body
 
   validation.check(
@@ -25,7 +25,7 @@ export const validateSignInForm = (req, res, next) => {
   next()
 }
 
-export const valdiateSignUpForm = (req, res, next) => {
+export const valdiateSignUp = (req, res, next) => {
   const { username, password, phone } = req.body
 
   validation.check(
@@ -54,7 +54,7 @@ export const valdiateSignUpForm = (req, res, next) => {
   next()
 }
 
-export const validateAuthCodeQuery = (req, res, next) => {
+export const validateAuthCode = (req, res, next) => {
   const { receiverNumber } = req.query
 
   validation.check(
@@ -66,6 +66,7 @@ export const validateAuthCodeQuery = (req, res, next) => {
 
   next()
 }
+
 export const validateAuthCodeCheck = (req, res, next) => {
   const { smsAuthId } = req.cookies
   const { authNumber, phoneNumber } = req.body
