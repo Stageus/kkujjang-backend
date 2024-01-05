@@ -13,7 +13,7 @@ import {
   allowGuestOnly,
   requireAdminAuthority,
   requireSignin,
-} from '@utility/kkujjang-middleware'
+} from '@middleware/auth'
 
 configDotenv()
 

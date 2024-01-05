@@ -5,7 +5,8 @@
       "@router/*": ["router/*"],
       "@utility/*": ["utility/*"],
       "@model/*": ["model/*"],
-      "@database/*": ["database/*"]
+      "@database/*": ["database/*"],
+      "@middleware/*": ["middleware/*"]
     }
   },
   "exclude": ["node_modules"]

@@ -3,7 +3,7 @@ import asyncify from 'express-asyncify'
 import { configDotenv } from 'dotenv'
 import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
-import { requireAdminAuthority } from '@utility/kkujjang-middleware'
+import { requireAdminAuthority } from '@middleware/auth'
 
 configDotenv()
 

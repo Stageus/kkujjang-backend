@@ -11,10 +11,7 @@ import { isSignedIn, createSession } from '@utility/session'
 import { fileAnalyzer } from '@utility/file-analyzer'
 import { upload } from '@utility/multer.js'
 import { checkFileCount } from '@database/s3'
-import {
-  requireSignin,
-  requireAdminAuthority,
-} from '@utility/kkujjang-middleware'
+import { requireSignin, requireAdminAuthority } from '@middleware/auth'
 
 configDotenv()
 
