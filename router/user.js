@@ -361,50 +361,31 @@ userRouter.post('/find/pw', async (req, res) => {
 })
 
 // 아이디 찾기
-userRouter.post('/find/id', allowGuestOnly, async (req, res) => {
-  const smsAuthId = req.cookies.smsAuthId
-  if (!smsAuthId) {
-    throw {
-      statusCode: 400,
-      message: '휴대폰 인증이 되어있지 않습니다.',
+userRouter.post(
+  '/find/id',
+  allowGuestOnly,
+  requireSmsAuth,
+  async (req, res) => {
+    const { phone } = req.body
+
+    const queryString = `SELECT username FROM kkujjang.user WHERE phone = $1`
+    const values = [phone]
+    const queryRes = await pgQuery(queryString, values)
+
+    if (queryRes.rowCount == 0) {
+      throw {
+        statusCode: 400,
+        message: '해당하는 계정 정보가 존재하지 않습니다.',
+      }
     }
-  }
 
-  const { phone } = req.body
+    const { username } = queryRes.rows[0]
 
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증
-  const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
-  if (smsAuth.phoneNumber !== phone || smsAuth.fulfilled !== 'true') {
-    throw {
-      statusCode: 401,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증 끝
-
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제
-  await redisClient.del(`auth-${smsAuthId}`)
-  res.setHeader(
-    'Set-Cookie',
-    `smsAuthId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
-  )
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제 끝
-
-  const queryString = `SELECT username FROM kkujjang.user WHERE phone = $1`
-  const values = [phone]
-  const queryRes = await pgQuery(queryString, values)
-  if (queryRes.rowCount == 0) {
-    throw {
-      statusCode: 400,
-      message: '해당하는 계정 정보가 존재하지 않습니다.',
-    }
-  }
-
-  const username = queryRes.rows[0].username
-  res.json({
-    result: username,
-  })
-})
+    res.json({
+      result: username,
+    })
+  },
+)
 
 // 인덱스를 이용한 사용자 검색
 userRouter.get('/:userId', requireSignin, async (req, res) => {
