@@ -9,6 +9,11 @@ import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn } from '@utility/session'
 import { sendSMS } from '@utility/sms-auth'
+import {
+  allowGuestOnly,
+  requireAdminAuthority,
+  requireSignin,
+} from '@utility/kkujjang-middleware'
 
 configDotenv()
 
@@ -16,14 +21,7 @@ export const userRouter = asyncify(express.Router())
 
 // 카카오 로그인 콜백
 // 토큰 발급 -> 사용자 정보 조회 -> 첫 가입 시 DB 등록 -> 세션 등록 -> 쿠키에 세션 ID 저장
-userRouter.get('/oauth/kakao', async (req, res) => {
-  if (req.cookies.sessionId) {
-    throw {
-      statusCode: 400,
-      message: '이미 로그인된 상태입니다.',
-    }
-  }
-
+userRouter.get('/oauth/kakao', allowGuestOnly, async (req, res) => {
   // 토큰 발급
   const tokenData = await kakao.getToken(req.query.code)
 
@@ -94,26 +92,11 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   })
 })
 
-userRouter.get('/oauth/unlink', async (req, res) => {
+userRouter.get('/oauth/unlink', requireSignin, async (req, res) => {
   const sessionId = req.cookies.sessionId
-
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인하지 않은 상태입니다.',
-    }
-  }
-
-  const { userId = null, kakaoToken = null } = await getSession(sessionId)
+  const { userId, kakaoToken } = res.locals.session
 
   console.log(`User ID: ${userId}, token: ${kakaoToken}`)
-
-  if (userId === null) {
-    throw {
-      statusCode: 401,
-      message: '유효하지 않은 세션 정보입니다.',
-    }
-  }
 
   // 카카오 계정 연결 해제
   await kakao.unlink(kakaoToken)
@@ -208,16 +191,8 @@ userRouter.post('/auth-code/check', async (req, res) => {
 })
 
 // 로그아웃
-userRouter.get('/signout', async (req, res) => {
-  // Permission 체크 : 사용자, 관리자
+userRouter.get('/signout', requireSignin, async (req, res) => {
   const sessionId = req.cookies.sessionId
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인하지 않은 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
 
   // 세션과 쿠키 삭제
   await destorySession(sessionId)
@@ -225,7 +200,6 @@ userRouter.get('/signout', async (req, res) => {
     'Set-Cookie',
     `sessionId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
   )
-  // 세션과 쿠키 삭제 끝
 
   res.json({
     result: 'success',
@@ -233,16 +207,7 @@ userRouter.get('/signout', async (req, res) => {
 })
 
 // 로그인
-userRouter.post('/signin', async (req, res) => {
-  // Permission 체크 : 게스트
-  if (req.cookies.sessionId) {
-    throw {
-      statusCode: 401,
-      message: '이미 로그인된 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
-
+userRouter.post('/signin', allowGuestOnly, async (req, res) => {
   const { username, password } = req.body
 
   const queryString = `SELECT id, authority_level FROM kkujjang.user
@@ -282,24 +247,7 @@ userRouter.post('/signin', async (req, res) => {
 })
 
 // 특정 조건에 맞는 사용자 검색
-userRouter.get('/search', async (req, res) => {
-  // Permission 체크 : 관리자
-  const sessionId = req.cookies.sessionId
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인 해주세요',
-    }
-  }
-  const authorityLevel = (await getSession(sessionId)).authorityLevel
-  if (authorityLevel !== process.env.ADMIN_AUTHORITY) {
-    throw {
-      statusCode: 401,
-      message: '관리자 권한이 없습니다.',
-    }
-  }
-  // Permission 체크 끝
-
+userRouter.get('/search', requireAdminAuthority, async (req, res) => {
   const username = req.query.username
   const nickname = req.query.nickname
   const isBanned = req.query.isBanned
@@ -420,16 +368,7 @@ userRouter.post('/find/pw', async (req, res) => {
 })
 
 // 아이디 찾기
-userRouter.post('/find/id', async (req, res) => {
-  // Permission 체크 : 게스트
-  if (req.cookies.sessionId) {
-    throw {
-      statusCode: 401,
-      message: '이미 로그인된 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
-
+userRouter.post('/find/id', allowGuestOnly, async (req, res) => {
   const smsAuthId = req.cookies.smsAuthId
   if (!smsAuthId) {
     throw {
