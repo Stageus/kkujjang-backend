@@ -21,6 +21,7 @@ import {
   validateReceiverNumber,
   validateSignIn,
   validateUserModification,
+  validatePasswordReset,
 } from '@middleware/user'
 
 configDotenv()
@@ -290,75 +291,33 @@ userRouter.get('/search', requireAdminAuthority, async (req, res) => {
 })
 
 // 비밀번호 재설정
-userRouter.post('/find/pw', async (req, res) => {
-  // Permission 체크 : 게스트
-  if (req.cookies.sessionId) {
-    throw {
-      statusCode: 401,
-      message: '이미 로그인된 상태입니다.',
+userRouter.post(
+  '/find/pw',
+  allowGuestOnly,
+  requireSmsAuth,
+  validatePasswordReset,
+  async (req, res) => {
+    const { username, newPassword, phone } = req.body
+
+    let queryString = `SELECT count(*) AS count FROM kkujjang.user WHERE username = $1 AND phone = $2`
+    let values = [username, phone]
+    const { count } = (await pgQuery(queryString, values)).rows[0]
+    if (count === 0) {
+      throw {
+        statusCode: 400,
+        message: '해당하는 계정 정보가 존재하지 않습니다.',
+      }
     }
-  }
-  // Permission 체크 끝
 
-  const smsAuthId = req.cookies.smsAuthId
-  if (!smsAuthId) {
-    throw {
-      statusCode: 400,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
+    queryString = `UPDATE kkujjang.user SET password = crypt($1, gen_salt('bf')) WHERE username = $2 AND phone = $3`
+    values = [newPassword, username, phone]
+    await pgQuery(queryString, values)
 
-  const { username, newPassword, phone } = req.body
-
-  // body 값 유효성 검증
-  validation.check(
-    newPassword,
-    'newPassword',
-    validation.checkExist(),
-    validation.checkLength(7, 30),
-    validation.checkRegExp(
-      /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[@#$%^&+=!\(\)])[a-zA-Z0-9@#$%^&+=!\(\)]+$/,
-    ),
-  )
-  // body 값 유효성 검증 끝
-
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증
-  const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
-
-  if (smsAuth.phoneNumber !== phone || smsAuth.fulfilled !== 'true') {
-    throw {
-      statusCode: 401,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증 끝
-
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제
-  await redisClient.del(`auth-${smsAuthId}`)
-  res.setHeader(
-    'Set-Cookie',
-    `smsAuthId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
-  )
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제 끝
-
-  let queryString = `SELECT count(*) FROM  kkujjang.user WHERE username = $1 AND phone = $2`
-  let values = [username, phone]
-  const queryRes = (await pgQuery(queryString, values)).rows[0].count
-  if (queryRes == 0) {
-    throw {
-      statusCode: 400,
-      message: '해당하는 계정 정보가 존재하지 않습니다.',
-    }
-  }
-
-  queryString = `UPDATE kkujjang.user SET password = crypt($1, gen_salt('bf')) WHERE username = $2 AND phone = $3`
-  values = [newPassword, username, phone]
-  await pgQuery(queryString, values)
-
-  res.json({
-    result: 'success',
-  })
-})
+    res.json({
+      result: 'success',
+    })
+  },
+)
 
 // 아이디 찾기
 userRouter.post(
