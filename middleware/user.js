@@ -23,7 +23,7 @@ export const validateSignIn = (req, res, next) => {
   next()
 }
 
-export const valdiateSignUp = (req, res, next) => {
+export const validateSignUp = (req, res, next) => {
   const { username, password, phone } = req.body
 
   validation.check(
@@ -52,7 +52,7 @@ export const valdiateSignUp = (req, res, next) => {
   next()
 }
 
-export const validateAuthCode = (req, res, next) => {
+export const validateReceiverNumber = (req, res, next) => {
   const { receiverNumber } = req.query
 
   validation.check(

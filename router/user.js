@@ -16,9 +16,9 @@ import {
   requireSmsAuth,
 } from '@middleware/auth'
 import {
-  valdiateSignUp,
+  validateSignUp,
   validateAuthCodeCheck,
-  validateAuthCode as validateReceiverNumber,
+  validateReceiverNumber,
   validateSignIn,
 } from '@middleware/user'
 
@@ -524,7 +524,7 @@ userRouter.post(
   '/',
   allowGuestOnly,
   requireSmsAuth,
-  valdiateSignUp,
+  validateSignUp,
   async (req, res) => {
     const { username, password, phone } = req.body
 
