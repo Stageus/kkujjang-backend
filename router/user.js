@@ -13,8 +13,9 @@ import {
   allowGuestOnly,
   requireAdminAuthority,
   requireSignin,
+  requireSmsAuth,
 } from '@middleware/auth'
-import { validateSignInForm } from '@middleware/user'
+import { valdiateSignUpForm, validateSignInForm } from '@middleware/user'
 
 configDotenv()
 
@@ -137,7 +138,7 @@ userRouter.get('/auth-code', async (req, res) => {
 
   await redisClient.hSet(`auth-${smsAuthId}`, {
     authNumber: authNumber,
-    fullfilled: 'false',
+    fulfilled: 'false',
     phoneNumber: receiverNumber,
   })
   await redisClient.expire(`auth-${smsAuthId}`, 300)
@@ -178,7 +179,7 @@ userRouter.post('/auth-code/check', async (req, res) => {
 
   if (phoneNumber === targetPhoneNumber && authNumber === answer) {
     redisClient.hSet(`auth-${smsAuthId}`, {
-      fullfilled: 'true',
+      fulfilled: 'true',
     })
     redisClient.expire(`auth-${smsAuthId}`, 1800)
   } else {
@@ -338,7 +339,7 @@ userRouter.post('/find/pw', async (req, res) => {
   // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증
   const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
 
-  if (smsAuth.phoeNumber !== phone || smsAuth.fulfilled !== 'true') {
+  if (smsAuth.phoneNumber !== phone || smsAuth.fulfilled !== 'true') {
     throw {
       statusCode: 401,
       message: '휴대폰 인증이 되어있지 않습니다.',
@@ -387,7 +388,7 @@ userRouter.post('/find/id', allowGuestOnly, async (req, res) => {
 
   // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증
   const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
-  if (smsAuth.phoeNumber !== phone || smsAuth.fulfilled !== 'true') {
+  if (smsAuth.phoneNumber !== phone || smsAuth.fulfilled !== 'true') {
     throw {
       statusCode: 401,
       message: '휴대폰 인증이 되어있지 않습니다.',
@@ -534,74 +535,20 @@ userRouter.put('/', async (req, res) => {
 })
 
 // 회원가입
-userRouter.post('/', async (req, res) => {
-  // Permission 체크 : 게스트
-  if (req.cookies.sessionId) {
-    throw {
-      statusCode: 401,
-      message: '이미 로그인된 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
+userRouter.post(
+  '/',
+  allowGuestOnly,
+  requireSmsAuth,
+  valdiateSignUpForm,
+  async (req, res) => {
+    const { username, password, phone } = req.body
 
-  const smsAuthId = req.cookies.smsAuthId
-  if (!smsAuthId) {
-    throw {
-      statusCode: 400,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
+    const queryString = `INSERT INTO kkujjang.user (username, password, phone) VALUES ($1, crypt($2, gen_salt('bf')), $3)`
+    const values = [username, password, phone]
+    await pgQuery(queryString, values)
 
-  const { username, password, phone } = req.body
-
-  // body값 유효성 검증
-  validation.check(
-    username,
-    'username',
-    validation.checkExist(),
-    validation.checkLength(7, 30),
-    validation.checkRegExp(/^(?=.*[a-z])(?=.*[0-9])[a-z0-9]+$/),
-  )
-  validation.check(
-    password,
-    'password',
-    validation.checkExist(),
-    validation.checkLength(7, 30),
-    validation.checkRegExp(
-      /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[@#$%^&+=!\(\)])[a-zA-Z0-9@#$%^&+=!\(\)]+$/,
-    ),
-  )
-  validation.check(
-    phone,
-    'phone',
-    validation.checkExist(),
-    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
-  )
-  // body값 유효성 검증 끝
-
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증
-  const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
-  if (smsAuth.phoeNumber !== phone || smsAuth.fulfilled !== 'true') {
-    throw {
-      statusCode: 400,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증 끝
-
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제
-  await redisClient.del(`auth-${smsAuthId}`)
-  res.setHeader(
-    'Set-Cookie',
-    `smsAuthId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
-  )
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제 끝
-
-  const queryString = `INSERT INTO kkujjang.user (username, password, phone) VALUES ($1, crypt($2, gen_salt('bf')), $3)`
-  const values = [username, password, phone]
-  await pgQuery(queryString, values)
-
-  res.json({
-    result: 'success',
-  })
-})
+    res.json({
+      result: 'success',
+    })
+  },
+)

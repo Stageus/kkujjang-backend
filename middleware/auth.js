@@ -1,5 +1,6 @@
 import { getSession } from '@utility/session'
 import { configDotenv } from 'dotenv'
+import { redisClient } from '@database/redis'
 
 configDotenv()
 
@@ -43,6 +44,39 @@ export const requireAdminAuthority = async (req, res, next) => {
   }
 
   res.locals.session = session
+
+  next()
+}
+
+export const requireSmsAuth = async (req, res, next) => {
+  // 프로덕션에서만 SMS 인증 요구
+  if (process.env.NODE_ENV !== 'production') {
+    next()
+    return
+  }
+
+  const { smsAuthId } = req.cookies
+  const { phone } = req.body
+
+  const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
+  console.log(JSON.stringify(smsAuth))
+
+  if (
+    !smsAuthId ||
+    smsAuth.phoneNumber !== phone ||
+    smsAuth.fulfilled !== 'true'
+  ) {
+    throw {
+      statusCode: 400,
+      message: '휴대폰 인증이 되어있지 않습니다.',
+    }
+  }
+
+  await redisClient.del(`auth-${smsAuthId}`)
+  res.setHeader(
+    'Set-Cookie',
+    `smsAuthId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
+  )
 
   next()
 }
