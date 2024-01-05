@@ -17,6 +17,7 @@ import {
 } from '@middleware/auth'
 import {
   valdiateSignUpForm,
+  validateAuthCodeCheck,
   validateAuthCodeQuery,
   validateSignInForm,
 } from '@middleware/user'
@@ -156,17 +157,9 @@ userRouter.get('/auth-code', validateAuthCodeQuery, async (req, res) => {
     })
 })
 
-userRouter.post('/auth-code/check', async (req, res) => {
+userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
   const { smsAuthId } = req.cookies
-  validation.check(smsAuthId, 'smsAuthId', validation.checkExist())
-
   const { authNumber, phoneNumber } = req.body
-  validation.check(
-    authNumber,
-    'authNumber',
-    validation.checkExist(),
-    validation.checkRegExp(/\d{6}/),
-  )
 
   const { authNumber: answer, phoneNumber: targetPhoneNumber } =
     await redisClient.hGetAll(`auth-${smsAuthId}`)

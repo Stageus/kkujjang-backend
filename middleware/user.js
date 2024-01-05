@@ -66,3 +66,25 @@ export const validateAuthCodeQuery = (req, res, next) => {
 
   next()
 }
+export const validateAuthCodeCheck = (req, res, next) => {
+  const { smsAuthId } = req.cookies
+  const { authNumber, phoneNumber } = req.body
+
+  validation.check(smsAuthId, 'smsAuthId', validation.checkExist())
+
+  validation.check(
+    authNumber,
+    'authNumber',
+    validation.checkExist(),
+    validation.checkRegExp(/\d{6}/),
+  )
+
+  validation.check(
+    phoneNumber,
+    'phoneNumber',
+    validation.checkExist(),
+    validation.checkRegExp(/010-\d{4}-\d{4}/),
+  )
+
+  next()
+}
