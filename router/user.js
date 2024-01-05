@@ -20,6 +20,7 @@ import {
   validateAuthCodeCheck,
   validateReceiverNumber,
   validateSignIn,
+  validateUserModification,
 } from '@middleware/user'
 
 configDotenv()
@@ -486,38 +487,23 @@ userRouter.delete('/', async (req, res) => {
 })
 
 // 회원 정보 수정
-userRouter.put('/', async (req, res) => {
-  // Permission 체크 : 사용자, 관리자
-  const sessionId = req.cookies.sessionId
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인하지 않은 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
+userRouter.put(
+  '/',
+  requireSignin,
+  validateUserModification,
+  async (req, res) => {
+    const { nickname } = req.body
+    const { id } = res.locals.session
 
-  const { nickname } = req.body
+    const queryString = `UPDATE kkujjang.user SET nickname = $1 WHERE id = $2`
+    const values = [`${nickname}#${id}`, id]
+    await pgQuery(queryString, values)
 
-  // body 값 유효성 검증
-  validation.check(
-    nickname,
-    `nickname`,
-    validation.checkExist(),
-    validation.checkLength(1, 15),
-    validation.checkRegExp(/^[a-zA-Z0-9가-힣]+$/),
-  )
-  // body 값 유효성 검증 끝
-
-  const id = (await getSession(sessionId)).userId
-  const queryString = `UPDATE kkujjang.user SET nickname = $1 WHERE id = $2`
-  const values = [`${nickname}#${id}`, id]
-  await pgQuery(queryString, values)
-
-  res.json({
-    result: 'success',
-  })
-})
+    res.json({
+      result: 'success',
+    })
+  },
+)
 
 // 회원가입
 userRouter.post(

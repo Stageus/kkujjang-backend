@@ -52,6 +52,19 @@ export const validateSignUp = (req, res, next) => {
   next()
 }
 
+export const validateUserModification = (req, res, next) => {
+  const { nickname } = req.body
+
+  validation.check(
+    nickname,
+    `nickname`,
+    validation.checkExist(),
+    validation.checkRegExp(/^[a-zA-Z0-9가-힣]{1,15}$/),
+  )
+
+  next()
+}
+
 export const validateReceiverNumber = (req, res, next) => {
   const { receiverNumber } = req.query
 
