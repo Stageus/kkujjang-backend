@@ -15,7 +15,11 @@ import {
   requireSignin,
   requireSmsAuth,
 } from '@middleware/auth'
-import { valdiateSignUpForm, validateSignInForm } from '@middleware/user'
+import {
+  valdiateSignUpForm,
+  validateAuthCodeQuery,
+  validateSignInForm,
+} from '@middleware/user'
 
 configDotenv()
 
@@ -121,15 +125,8 @@ userRouter.get('/oauth/unlink', requireSignin, async (req, res) => {
     })
 })
 
-userRouter.get('/auth-code', async (req, res) => {
+userRouter.get('/auth-code', validateAuthCodeQuery, async (req, res) => {
   const { receiverNumber } = req.query
-
-  validation.check(
-    receiverNumber,
-    'receiverNumber',
-    validation.checkExist(),
-    validation.checkRegExp(/010-\d{4}-\d{4}/),
-  )
 
   const smsAuthId = uuid.v4()
   const authNumber = String(Math.floor(Math.random() * 900000) + 100000)

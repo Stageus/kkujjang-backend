@@ -53,3 +53,16 @@ export const valdiateSignUpForm = (req, res, next) => {
 
   next()
 }
+
+export const validateAuthCodeQuery = (req, res, next) => {
+  const { receiverNumber } = req.query
+
+  validation.check(
+    receiverNumber,
+    'receiverNumber',
+    validation.checkExist(),
+    validation.checkRegExp(/010-\d{4}-\d{4}/),
+  )
+
+  next()
+}
