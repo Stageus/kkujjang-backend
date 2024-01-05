@@ -407,26 +407,18 @@ userRouter.post('/find/id', allowGuestOnly, async (req, res) => {
 })
 
 // 인덱스를 이용한 사용자 검색
-userRouter.get('/:id', async (req, res) => {
-  // Permission 체크 : 사용자, 관리자
-  const sessionId = req.cookies.sessionId
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인하지 않은 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
+userRouter.get('/:userId', requireSignin, async (req, res) => {
+  const { userId } = req.params
+  const { authorityLevel } = res.locals.session
 
-  const id = req.params.id
   const queryString = `SELECT level, exp, nickname, wins, loses, is_banned, banned_reason FROM kkujjang.user WHERE id = $1 AND is_deleted = FALSE`
-  const values = [id]
+  const values = [userId]
   const queryRes = await pgQuery(queryString, values)
 
   if (queryRes.rowCount == 0) {
     throw {
       statusCode: 400,
-      message: '존재하지 않는 id입니다.',
+      message: '존재하지 않는 사용자입니다.',
     }
   }
 
@@ -450,40 +442,33 @@ userRouter.get('/:id', async (req, res) => {
     winRate,
   }
 
-  const authorityLevel = (await getSession(sessionId)).authorityLevel
   if (authorityLevel === process.env.ADMIN_AUTHORITY) {
     result.isBanned = is_banned
     result.bannedReason = banned_reason
   }
-  res.send(result)
+
+  res.json({ result })
 })
 
 // 회원 탈퇴
-userRouter.delete('/', async (req, res) => {
-  // Permission 체크 : 사용자, 관리자
-  const sessionId = req.cookies.sessionId
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인하지 않은 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
+userRouter.delete('/', requireSignin, async (req, res) => {
+  const { sessionId } = req.cookies
+  const { userId } = res.locals.session
 
-  const id = (await getSession(sessionId)).userId
   const queryString = `UPDATE kkujjang.user SET kakao_id = NULL, username = NULL, phone = NULL, nickname = NULL, is_deleted = TRUE WHERE id = $1`
-  const values = [id]
+  const values = [userId]
   await pgQuery(queryString, values)
 
-  res.setHeader(
-    'Set-Cookie',
-    `sessionId=none; Path=/; HttpOnly; Secure; Max-Age=0`,
-  )
   await destorySession(sessionId)
 
-  res.json({
-    result: 'success',
-  })
+  res
+    .setHeader(
+      'Set-Cookie',
+      `sessionId=none; Path=/; HttpOnly; Secure; Max-Age=0`,
+    )
+    .json({
+      result: 'success',
+    })
 })
 
 // 회원 정보 수정
