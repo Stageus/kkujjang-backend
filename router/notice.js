@@ -4,7 +4,8 @@ import { configDotenv } from 'dotenv'
 import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
 import { requireAdminAuthority } from '@middleware/auth'
-import { validateNotice } from '@middleware/notice'
+import { validateNotice, validateNoticeSearch } from '@middleware/notice'
+import { validatePageNumber } from '@middleware/page'
 
 configDotenv()
 
@@ -28,7 +29,7 @@ noticeRouter.post(
   },
 )
 
-noticeRouter.get('/list', async (req, res) => {
+noticeRouter.get('/list', validatePageNumber, async (req, res) => {
   const page = Number(req.query.page ?? 1)
 
   const result = (
@@ -44,30 +45,28 @@ noticeRouter.get('/list', async (req, res) => {
   res.json({ result })
 })
 
-noticeRouter.get('/search', async (req, res) => {
-  const page = Number(req.query.page ?? 1)
-  const keyword = req.query.q
+noticeRouter.get(
+  '/search',
+  validatePageNumber,
+  validateNoticeSearch,
+  async (req, res) => {
+    const page = Number(req.query.page ?? 1)
+    const keyword = req.query.q
 
-  validation.check(
-    validation,
-    'keyword',
-    validation.checkExist(),
-    validation.checkRegExp(/^[a-zA-Z가-힣0-9 ].+$/),
-  )
-
-  const result = (
-    await pgQuery(
-      `SELECT title, content, created_at, views 
+    const result = (
+      await pgQuery(
+        `SELECT title, content, created_at, views 
       FROM kkujjang.notice 
       WHERE is_deleted=FALSE
       AND title LIKE '%${keyword}%'
       ORDER BY created_at DESC
       OFFSET ${(page - 1) * 10} LIMIT 10`,
-    )
-  ).rows
+      )
+    ).rows
 
-  res.json({ result })
-})
+    res.json({ result })
+  },
+)
 
 noticeRouter.get('/:noticeId', async (req, res) => {
   const { noticeId } = req.params

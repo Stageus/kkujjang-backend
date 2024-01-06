@@ -13,3 +13,16 @@ export const validateNotice = (req, res, next) => {
 
   next()
 }
+
+export const validateNoticeSearch = (req, res, next) => {
+  const keyword = req.query.q
+
+  validation.check(
+    keyword,
+    'keyword',
+    validation.checkExist(),
+    validation.checkRegExp(/^[a-zA-Z가-힣0-9 -~].+$/),
+  )
+
+  next()
+}
