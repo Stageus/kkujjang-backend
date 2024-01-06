@@ -22,6 +22,7 @@ import {
   validateSignIn,
   validateUserModification,
   validatePasswordReset,
+  validateUserSearch,
 } from '@middleware/user'
 
 configDotenv()
@@ -241,54 +242,48 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
 })
 
 // 특정 조건에 맞는 사용자 검색
-userRouter.get('/search', requireAdminAuthority, async (req, res) => {
-  const username = req.query.username
-  const nickname = req.query.nickname
-  const isBanned = req.query.isBanned
+userRouter.get(
+  '/search',
+  requireAdminAuthority,
+  validateUserSearch,
+  async (req, res) => {
+    const { username, nickname, isBanned } = req.query
 
-  // 쿼리 파라미터 검증
-  validation.check(username, `username`, validation.checkRegExp(/^[a-z0-9]+$/))
-  validation.check(
-    nickname,
-    `nickname`,
-    validation.checkRegExp(/^[a-zA-Z0-9가-힣]+$/),
-  )
-  // 쿼리 파라미터 검증 끝
+    const conditions = []
+    const values = []
+    let conditionCnt = 1
+    if (username) {
+      conditions.push(`username LIKE $${conditionCnt++}`)
+      values.push(`%${username}%`)
+    }
+    if (nickname) {
+      conditions.push(`nickname LIKE $${conditionCnt++}`)
+      values.push(`%${nickname}%`)
+    }
+    if (isBanned) {
+      conditions.push(`is_banned = $${conditionCnt++}`)
+      values.push(isBanned)
+    }
 
-  const conditions = []
-  const values = []
-  let conditionCnt = 1
-  if (username) {
-    conditions.push(`username LIKE $${conditionCnt++}`)
-    values.push(`%${username}%`)
-  }
-  if (nickname) {
-    conditions.push(`nickname LIKE $${conditionCnt++}`)
-    values.push(`%${nickname}%`)
-  }
-  if (isBanned) {
-    conditions.push(`is_banned = $${conditionCnt++}`)
-    values.push(isBanned)
-  }
+    let queryString = `SELECT id, username, nickname, is_banned FROM kkujjang.user WHERE is_deleted = FALSE`
 
-  let queryString = `SELECT id, username, nickname, is_banned FROM kkujjang.user WHERE is_deleted = FALSE`
+    if (conditions.length) {
+      queryString += ' AND ' + conditions.join(' AND ')
+    }
+    const queryRes = await pgQuery(queryString, values)
 
-  if (conditions.length) {
-    queryString += ' AND ' + conditions.join(' AND ')
-  }
-  const queryRes = await pgQuery(queryString, values)
+    const result = []
+    for (const data of queryRes.rows) {
+      const { id, username, nickname, is_banned } = data
+      const temp = { id, username, nickname, isBanned: is_banned }
+      result.push(temp)
+    }
 
-  const result = []
-  for (const data of queryRes.rows) {
-    const { id, username, nickname, is_banned } = data
-    const temp = { id, username, nickname, isBanned: is_banned }
-    result.push(temp)
-  }
-
-  res.json({
-    result,
-  })
-})
+    res.json({
+      result,
+    })
+  },
+)
 
 // 비밀번호 재설정
 userRouter.post(
@@ -346,7 +341,7 @@ userRouter.post(
   },
 )
 
-// 인덱스를 이용한 사용자 검색
+// 인덱스를 이용한 사용자 조회
 userRouter.get('/:userId', requireSignin, async (req, res) => {
   const { userId } = req.params
   const { authorityLevel } = res.locals.session
