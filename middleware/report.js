@@ -34,3 +34,28 @@ export const validateReport = (req, res, next) => {
 
   next()
 }
+
+export const validateReportSearch = (req, res, next) => {
+  const {
+    page = 1,
+    reporterId = null,
+    reporteeId = null,
+    isOffensive = null,
+    isPoorManner = null,
+    isCheating = null,
+  } = req.body
+
+  validation.check(page, 'page', validation.checkIsNumber())
+  reporterId &&
+    validation.check(reporterId, 'reporterId', validation.checkIsNumber())
+  reporteeId &&
+    validation.check(reporteeId, 'reporteeId', validation.checkIsNumber())
+  isOffensive &&
+    validation.check(isOffensive, 'isOffensive', validation.checkIsNumber())
+  isPoorManner &&
+    validation.check(isPoorManner, 'isPoorManner', validation.checkIsNumber())
+  isCheating &&
+    validation.check(isCheating, 'isCheating', validation.checkIsNumber())
+
+  next()
+}

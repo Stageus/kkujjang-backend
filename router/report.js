@@ -4,7 +4,7 @@ import { configDotenv } from 'dotenv'
 import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
 import { requireAdminAuthority, requireSignin } from '@middleware/auth'
-import { validateReport } from '@middleware/report'
+import { validateReport, validateReportSearch } from '@middleware/report'
 
 configDotenv()
 
@@ -36,22 +36,26 @@ reportRouter.post('/', requireSignin, validateReport, async (req, res) => {
   res.json({ result: 'success' })
 })
 
-reportRouter.get('/search', requireAdminAuthority, async (req, res) => {
-  const {
-    page = 1,
-    reporterId = null,
-    reporteeId = null,
-    isOffensive = null,
-    isPoorManner = null,
-    isCheating = null,
-  } = req.query
+reportRouter.get(
+  '/search',
+  requireAdminAuthority,
+  validateReportSearch,
+  async (req, res) => {
+    const {
+      page = 1,
+      reporterId = null,
+      reporteeId = null,
+      isOffensive = null,
+      isPoorManner = null,
+      isCheating = null,
+    } = req.query
 
-  // 입력받은 필터에 대해서만 WHERE 조건 추가
-  // 1=1 등 같은 값 비교 시 반드시 true이므로 매개변수 개수 유지를 위해
-  // null 값인 필터에 대해 해당 표현으로 대체
-  const result = (
-    await pgQuery(
-      `SELECT
+    // 입력받은 필터에 대해서만 WHERE 조건 추가
+    // 1=1 등 같은 값 비교 시 반드시 true이므로 매개변수 개수 유지를 위해
+    // null 값인 필터에 대해 해당 표현으로 대체
+    const result = (
+      await pgQuery(
+        `SELECT
         report.id,
         author_id as reporterId, 
         reporter_user_table.nickname as reporterNickname,
@@ -73,18 +77,19 @@ reportRouter.get('/search', requireAdminAuthority, async (req, res) => {
         ${isCheating === null ? `AND $5=$5` : `AND is_cheating=$5`} 
       ORDER BY report.created_at DESC
       OFFSET ${(page - 1) * 10} LIMIT 10`,
-      [
-        Number(reporterId ?? 1),
-        Number(reporteeId ?? 1),
-        isOffensive ?? 1,
-        isPoorManner ?? 1,
-        isCheating ?? 1,
-      ],
-    )
-  ).rows
+        [
+          Number(reporterId ?? 1),
+          Number(reporteeId ?? 1),
+          isOffensive ?? 1,
+          isPoorManner ?? 1,
+          isCheating ?? 1,
+        ],
+      )
+    ).rows
 
-  res.json({ result })
-})
+    res.json({ result })
+  },
+)
 
 reportRouter.put('/:reportId', requireAdminAuthority, async (req, res) => {
   const reportId = Number(req.params.reportId)
