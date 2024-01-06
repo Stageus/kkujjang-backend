@@ -87,4 +87,6 @@ export const checkSame = curry((sameTarget, target) => {
   return result
 })
 
+export const checkIsNumber = curry((target) => !isNaN(Number(target)))
+
 export const check = (...args) => combine(args)

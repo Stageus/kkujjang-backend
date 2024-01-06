@@ -4,43 +4,22 @@ import { configDotenv } from 'dotenv'
 import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
 import { requireAdminAuthority, requireSignin } from '@middleware/auth'
+import { validateReport } from '@middleware/report'
 
 configDotenv()
 
 export const reportRouter = asyncify(express.Router())
 
-reportRouter.post('/', requireSignin, async (req, res) => {
+reportRouter.post('/', requireSignin, validateReport, async (req, res) => {
   const session = res.locals.session
 
-  console.log(JSON.stringify(session))
-  console.log(process.env.ADMIN_AUTHORITY)
-
   const {
-    reporteeId = null,
+    reporteeId,
     isOffensive = 0,
     isPoorManner = 0,
     isCheating = 0,
     note = '',
   } = req.body
-
-  if (reporteeId === null || isNaN(Number(reporteeId))) {
-    throw {
-      statusCode: 400,
-      message: '신고 대상이 올바르지 않습니다.',
-    }
-  }
-
-  if (
-    isOffensive === 0 &&
-    isPoorManner === 0 &&
-    isCheating === 0 &&
-    note === ''
-  ) {
-    throw {
-      statusCode: 400,
-      message: '신고 사유를 입력해 주세요.',
-    }
-  }
 
   await pgQuery(
     `INSERT INTO kkujjang.report (
