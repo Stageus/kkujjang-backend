@@ -4,7 +4,11 @@ import { configDotenv } from 'dotenv'
 import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
 import { requireAdminAuthority, requireSignin } from '@middleware/auth'
-import { validateReport, validateReportSearch } from '@middleware/report'
+import {
+  validateReport,
+  validateReportModification,
+  validateReportSearch,
+} from '@middleware/report'
 
 configDotenv()
 
@@ -91,30 +95,23 @@ reportRouter.get(
   },
 )
 
-reportRouter.put('/:reportId', requireAdminAuthority, async (req, res) => {
-  const reportId = Number(req.params.reportId)
+// 처리 여부 변경
+reportRouter.put(
+  '/:reportId',
+  requireAdminAuthority,
+  validateReportModification,
+  async (req, res) => {
+    const { reportId } = req.params
+    const { reportStatus } = req.body
 
-  // TODO: load reportStatus from body not from query
-  const reportStatus = Number(req.query.reportStatus)
+    await pgQuery(`UPDATE kkujjang.report SET is_handled=$1 WHERE id=$2`, [
+      reportStatus,
+      reportId,
+    ])
 
-  if (
-    isNaN(reportId) ||
-    isNaN(reportStatus) ||
-    (reportStatus !== 0 && reportStatus !== 1)
-  ) {
-    throw {
-      statusCode: 400,
-      message: '잘못된 입력입니다.',
-    }
-  }
-
-  await pgQuery(`UPDATE kkujjang.report SET is_handled=$1 WHERE id=$2`, [
-    reportStatus,
-    reportId,
-  ])
-
-  res.json({ result: 'success' })
-})
+    res.json({ result: 'success' })
+  },
+)
 
 reportRouter.get('/:reportId', requireAdminAuthority, async (req, res) => {
   const { reportId } = req.params

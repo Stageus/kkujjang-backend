@@ -59,3 +59,24 @@ export const validateReportSearch = (req, res, next) => {
 
   next()
 }
+
+export const validateReportModification = (req, res, next) => {
+  const { reportId } = req.params
+  const { reportStatus } = req.body
+
+  validation.check(
+    reportId,
+    'reportId',
+    validation.checkExist(),
+    validation.checkIsNumber(),
+  )
+
+  validation.check(
+    reportStatus,
+    'reportStatus',
+    validation.checkExist(),
+    validation.checkIsNumber(),
+  )
+
+  next()
+}
