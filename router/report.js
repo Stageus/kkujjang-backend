@@ -7,6 +7,7 @@ import { requireAdminAuthority, requireSignin } from '@middleware/auth'
 import {
   validateReport,
   validateReportModification,
+  validateReportPathIndex,
   validateReportSearch,
 } from '@middleware/report'
 
@@ -113,13 +114,16 @@ reportRouter.put(
   },
 )
 
-reportRouter.get('/:reportId', requireAdminAuthority, async (req, res) => {
-  const { reportId } = req.params
-  validation.check(reportId, 'reportId', validation.checkExist())
+reportRouter.get(
+  '/:reportId',
+  requireAdminAuthority,
+  validateReportPathIndex,
+  async (req, res) => {
+    const { reportId } = req.params
 
-  const result = (
-    await pgQuery(
-      `SELECT
+    const result = (
+      await pgQuery(
+        `SELECT
         report.id,
         author_id as reporterId, 
         reporter_user_table.nickname as reporterNickname,
@@ -134,16 +138,16 @@ reportRouter.get('/:reportId', requireAdminAuthority, async (req, res) => {
         JOIN kkujjang.user reporter_user_table ON report.author_id = reporter_user_table.id
         JOIN kkujjang.user reportee_user_table ON report.reportee_id = reportee_user_table.id
       WHERE report.id=$1`,
-      [reportId],
-    )
-  ).rows[0]
+        [reportId],
+      )
+    ).rows[0]
 
-  if (Object.keys(result).length == 0) {
-    throw {
-      statusCode: 409,
-      message: '신고 내역을 찾을 수 없습니다.',
+    if (Object.keys(result).length == 0) {
+      throw {
+        message: '신고 내역을 찾을 수 없습니다.',
+      }
     }
-  }
 
-  res.json({ result })
-})
+    res.json({ result })
+  },
+)

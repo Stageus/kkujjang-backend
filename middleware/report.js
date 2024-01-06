@@ -80,3 +80,16 @@ export const validateReportModification = (req, res, next) => {
 
   next()
 }
+
+export const validateReportPathIndex = (req, res, next) => {
+  const { reportId } = req.params
+
+  validation.check(
+    reportId,
+    'reportId',
+    validation.checkExist(),
+    validation.checkIsNumber(),
+  )
+
+  next()
+}
