@@ -6,7 +6,6 @@ import asyncify from 'express-asyncify'
 import * as kakao from '@utility/kakao'
 import { getSession, createSession, destorySession } from '@utility/session'
 import * as uuid from 'uuid'
-import * as validation from '@utility/validation'
 import { isSignedIn } from '@utility/session'
 import { sendSMS } from '@utility/sms-auth'
 import {
