@@ -4,7 +4,11 @@ import { configDotenv } from 'dotenv'
 import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
 import { requireAdminAuthority } from '@middleware/auth'
-import { validateNotice, validateNoticeSearch } from '@middleware/notice'
+import {
+  validateNotice,
+  validateNoticePathIndex,
+  validateNoticeSearch,
+} from '@middleware/notice'
 import { validatePageNumber } from '@middleware/page'
 
 configDotenv()
@@ -68,7 +72,7 @@ noticeRouter.get(
   },
 )
 
-noticeRouter.get('/:noticeId', async (req, res) => {
+noticeRouter.get('/:noticeId', validateNoticePathIndex, async (req, res) => {
   const { noticeId } = req.params
   validation.check(noticeId, 'noticeId', validation.checkExist())
 
@@ -91,36 +95,46 @@ noticeRouter.get('/:noticeId', async (req, res) => {
   res.json({ result })
 })
 
-noticeRouter.put('/:noticeId', requireAdminAuthority, async (req, res) => {
-  const { noticeId } = req.params
-  validation.check(noticeId, 'noticeId', validation.checkExist())
+noticeRouter.put(
+  '/:noticeId',
+  validateNoticePathIndex,
+  requireAdminAuthority,
+  async (req, res) => {
+    const { noticeId } = req.params
+    validation.check(noticeId, 'noticeId', validation.checkExist())
 
-  const { title, content } = req.body
-  validation.check(title, 'title', validation.checkExist())
-  validation.check(content, 'content', validation.checkExist())
+    const { title, content } = req.body
+    validation.check(title, 'title', validation.checkExist())
+    validation.check(content, 'content', validation.checkExist())
 
-  await pgQuery(
-    `UPDATE kkujjang.notice SET title=$1, content=$2 
+    await pgQuery(
+      `UPDATE kkujjang.notice SET title=$1, content=$2 
     WHERE id=$3 AND is_deleted=FALSE`,
-    [title, content, noticeId],
-  )
+      [title, content, noticeId],
+    )
 
-  res.json({ result: 'success' })
-})
+    res.json({ result: 'success' })
+  },
+)
 
-noticeRouter.delete('/:noticeId', requireAdminAuthority, async (req, res) => {
-  const { noticeId } = req.params
-  validation.check(noticeId, 'noticeId', validation.checkExist())
+noticeRouter.delete(
+  '/:noticeId',
+  validateNoticePathIndex,
+  requireAdminAuthority,
+  async (req, res) => {
+    const { noticeId } = req.params
+    validation.check(noticeId, 'noticeId', validation.checkExist())
 
-  // TODO: remove line 117-119
-  const { title, content } = req.body
-  validation.check(title, 'title', validation.checkExist())
-  validation.check(content, 'content', validation.checkExist())
+    // TODO: remove line 117-119
+    const { title, content } = req.body
+    validation.check(title, 'title', validation.checkExist())
+    validation.check(content, 'content', validation.checkExist())
 
-  await pgQuery(
-    `UPDATE kkujjang.notice SET is_deleted=TRUE WHERE id=$1 AND is_deleted=FALSE`,
-    [noticeId],
-  )
+    await pgQuery(
+      `UPDATE kkujjang.notice SET is_deleted=TRUE WHERE id=$1 AND is_deleted=FALSE`,
+      [noticeId],
+    )
 
-  res.json({ result: 'success' })
-})
+    res.json({ result: 'success' })
+  },
+)

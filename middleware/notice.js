@@ -26,3 +26,16 @@ export const validateNoticeSearch = (req, res, next) => {
 
   next()
 }
+
+export const validateNoticePathIndex = (req, res, next) => {
+  const { noticeId } = req.params
+
+  validation.check(
+    noticeId,
+    'noticeId',
+    validation.checkExist(),
+    validation.checkIsNumber(),
+  )
+
+  next()
+}
