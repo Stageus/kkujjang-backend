@@ -38,11 +38,11 @@ export const validateReport = (req, res, next) => {
 export const validateReportSearch = (req, res, next) => {
   const {
     page = 1,
-    reporterId = null,
-    reporteeId = null,
-    isOffensive = null,
-    isPoorManner = null,
-    isCheating = null,
+    reporterId,
+    reporteeId,
+    isOffensive,
+    isPoorManner,
+    isCheating,
   } = req.body
 
   validation.check(page, 'page', validation.checkIsNumber())
