@@ -133,12 +133,19 @@ export const validatePasswordReset = (req, res, next) => {
 export const validateUserSearch = (req, res, next) => {
   const { username, nickname, isBanned } = req.query
 
-  validation.check(username, 'username', validation.checkRegExp(/^[a-z0-9]+$/))
-  validation.check(
-    nickname,
-    'nickname',
-    validation.checkRegExp(/^[a-zA-Z0-9가-힣]+$/),
-  )
+  username &&
+    validation.check(
+      username,
+      'username',
+      validation.checkRegExp(/^[a-z0-9]+$/),
+    )
+  nickname &&
+    validation.check(
+      nickname,
+      'nickname',
+      validation.checkRegExp(/^[a-zA-Z0-9가-힣]+$/),
+    )
+  isBanned && validation.check(isBanned, 'isBanned', validation.checkIsNumber())
 
   next()
 }
