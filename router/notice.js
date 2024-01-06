@@ -4,28 +4,29 @@ import { configDotenv } from 'dotenv'
 import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
 import { requireAdminAuthority } from '@middleware/auth'
+import { validateNotice } from '@middleware/notice'
 
 configDotenv()
 
 export const noticeRouter = asyncify(express.Router())
 
-noticeRouter.post('/', requireAdminAuthority, async (req, res) => {
-  const session = res.locals.session
+noticeRouter.post(
+  '/',
+  requireAdminAuthority,
+  validateNotice,
+  async (req, res) => {
+    const session = res.locals.session
 
-  console.log(JSON.stringify(session))
-  console.log(process.env.ADMIN_AUTHORITY)
+    const { title, content } = req.body
 
-  const { title, content } = req.body
-  validation.check(title, 'title', validation.checkExist())
-  validation.check(content, 'content', validation.checkExist())
+    await pgQuery(
+      `INSERT INTO kkujjang.notice (title, content, author_id) VALUES ($1, $2, $3);`,
+      [title, content, session.userId],
+    )
 
-  await pgQuery(
-    `INSERT INTO kkujjang.notice (title, content, author_id) VALUES ($1, $2, $3);`,
-    [title, content, session.userId],
-  )
-
-  res.json({ result: 'success' })
-})
+    res.json({ result: 'success' })
+  },
+)
 
 noticeRouter.get('/list', async (req, res) => {
   const page = Number(req.query.page ?? 1)
