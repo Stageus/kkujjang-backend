@@ -6,9 +6,23 @@ import asyncify from 'express-asyncify'
 import * as kakao from '@utility/kakao'
 import { getSession, createSession, destorySession } from '@utility/session'
 import * as uuid from 'uuid'
-import * as validation from '@utility/validation'
 import { isSignedIn } from '@utility/session'
 import { sendSMS } from '@utility/sms-auth'
+import {
+  allowGuestOnly,
+  requireAdminAuthority,
+  requireSignin,
+  requireSmsAuth,
+} from '@middleware/auth'
+import {
+  validateSignUp,
+  validateAuthCodeCheck,
+  validateReceiverNumber,
+  validateSignIn,
+  validateUserModification,
+  validatePasswordReset,
+  validateUserSearch,
+} from '@middleware/user'
 
 configDotenv()
 
@@ -16,14 +30,7 @@ export const userRouter = asyncify(express.Router())
 
 // 카카오 로그인 콜백
 // 토큰 발급 -> 사용자 정보 조회 -> 첫 가입 시 DB 등록 -> 세션 등록 -> 쿠키에 세션 ID 저장
-userRouter.get('/oauth/kakao', async (req, res) => {
-  if (req.cookies.sessionId) {
-    throw {
-      statusCode: 400,
-      message: '이미 로그인된 상태입니다.',
-    }
-  }
-
+userRouter.get('/oauth/kakao', allowGuestOnly, async (req, res) => {
   // 토큰 발급
   const tokenData = await kakao.getToken(req.query.code)
 
@@ -94,26 +101,11 @@ userRouter.get('/oauth/kakao', async (req, res) => {
   })
 })
 
-userRouter.get('/oauth/unlink', async (req, res) => {
+userRouter.get('/oauth/unlink', requireSignin, async (req, res) => {
   const sessionId = req.cookies.sessionId
-
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인하지 않은 상태입니다.',
-    }
-  }
-
-  const { userId = null, kakaoToken = null } = await getSession(sessionId)
+  const { userId, kakaoToken } = res.locals.session
 
   console.log(`User ID: ${userId}, token: ${kakaoToken}`)
-
-  if (userId === null) {
-    throw {
-      statusCode: 401,
-      message: '유효하지 않은 세션 정보입니다.',
-    }
-  }
 
   // 카카오 계정 연결 해제
   await kakao.unlink(kakaoToken)
@@ -136,15 +128,8 @@ userRouter.get('/oauth/unlink', async (req, res) => {
     })
 })
 
-userRouter.get('/auth-code', async (req, res) => {
+userRouter.get('/auth-code', validateReceiverNumber, async (req, res) => {
   const { receiverNumber } = req.query
-
-  validation.check(
-    receiverNumber,
-    'receiverNumber',
-    validation.checkExist(),
-    validation.checkRegExp(/010-\d{4}-\d{4}/),
-  )
 
   const smsAuthId = uuid.v4()
   const authNumber = String(Math.floor(Math.random() * 900000) + 100000)
@@ -153,7 +138,7 @@ userRouter.get('/auth-code', async (req, res) => {
 
   await redisClient.hSet(`auth-${smsAuthId}`, {
     authNumber: authNumber,
-    fullfilled: 'false',
+    fulfilled: 'false',
     phoneNumber: receiverNumber,
   })
   await redisClient.expire(`auth-${smsAuthId}`, 300)
@@ -174,17 +159,9 @@ userRouter.get('/auth-code', async (req, res) => {
     })
 })
 
-userRouter.post('/auth-code/check', async (req, res) => {
+userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
   const { smsAuthId } = req.cookies
-  validation.check(smsAuthId, 'smsAuthId', validation.checkExist())
-
   const { authNumber, phoneNumber } = req.body
-  validation.check(
-    authNumber,
-    'authNumber',
-    validation.checkExist(),
-    validation.checkRegExp(/\d{6}/),
-  )
 
   const { authNumber: answer, phoneNumber: targetPhoneNumber } =
     await redisClient.hGetAll(`auth-${smsAuthId}`)
@@ -194,7 +171,7 @@ userRouter.post('/auth-code/check', async (req, res) => {
 
   if (phoneNumber === targetPhoneNumber && authNumber === answer) {
     redisClient.hSet(`auth-${smsAuthId}`, {
-      fullfilled: 'true',
+      fulfilled: 'true',
     })
     redisClient.expire(`auth-${smsAuthId}`, 1800)
   } else {
@@ -208,16 +185,8 @@ userRouter.post('/auth-code/check', async (req, res) => {
 })
 
 // 로그아웃
-userRouter.get('/signout', async (req, res) => {
-  // Permission 체크 : 사용자, 관리자
+userRouter.get('/signout', requireSignin, async (req, res) => {
   const sessionId = req.cookies.sessionId
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인하지 않은 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
 
   // 세션과 쿠키 삭제
   await destorySession(sessionId)
@@ -225,7 +194,6 @@ userRouter.get('/signout', async (req, res) => {
     'Set-Cookie',
     `sessionId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
   )
-  // 세션과 쿠키 삭제 끝
 
   res.json({
     result: 'success',
@@ -233,16 +201,7 @@ userRouter.get('/signout', async (req, res) => {
 })
 
 // 로그인
-userRouter.post('/signin', async (req, res) => {
-  // Permission 체크 : 게스트
-  if (req.cookies.sessionId) {
-    throw {
-      statusCode: 401,
-      message: '이미 로그인된 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
-
+userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
   const { username, password } = req.body
 
   const queryString = `SELECT id, authority_level FROM kkujjang.user
@@ -282,219 +241,118 @@ userRouter.post('/signin', async (req, res) => {
 })
 
 // 특정 조건에 맞는 사용자 검색
-userRouter.get('/search', async (req, res) => {
-  // Permission 체크 : 관리자
-  const sessionId = req.cookies.sessionId
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인 해주세요',
+userRouter.get(
+  '/search',
+  requireAdminAuthority,
+  validateUserSearch,
+  async (req, res) => {
+    const { username, nickname, isBanned } = req.query
+
+    const conditions = []
+    const values = []
+    let conditionCnt = 1
+    if (username) {
+      conditions.push(`username LIKE $${conditionCnt++}`)
+      values.push(`%${username}%`)
     }
-  }
-  const authorityLevel = (await getSession(sessionId)).authorityLevel
-  if (authorityLevel !== process.env.ADMIN_AUTHORITY) {
-    throw {
-      statusCode: 401,
-      message: '관리자 권한이 없습니다.',
+    if (nickname) {
+      conditions.push(`nickname LIKE $${conditionCnt++}`)
+      values.push(`%${nickname}%`)
     }
-  }
-  // Permission 체크 끝
+    if (isBanned) {
+      conditions.push(`is_banned = $${conditionCnt++}`)
+      values.push(isBanned)
+    }
 
-  const username = req.query.username
-  const nickname = req.query.nickname
-  const isBanned = req.query.isBanned
+    let queryString = `SELECT id, username, nickname, is_banned FROM kkujjang.user WHERE is_deleted = FALSE`
 
-  // 쿼리 파라미터 검증
-  validation.check(username, `username`, validation.checkRegExp(/^[a-z0-9]+$/))
-  validation.check(
-    nickname,
-    `nickname`,
-    validation.checkRegExp(/^[a-zA-Z0-9가-힣]+$/),
-  )
-  // 쿼리 파라미터 검증 끝
+    if (conditions.length) {
+      queryString += ' AND ' + conditions.join(' AND ')
+    }
+    const queryRes = await pgQuery(queryString, values)
 
-  const conditions = []
-  const values = []
-  let conditionCnt = 1
-  if (username) {
-    conditions.push(`username LIKE $${conditionCnt++}`)
-    values.push(`%${username}%`)
-  }
-  if (nickname) {
-    conditions.push(`nickname LIKE $${conditionCnt++}`)
-    values.push(`%${nickname}%`)
-  }
-  if (isBanned) {
-    conditions.push(`is_banned = $${conditionCnt++}`)
-    values.push(isBanned)
-  }
+    const result = []
+    for (const data of queryRes.rows) {
+      const { id, username, nickname, is_banned } = data
+      const temp = { id, username, nickname, isBanned: is_banned }
+      result.push(temp)
+    }
 
-  let queryString = `SELECT id, username, nickname, is_banned FROM kkujjang.user WHERE is_deleted = FALSE`
-
-  if (conditions.length) {
-    queryString += ' AND ' + conditions.join(' AND ')
-  }
-  const queryRes = await pgQuery(queryString, values)
-
-  const result = []
-  for (const data of queryRes.rows) {
-    const { id, username, nickname, is_banned } = data
-    const temp = { id, username, nickname, isBanned: is_banned }
-    result.push(temp)
-  }
-
-  res.json({
-    result,
-  })
-})
+    res.json({
+      result,
+    })
+  },
+)
 
 // 비밀번호 재설정
-userRouter.post('/find/pw', async (req, res) => {
-  // Permission 체크 : 게스트
-  if (req.cookies.sessionId) {
-    throw {
-      statusCode: 401,
-      message: '이미 로그인된 상태입니다.',
+userRouter.post(
+  '/find/pw',
+  allowGuestOnly,
+  requireSmsAuth,
+  validatePasswordReset,
+  async (req, res) => {
+    const { username, newPassword, phone } = req.body
+
+    let queryString = `SELECT count(*) AS count FROM kkujjang.user WHERE username = $1 AND phone = $2`
+    let values = [username, phone]
+    const { count } = (await pgQuery(queryString, values)).rows[0]
+    if (count === 0) {
+      throw {
+        statusCode: 400,
+        message: '해당하는 계정 정보가 존재하지 않습니다.',
+      }
     }
-  }
-  // Permission 체크 끝
 
-  const smsAuthId = req.cookies.smsAuthId
-  if (!smsAuthId) {
-    throw {
-      statusCode: 400,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
+    queryString = `UPDATE kkujjang.user SET password = crypt($1, gen_salt('bf')) WHERE username = $2 AND phone = $3`
+    values = [newPassword, username, phone]
+    await pgQuery(queryString, values)
 
-  const { username, newPassword, phone } = req.body
-
-  // body 값 유효성 검증
-  validation.check(
-    newPassword,
-    'newPassword',
-    validation.checkExist(),
-    validation.checkLength(7, 30),
-    validation.checkRegExp(
-      /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[@#$%^&+=!\(\)])[a-zA-Z0-9@#$%^&+=!\(\)]+$/,
-    ),
-  )
-  // body 값 유효성 검증 끝
-
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증
-  const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
-
-  if (smsAuth.phoeNumber !== phone || smsAuth.fulfilled !== 'true') {
-    throw {
-      statusCode: 401,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증 끝
-
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제
-  await redisClient.del(`auth-${smsAuthId}`)
-  res.setHeader(
-    'Set-Cookie',
-    `smsAuthId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
-  )
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제 끝
-
-  let queryString = `SELECT count(*) FROM  kkujjang.user WHERE username = $1 AND phone = $2`
-  let values = [username, phone]
-  const queryRes = (await pgQuery(queryString, values)).rows[0].count
-  if (queryRes == 0) {
-    throw {
-      statusCode: 400,
-      message: '해당하는 계정 정보가 존재하지 않습니다.',
-    }
-  }
-
-  queryString = `UPDATE kkujjang.user SET password = crypt($1, gen_salt('bf')) WHERE username = $2 AND phone = $3`
-  values = [newPassword, username, phone]
-  await pgQuery(queryString, values)
-
-  res.json({
-    result: 'success',
-  })
-})
+    res.json({
+      result: 'success',
+    })
+  },
+)
 
 // 아이디 찾기
-userRouter.post('/find/id', async (req, res) => {
-  // Permission 체크 : 게스트
-  if (req.cookies.sessionId) {
-    throw {
-      statusCode: 401,
-      message: '이미 로그인된 상태입니다.',
+userRouter.post(
+  '/find/id',
+  allowGuestOnly,
+  requireSmsAuth,
+  async (req, res) => {
+    const { phone } = req.body
+
+    const queryString = `SELECT username FROM kkujjang.user WHERE phone = $1`
+    const values = [phone]
+    const queryRes = await pgQuery(queryString, values)
+
+    if (queryRes.rowCount == 0) {
+      throw {
+        statusCode: 400,
+        message: '해당하는 계정 정보가 존재하지 않습니다.',
+      }
     }
-  }
-  // Permission 체크 끝
 
-  const smsAuthId = req.cookies.smsAuthId
-  if (!smsAuthId) {
-    throw {
-      statusCode: 400,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
+    const { username } = queryRes.rows[0]
 
-  const { phone } = req.body
+    res.json({
+      result: username,
+    })
+  },
+)
 
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증
-  const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
-  if (smsAuth.phoeNumber !== phone || smsAuth.fulfilled !== 'true') {
-    throw {
-      statusCode: 401,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증 끝
+// 인덱스를 이용한 사용자 조회
+userRouter.get('/:userId', requireSignin, async (req, res) => {
+  const { userId } = req.params
+  const { authorityLevel } = res.locals.session
 
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제
-  await redisClient.del(`auth-${smsAuthId}`)
-  res.setHeader(
-    'Set-Cookie',
-    `smsAuthId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
-  )
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제 끝
-
-  const queryString = `SELECT username FROM kkujjang.user WHERE phone = $1`
-  const values = [phone]
-  const queryRes = await pgQuery(queryString, values)
-  if (queryRes.rowCount == 0) {
-    throw {
-      statusCode: 400,
-      message: '해당하는 계정 정보가 존재하지 않습니다.',
-    }
-  }
-
-  const username = queryRes.rows[0].username
-  res.json({
-    result: username,
-  })
-})
-
-// 인덱스를 이용한 사용자 검색
-userRouter.get('/:id', async (req, res) => {
-  // Permission 체크 : 사용자, 관리자
-  const sessionId = req.cookies.sessionId
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인하지 않은 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
-
-  const id = req.params.id
   const queryString = `SELECT level, exp, nickname, wins, loses, is_banned, banned_reason FROM kkujjang.user WHERE id = $1 AND is_deleted = FALSE`
-  const values = [id]
+  const values = [userId]
   const queryRes = await pgQuery(queryString, values)
 
   if (queryRes.rowCount == 0) {
     throw {
       statusCode: 400,
-      message: '존재하지 않는 id입니다.',
+      message: '존재하지 않는 사용자입니다.',
     }
   }
 
@@ -518,145 +376,69 @@ userRouter.get('/:id', async (req, res) => {
     winRate,
   }
 
-  const authorityLevel = (await getSession(sessionId)).authorityLevel
   if (authorityLevel === process.env.ADMIN_AUTHORITY) {
     result.isBanned = is_banned
     result.bannedReason = banned_reason
   }
-  res.send(result)
+
+  res.json({ result })
 })
 
 // 회원 탈퇴
-userRouter.delete('/', async (req, res) => {
-  // Permission 체크 : 사용자, 관리자
-  const sessionId = req.cookies.sessionId
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인하지 않은 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
+userRouter.delete('/', requireSignin, async (req, res) => {
+  const { sessionId } = req.cookies
+  const { userId } = res.locals.session
 
-  const id = (await getSession(sessionId)).userId
   const queryString = `UPDATE kkujjang.user SET kakao_id = NULL, username = NULL, phone = NULL, nickname = NULL, is_deleted = TRUE WHERE id = $1`
-  const values = [id]
+  const values = [userId]
   await pgQuery(queryString, values)
 
-  res.setHeader(
-    'Set-Cookie',
-    `sessionId=none; Path=/; HttpOnly; Secure; Max-Age=0`,
-  )
   await destorySession(sessionId)
 
-  res.json({
-    result: 'success',
-  })
+  res
+    .setHeader(
+      'Set-Cookie',
+      `sessionId=none; Path=/; HttpOnly; Secure; Max-Age=0`,
+    )
+    .json({
+      result: 'success',
+    })
 })
 
 // 회원 정보 수정
-userRouter.put('/', async (req, res) => {
-  // Permission 체크 : 사용자, 관리자
-  const sessionId = req.cookies.sessionId
-  if (!sessionId) {
-    throw {
-      statusCode: 401,
-      message: '로그인하지 않은 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
+userRouter.put(
+  '/',
+  requireSignin,
+  validateUserModification,
+  async (req, res) => {
+    const { nickname } = req.body
+    const { id } = res.locals.session
 
-  const { nickname } = req.body
+    const queryString = `UPDATE kkujjang.user SET nickname = $1 WHERE id = $2`
+    const values = [`${nickname}#${id}`, id]
+    await pgQuery(queryString, values)
 
-  // body 값 유효성 검증
-  validation.check(
-    nickname,
-    `nickname`,
-    validation.checkExist(),
-    validation.checkLength(1, 15),
-    validation.checkRegExp(/^[a-zA-Z0-9가-힣]+$/),
-  )
-  // body 값 유효성 검증 끝
-
-  const id = (await getSession(sessionId)).userId
-  const queryString = `UPDATE kkujjang.user SET nickname = $1 WHERE id = $2`
-  const values = [`${nickname}#${id}`, id]
-  await pgQuery(queryString, values)
-
-  res.json({
-    result: 'success',
-  })
-})
+    res.json({
+      result: 'success',
+    })
+  },
+)
 
 // 회원가입
-userRouter.post('/', async (req, res) => {
-  // Permission 체크 : 게스트
-  if (req.cookies.sessionId) {
-    throw {
-      statusCode: 401,
-      message: '이미 로그인된 상태입니다.',
-    }
-  }
-  // Permission 체크 끝
+userRouter.post(
+  '/',
+  allowGuestOnly,
+  requireSmsAuth,
+  validateSignUp,
+  async (req, res) => {
+    const { username, password, phone } = req.body
 
-  const smsAuthId = req.cookies.smsAuthId
-  if (!smsAuthId) {
-    throw {
-      statusCode: 400,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
+    const queryString = `INSERT INTO kkujjang.user (username, password, phone) VALUES ($1, crypt($2, gen_salt('bf')), $3)`
+    const values = [username, password, phone]
+    await pgQuery(queryString, values)
 
-  const { username, password, phone } = req.body
-
-  // body값 유효성 검증
-  validation.check(
-    username,
-    'username',
-    validation.checkExist(),
-    validation.checkLength(7, 30),
-    validation.checkRegExp(/^(?=.*[a-z])(?=.*[0-9])[a-z0-9]+$/),
-  )
-  validation.check(
-    password,
-    'password',
-    validation.checkExist(),
-    validation.checkLength(7, 30),
-    validation.checkRegExp(
-      /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[@#$%^&+=!\(\)])[a-zA-Z0-9@#$%^&+=!\(\)]+$/,
-    ),
-  )
-  validation.check(
-    phone,
-    'phone',
-    validation.checkExist(),
-    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
-  )
-  // body값 유효성 검증 끝
-
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증
-  const smsAuth = await redisClient.hGetAll(`auth-${smsAuthId}`)
-  if (smsAuth.phoeNumber !== phone || smsAuth.fulfilled !== 'true') {
-    throw {
-      statusCode: 400,
-      message: '휴대폰 인증이 되어있지 않습니다.',
-    }
-  }
-  // 휴대폰 인증 성공 여부 확인 후 처리(1) 검증 끝
-
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제
-  await redisClient.del(`auth-${smsAuthId}`)
-  res.setHeader(
-    'Set-Cookie',
-    `smsAuthId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
-  )
-  // 휴대폰 인증 성공 여부 확인 후 처리(2) 해당 휴대폰 인증 정보 삭제 끝
-
-  const queryString = `INSERT INTO kkujjang.user (username, password, phone) VALUES ($1, crypt($2, gen_salt('bf')), $3)`
-  const values = [username, password, phone]
-  await pgQuery(queryString, values)
-
-  res.json({
-    result: 'success',
-  })
-})
+    res.json({
+      result: 'success',
+    })
+  },
+)

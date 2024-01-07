@@ -9,7 +9,12 @@ export const getSession = async (id) => {
     return null
   }
 
-  const session = (await redisClient.hGetAll(`session-${id}`)) ?? {}
+  const session = await redisClient.hGetAll(`session-${id}`)
+
+  if (!session || Object.keys(session).length === 0) {
+    return null
+  }
+
   return session
 }
 
@@ -50,9 +55,9 @@ export const destorySession = async (sessionId) => {
 }
 
 export const isSignedIn = async (userId) => {
-  const { userId: userIdInSession } = (await getSessionByUserId(userId)) ?? {}
+  const { userId: userIdInSession = null } = await getSessionByUserId(userId)
 
   console.log(`userId: ${userId}, userIdInSession: ${userIdInSession}`)
 
-  return userId === userIdInSession
+  return userIdInSession !== null && userId === userIdInSession
 }
