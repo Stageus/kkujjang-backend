@@ -55,14 +55,15 @@ noticeRouter.get('/list', validatePageNumber, async (req, res) => {
   ).rows
 
   res.json({
-    lastPage: result[0].lastPage,
-    list: result.map(({ id, title, content, created_at, views }) => ({
-      id,
-      title,
-      content,
-      created_at,
-      views,
-    })),
+    lastPage: result[0]?.lastPage ?? 0,
+    list:
+      result?.map(({ id, title, content, created_at, views }) => ({
+        id,
+        title,
+        content,
+        created_at,
+        views,
+      })) ?? [],
   })
 })
 
