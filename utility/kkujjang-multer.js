@@ -102,6 +102,9 @@ export const multer = async (req, limits, options) =>
           if (!filename) {
             rejectEvent('File | filename이 존재하지 않습니다')
           }
+          if (201 <= filename.length) {
+            rejectEvent('File | filename은 200자 이하여야합니다')
+          }
           if (fieldname !== 'files') {
             rejectEvent(`File | ${fieldname} : filedname은 'files'여야합니다`)
           }
@@ -122,6 +125,7 @@ export const multer = async (req, limits, options) =>
                 fileCount = 0
               } else {
                 fileCount = await s3CountFile(`${textResult.id}/${subkey}/`)
+                console.log(`${textResult.id}/${subkey}/`)
               }
             }
 
@@ -154,13 +158,17 @@ export const multer = async (req, limits, options) =>
               }
             })
             // S3 업로드 경로를 설정해줄 id 와 filename을 함께 전달해준다
-            const filePath = `${textResult.id}/${subkey}/${filename}`
+            const filePath = `${
+              textResult.id
+            }/${subkey}/${Date.now()}-${filename}`
             const s3Promise = s3Upload(filePath, passThrough)
             promiseList.push(
               s3Promise
                 .done()
                 .catch(() =>
-                  rejectEvent(`File | ${filename} : 용량이 초과되었습니다`),
+                  rejectEvent(
+                    `File | ${filename} : 허가 용량을 초과하였습니다`,
+                  ),
                 ),
             )
             // fileStream 이벤트 리스너 등록

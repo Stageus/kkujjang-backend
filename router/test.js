@@ -9,7 +9,7 @@ import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn, createSession } from '@utility/session'
 import { multer } from '@utility/kkujjang-multer'
-import { checkFileCount } from '@database/s3'
+import { s3CountFile } from '@database/s3'
 import { requireSignin, requireAdminAuthority } from '@middleware/auth'
 
 configDotenv()
@@ -176,14 +176,14 @@ testRouter.get('/user/session', async (req, res) => {
 })
 
 testRouter.get('/fileCount', async (req, res) => {
-  const cnt = await checkFileCount('')
-  res.send(`s3://${process.env.AWS_BUCKET_NAME}: ${cnt} files`)
+  const cnt = await s3CountFile('')
+  res.send(`s3://${process.env.AWS_BUCKET_NAME}: ${cnt} folders`)
 })
 
 testRouter.get('/fileCount/:id', async (req, res) => {
   const key = req.params.id
-  const cnt = await checkFileCount(`${key}/`)
-  res.send(`s3://${process.env.AWS_BUCKET_NAME}/${key}: ${cnt} files`)
+  const cnt = await s3CountFile(`${key}/`)
+  res.send(`s3://${process.env.AWS_BUCKET_NAME}/${key}: ${cnt} folders`)
 })
 
 testRouter.post('/fileUpload', async (req, res) => {
@@ -193,12 +193,15 @@ testRouter.post('/fileUpload', async (req, res) => {
     //   idColumnName: thread_id,
     //   tableName: kkujjang.inquiry,
     // },
+    subkey: 1,
     fileCountLimit: 5,
     allowedExtension: ['jpg', 'jpeg', 'png'],
   }
 
   const config = {
-    fileSize: 1024 * 1024 * 5,
+    // 하나당 파일 크기 제한
+    fileSize: 1024 * 1024 * 10,
+    // form-data key의 글자 길이 제한
     fieldNameSize: 100,
   }
 

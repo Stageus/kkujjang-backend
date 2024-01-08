@@ -31,9 +31,12 @@ export const s3CountFile = async (key) => {
   })
 
   const result = await s3.send(command)
-  const fileCount =
-    result.CommonPrefixes && result.CommonPrefixes.length
-      ? result.CommonPrefixes.length
-      : 0
-  return fileCount
+
+  if (result.Contents) {
+    return result.Contents.length
+  }
+  if (result.CommonPrefixes) {
+    return result.CommonPrefixes.length
+  }
+  return 0
 }
