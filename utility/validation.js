@@ -88,7 +88,7 @@ export const checkSame = curry((sameTarget, target) => {
 })
 
 export const checkIsNumber = curry((target) => {
-  const validity = isNaN(Number(target))
+  const validity = !isNaN(Number(target))
 
   return {
     isValid: validity,
