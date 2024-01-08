@@ -36,17 +36,36 @@ noticeRouter.post(
 noticeRouter.get('/list', validatePageNumber, async (req, res) => {
   const page = Number(req.query.page ?? 1)
 
-  const result = (
+  const list = (
     await pgQuery(
-      `SELECT title, content, created_at, views 
-      FROM kkujjang.notice 
+      `SELECT
+        id, title, content, created_at, views,
+        CEIL(notice_count::float / 10) AS "lastPage"
+      FROM
+        (SELECT
+          id, title, content, created_at, views, is_deleted,
+          COUNT(*) OVER() AS notice_count
+        FROM kkujjang.notice 
+        WHERE is_deleted=FALSE
+        ) AS sub_table
       WHERE is_deleted=FALSE
       ORDER BY created_at DESC
       OFFSET ${(page - 1) * 10} LIMIT 10`,
     )
   ).rows
 
-  res.json({ result })
+  console.log(list)
+
+  res.json({
+    lastPage: list[0].lastPage,
+    list: list.map(({ id, title, content, created_at, views }) => ({
+      id,
+      title,
+      content,
+      created_at,
+      views,
+    })),
+  })
 })
 
 noticeRouter.get(
