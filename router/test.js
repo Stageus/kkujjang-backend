@@ -7,7 +7,7 @@ import { testSchema } from '@model/test'
 import { redisClient } from '@database/redis'
 import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
-import { isSignedIn, createSession } from '@utility/session'
+import { isSignedIn, createSession, getSession } from '@utility/session'
 import { multer } from '@utility/kkujjang_multer/core'
 import { s3CountFile } from '@database/s3'
 import { requireSignin, requireAdminAuthority } from '@middleware/auth'
@@ -187,16 +187,16 @@ testRouter.get('/fileCount/:id', async (req, res) => {
 })
 
 testRouter.post('/fileUpload', async (req, res) => {
-  // if (Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)) {
-  //   checkAuthor = {
-  //     userId: session.userId,
-  //     idColumnName: 'thread_id',
-  //     tableName: 'kkujjang.inquiry',
-  //   }
+  // author 할당 예시
+  // const session = await getSession(req.cookies.sessionId)
+  // let author
+  // author = {
+  //   userId: session.userId,
+  //   idColumnName: 'thread_id',
+  //   tableName: 'kkujjang.inquiry',
   // }
-
   const options = {
-    subkey: 1,
+    // author,
     fileCountLimit: 3,
     allowedExtension: ['jpg', 'png'],
   }

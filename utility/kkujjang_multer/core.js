@@ -3,21 +3,25 @@ import * as uuid from 'uuid'
 import { PassThrough, pipeline } from 'stream'
 import { s3Upload, s3CountFile } from '@database/s3'
 import {
-  authorCheckization,
+  checkAuthor,
   checkExtension,
 } from '@utility/kkujjang_multer/file-analyzer'
 
 export const multer = async (req, limits, options) =>
   new Promise((resolve, reject) => {
+    if (!req.headers['content-type'].startsWith('multipart/form-data')) {
+      reject({
+        statusCode: 400,
+        message: `kkujjang-multer : multipart 요청이 아닙니다`,
+      })
+    }
     // init
     const bb = busboy({ headers: req.headers, limits })
-    let isRejected = false
 
     const rejectEvent = (err) => {
       req.unpipe(bb)
       req.resume()
       bb.removeAllListeners()
-      isRejected = true
       reject({
         statusCode: 400,
         message: `kkujjang-multer : ${err}`,
@@ -26,25 +30,19 @@ export const multer = async (req, limits, options) =>
 
     // options 불러오기
     const {
-      authorCheck = null,
+      author = null,
       fileCountLimit = -1,
       allowedExtension = [],
     } = options
+    const isAuthorCheckMode = !(author === null)
 
     let { subkey = '' } = options
 
     // options 검증
-    if (authorCheck) {
-      if (
-        !(
-          typeof authorCheck === 'object' &&
-          authorCheck.userId &&
-          authorCheck.idColumnName &&
-          authorCheck.tableName
-        )
-      ) {
+    if (isAuthorCheckMode) {
+      if (!(author?.userId && author?.idColumnName && author?.tableName)) {
         rejectEvent(
-          'checkAutor은 json 타입이며 userId, idColumnName, tableName의 값을 가지고 있어야합니다',
+          'autor은 json 타입이며 userId, idColumnName, tableName의 값을 가지고 있어야합니다',
         )
       }
     }
@@ -63,132 +61,130 @@ export const multer = async (req, limits, options) =>
     const promiseList = []
 
     let fileCount = -1
-    let valid = false
+    let isAuthorChecked = false
     // init 끝
 
     // text 값 가져오기
-    !isRejected &&
-      bb.on('field', (fieldname, value, { nameTruncated, valueTruncated }) => {
-        if (fieldname == null) {
-          rejectEvent('Text | key 이름이 존재하지 않습니다')
-        }
-        if (nameTruncated) {
-          rejectEvent('Text | key 이름의 길이 제한을 초과하였습니다')
-        }
-        if (valueTruncated) {
-          rejectEvent('Text | value 값의 길이 제한을 초과하였습니다')
-        }
+    bb.on('field', (fieldname, value, { nameTruncated, valueTruncated }) => {
+      if ((fieldname ?? null) === null) {
+        rejectEvent('Text | filedname이 존재하지 않습니다')
+      }
+      if (nameTruncated) {
+        rejectEvent('Text | filename의 길이 제한을 초과하였습니다')
+      }
+      if (valueTruncated) {
+        rejectEvent('Text | value 값의 길이 제한을 초과하였습니다')
+      }
 
-        if (fieldname === 'id') {
-          if (value) {
-            textResult[fieldname] = value
-            valid = false
-            return
-          }
-          if (!value) {
-            textResult[fieldname] = uuid.v4()
-            valid = true
-            return
-          }
-        }
-
-        textResult[fieldname] = value
-      })
-
-    !isRejected &&
-      bb.on(
-        'file',
-        async (fieldname, fileStream, { filename, encoding, mimeType }) => {
-          // 예외처리
-          if (!filename) {
-            rejectEvent('File | filename이 존재하지 않습니다')
-          }
-          if (201 <= filename.length) {
-            rejectEvent('File | filename은 200자 이하여야합니다')
-          }
-          if (fieldname !== 'files') {
-            rejectEvent(`File | ${fieldname} : filedname은 'files'여야합니다`)
-          }
-
-          // authorCheck 모드라면 해당 id에 대해 권한 검증
-          if (authorCheck && !valid) {
-            const valid = await checkAuthorization(authorCheck, textResult.id)
-            if (!valid) {
-              rejectEvent(`File | ${textResult.id}에 저장할 권한이 없습니다.`)
-            }
-          }
-
-          // countFile 모드라면 해당 id에 대해 권한 검증
-          if (fileCountLimit !== -1) {
-            if (fileCount === -1) {
-              if (subkey === '') {
-                subkey = (await s3CountFile(`${textResult.id}/`)) + 1
-                fileCount = 0
-              } else {
-                fileCount = await s3CountFile(`${textResult.id}/${subkey}/`)
-              }
-            }
-
-            fileCount++
-
-            if (fileCountLimit < fileCount) {
-              rejectEvent(
-                `File | ${textResult.id}의 저장 개수가 초과되었습니다.`,
+      if (fieldname === 'id') {
+        if (!value) {
+          textResult[fieldname] = uuid.v4()
+          isAuthorChecked = true
+        } else {
+          RegExp(
+            /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
+          ).test(value)
+            ? null
+            : rejectEvent(
+                'TEXT | id 텍스트 필드의 value는 UUID 형식이여야합니다',
               )
+          textResult[fieldname] = value
+        }
+        return
+      }
+
+      textResult[fieldname] = value
+    })
+
+    bb.on(
+      'file',
+      async (fieldname, fileStream, { filename, encoding, mimeType }) => {
+        // 예외처리
+        if (!textResult.id) {
+          rejectEvent(
+            `Text | form-data에서 id 텍스트 필드는 files 필드보다 앞서 지정해야합니다`,
+          )
+        }
+        if (fieldname !== 'files') {
+          rejectEvent(
+            `File | 제출한 파일의 fieldname : ${fieldname} | filedname은 'files'여야합니다`,
+          )
+        }
+        if (!filename) {
+          rejectEvent('File | filename이 존재하지 않습니다')
+        }
+        if (201 <= filename.length) {
+          rejectEvent('File | filename은 200자 이하여야합니다')
+        }
+        if (isAuthorCheckMode && isAuthorChecked === false) {
+          // authorCheck 모드라면 해당 id에 대해 권한 검증
+          const valid = await checkAuthor(author, textResult.id)
+          isAuthorChecked = true
+          if (valid === false) {
+            rejectEvent(`File | ${textResult.id}에 저장할 권한이 없습니다.`)
+          }
+        }
+
+        // countFile 모드라면 해당 id에 대해 권한 검증
+        if (fileCountLimit !== -1) {
+          if (fileCount === -1) {
+            if (subkey === '') {
+              subkey = (await s3CountFile(`${textResult.id}/`)) + 1
+              fileCount = 0
+            } else {
+              fileCount = await s3CountFile(`${textResult.id}/${subkey}/`)
             }
           }
 
-          // 첫번째 청크를 읽었을 때 파일 확장자 검사 수행
-          fileStream.once('data', async (firstChunk) => {
-            const result = checkExtension(
-              firstChunk,
-              filename,
-              allowedExtension,
-            )
-            if (!result.valid) {
-              rejectEvent(result.message)
-            }
+          fileCount++
 
-            // 일치한다면 pipeline 구성 작업
-            let passThrough = new PassThrough()
-            passThrough.write(firstChunk)
-            pipeline(fileStream, passThrough, (err) => {
-              if (err) {
-                rejectEvent(err)
-              }
-            })
-            // S3 업로드 경로를 설정해줄 id 와 filename을 함께 전달해준다
-            const filePath = `${
-              textResult.id
-            }/${subkey}/${Date.now()}-${filename}`
-            const s3Promise = s3Upload(filePath, passThrough)
-            promiseList.push(
-              s3Promise
-                .done()
-                .catch(() =>
-                  rejectEvent(
-                    `File | ${filename} : 허가 용량을 초과하였습니다`,
-                  ),
-                ),
-            )
-            // fileStream 이벤트 리스너 등록
-            fileStream.on('error', (err) => {
-              reject({
-                statusCode: 500,
-                message: err,
-              })
-            })
-            // 업로드하다가 파일 사이즈 한계 도래
-            fileStream.on('limit', () => {
-              s3Promise.abort()
-            })
-            fileStream.on('end', async () => {
-              passThrough.end()
-            })
-            // fileStream 이벤트 리스너 등록 끝
+          if (fileCountLimit < fileCount) {
+            rejectEvent(`File | ${textResult.id}의 저장 개수가 초과되었습니다.`)
+          }
+        }
+
+        // 첫번째 청크를 읽었을 때 파일 확장자 검사 수행
+        fileStream.once('data', async (firstChunk) => {
+          const result = checkExtension(firstChunk, filename, allowedExtension)
+          if (!result.valid) {
+            rejectEvent(result.message)
+          }
+
+          // 일치한다면 pipeline 구성 작업
+          let passThrough = new PassThrough()
+          passThrough.write(firstChunk)
+          pipeline(fileStream, passThrough, (err) => {
+            if (err) {
+              rejectEvent(err)
+            }
           })
-        },
-      )
+
+          const filePath = `${
+            textResult.id
+          }/${subkey}/${Date.now()}-${filename}`
+          const s3Promise = s3Upload(filePath, passThrough)
+          promiseList.push(
+            s3Promise
+              .done()
+              .catch(() =>
+                rejectEvent(`File | ${filename} : 허가 용량을 초과하였습니다`),
+              ),
+          )
+          // fileStream 이벤트 리스너 등록
+          fileStream.on('error', (err) => {
+            rejectEvent(err)
+          })
+          // 업로드하다가 파일 사이즈 한계 도래
+          fileStream.on('limit', () => {
+            s3Promise.abort()
+          })
+          fileStream.on('end', async () => {
+            passThrough.end()
+          })
+          // fileStream 이벤트 리스너 등록 끝
+        })
+      },
+    )
 
     // 이벤트 리스너의 return은 아무 영향을 끼치지않으므로 resovle로 return한 것과 같은 효과를낸다
     bb.on('finish', async () => {
@@ -203,16 +199,13 @@ export const multer = async (req, limits, options) =>
 
     // busboy 예외 이벤트 리스너 등록
     bb.on('error', (err) => {
-      reject({
-        statusCode: 500,
-        message: err,
-      })
+      rejectEvent(err)
     })
     bb.on('partsLimit', () => {
       rejectEvent('Busboy | LIMIT_PART_COUNT')
     })
     bb.on('filesLimit', () => {
-      rejectEvent('Busyboy | LIMIT_FILE_COUNT')
+      rejectEvent('Busboy | LIMIT_FILE_COUNT')
     })
     bb.on('fieldsLimit', () => {
       rejectEvent('Busboy | LIMIT_FIELD_COUNT')

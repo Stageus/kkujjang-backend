@@ -1,19 +1,18 @@
 import path from 'path'
 import { pgQuery } from '@database/postgres'
 
-export const checkAuthorization = async (checkAuthor, articleId) => {
-  let { userId, idColumnName, tableName } = checkAuthor
-
+export const checkAuthor = async (author, articleId) => {
+  let { userId, idColumnName, tableName } = author
   const res = (
     await pgQuery(
-      `SELECT count(*)
+      `SELECT COUNT(*) as count
       FROM kkujjang.${tableName}
       WHERE ${idColumnName} = $1 AND author_id=$2`,
       [articleId, userId],
     )
   ).rows[0].count
 
-  return Number(res)
+  return Number(res) === 0 ? false : true
 }
 
 export const checkExtension = (fileStream, filename, allowedExtension) => {
