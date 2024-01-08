@@ -275,7 +275,7 @@ userRouter.get(
 
     res.json({
       lastPage: result[0]?.lastPage ?? 0,
-      result:
+      list:
         result?.map(({ id, username, nickname, isBanned }) => ({
           id,
           username,
