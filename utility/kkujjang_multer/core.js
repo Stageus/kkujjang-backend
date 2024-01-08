@@ -3,7 +3,7 @@ import * as uuid from 'uuid'
 import { PassThrough, pipeline } from 'stream'
 import { s3Upload, s3CountFile } from '@database/s3'
 import {
-  checkAuthorization,
+  authorCheckization,
   checkExtension,
 } from '@utility/kkujjang_multer/file-analyzer'
 
@@ -25,25 +25,26 @@ export const multer = async (req, limits, options) =>
     }
 
     // options 불러오기
-    let {
-      checkAuthor = false,
-      subkey = '',
+    const {
+      authorCheck = null,
       fileCountLimit = -1,
       allowedExtension = [],
     } = options
 
+    let { subkey = '' } = options
+
     // options 검증
-    if (checkAuthor) {
+    if (authorCheck) {
       if (
         !(
-          typeof checkAuthor === 'object' &&
-          checkAuthor.userId &&
-          checkAuthor.idColumnName &&
-          checkAuthor.tableName
+          typeof authorCheck === 'object' &&
+          authorCheck.userId &&
+          authorCheck.idColumnName &&
+          authorCheck.tableName
         )
       ) {
         rejectEvent(
-          'checkAutor은 json이며 userId, idColumnName, tableName의 값을 가지고 있어야합니다',
+          'checkAutor은 json 타입이며 userId, idColumnName, tableName의 값을 가지고 있어야합니다',
         )
       }
     }
@@ -109,9 +110,9 @@ export const multer = async (req, limits, options) =>
             rejectEvent(`File | ${fieldname} : filedname은 'files'여야합니다`)
           }
 
-          // checkAuthor 모드라면 해당 id에 대해 권한 검증
-          if (checkAuthor && !valid) {
-            const valid = await checkAuthorization(checkAuthor, textResult.id)
+          // authorCheck 모드라면 해당 id에 대해 권한 검증
+          if (authorCheck && !valid) {
+            const valid = await checkAuthorization(authorCheck, textResult.id)
             if (!valid) {
               rejectEvent(`File | ${textResult.id}에 저장할 권한이 없습니다.`)
             }
@@ -214,7 +215,7 @@ export const multer = async (req, limits, options) =>
       rejectEvent('Busyboy | LIMIT_FILE_COUNT')
     })
     bb.on('fieldsLimit', () => {
-      rejectEvent('Busyboy | LIMIT_FIELD_COUNT')
+      rejectEvent('Busboy | LIMIT_FIELD_COUNT')
     })
     // busboy 예외 이벤트 리스너 등록 끝
 
