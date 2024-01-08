@@ -22,6 +22,7 @@ import {
   validateUserModification,
   validatePasswordReset,
   validateUserSearch,
+  validateUsername,
 } from '@middleware/user'
 import { validatePageNumber } from '@middleware/page'
 
@@ -445,6 +446,28 @@ userRouter.post(
 
     res.json({
       result: 'success',
+    })
+  },
+)
+
+userRouter.get(
+  '/username/availability',
+  allowGuestOnly,
+  validateUsername,
+  async (req, res) => {
+    const { username } = req.query
+
+    const count = (
+      await pgQuery(
+        `SELECT COUNT(*) AS "count"
+      FROM kkujjang.user 
+      WHERE username = $1`,
+        [username],
+      )
+    ).rows[0].count
+
+    res.json({
+      result: Number(count) === 0,
     })
   },
 )
