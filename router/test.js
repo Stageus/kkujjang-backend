@@ -8,7 +8,7 @@ import { redisClient } from '@database/redis'
 import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn, createSession } from '@utility/session'
-import { multer } from '@utility/kkujjang-multer'
+import { multer } from '@utility/kkujjang_multer/core'
 import { s3CountFile } from '@database/s3'
 import { requireSignin, requireAdminAuthority } from '@middleware/auth'
 
@@ -198,7 +198,7 @@ testRouter.post('/fileUpload', async (req, res) => {
   const options = {
     subkey: 1,
     fileCountLimit: 3,
-    allowedExtension: [],
+    allowedExtension: ['jpg', 'png'],
   }
 
   const config = {
