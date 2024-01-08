@@ -5,7 +5,7 @@ import { s3Upload, s3CountFile } from '@database/s3'
 import {
   checkAuthorization,
   checkExtension,
-} from '@utility/kkujjang_multer/modules.js'
+} from '@utility/kkujjang_multer/file-analyzer'
 
 export const multer = async (req, limits, options) =>
   new Promise((resolve, reject) => {
