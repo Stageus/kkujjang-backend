@@ -36,7 +36,7 @@ noticeRouter.post(
 noticeRouter.get('/list', validatePageNumber, async (req, res) => {
   const page = Number(req.query.page ?? 1)
 
-  const list = (
+  const result = (
     await pgQuery(
       `SELECT
         id, title, content, created_at, views,
@@ -54,11 +54,9 @@ noticeRouter.get('/list', validatePageNumber, async (req, res) => {
     )
   ).rows
 
-  console.log(list)
-
   res.json({
-    lastPage: list[0].lastPage,
-    list: list.map(({ id, title, content, created_at, views }) => ({
+    lastPage: result[0].lastPage,
+    list: result.map(({ id, title, content, created_at, views }) => ({
       id,
       title,
       content,
