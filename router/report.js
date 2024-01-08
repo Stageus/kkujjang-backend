@@ -61,26 +61,36 @@ reportRouter.get(
     const result = (
       await pgQuery(
         `SELECT
-        report.id,
-        author_id as reporterId, 
-        reporter_user_table.nickname as reporterNickname,
-        reportee_id as reporteeId, 
-        reportee_user_table.nickname as reporteeNickname,
-        is_offensive as isOffensive, 
-        is_poor_manner as isPoorManner, 
-        is_cheating as isCheating, 
-        report.created_at as createdAt,
-        note
-      FROM kkujjang.report
-        JOIN kkujjang.user reporter_user_table ON report.author_id = reporter_user_table.id
-        JOIN kkujjang.user reportee_user_table ON report.reportee_id = reportee_user_table.id
-      WHERE 
-        ${reporterId === null ? `$1=$1` : `author_id=$1`} 
-        ${reporteeId === null ? `AND $2=$2` : `AND reportee_id=$2`} 
-        ${isOffensive === null ? `AND $3=$3` : `AND is_offensive=$3`} 
-        ${isPoorManner === null ? `AND $4=$4` : `AND is_poor_manner=$4 `} 
-        ${isCheating === null ? `AND $5=$5` : `AND is_cheating=$5`} 
-      ORDER BY report.created_at DESC
+          id, 
+          "reporterId", "reporterNickname", 
+          "reporteeId", "reporteeNickname",
+          "isOffensive", "isPoorManner", "isCheating", 
+          "createdAt",
+          CEIL(report_count::float / 10) AS "lastPage"
+        FROM (
+          SELECT 
+            report.id,
+            author_id AS "reporterId", 
+            reporter_user_table.nickname AS "reporterNickname",
+            reportee_id AS "reporteeId", 
+            reportee_user_table.nickname AS "reporteeNickname",
+            is_offensive AS "isOffensive", 
+            is_poor_manner AS "isPoorManner", 
+            is_cheating AS "isCheating", 
+            report.created_at AS "createdAt",
+            note,
+            COUNT(*) OVER() AS report_count
+          FROM kkujjang.report
+            JOIN kkujjang.user reporter_user_table ON report.author_id = reporter_user_table.id
+            JOIN kkujjang.user reportee_user_table ON report.reportee_id = reportee_user_table.id
+          WHERE 
+            ${reporterId === null ? `$1=$1` : `author_id=$1`} 
+            ${reporteeId === null ? `AND $2=$2` : `AND reportee_id=$2`} 
+            ${isOffensive === null ? `AND $3=$3` : `AND is_offensive=$3`} 
+            ${isPoorManner === null ? `AND $4=$4` : `AND is_poor_manner=$4 `} 
+            ${isCheating === null ? `AND $5=$5` : `AND is_cheating=$5`} 
+        ) AS sub_table
+      ORDER BY "createdAt" DESC
       OFFSET ${(page - 1) * 10} LIMIT 10`,
         [
           Number(reporterId ?? 1),
@@ -92,7 +102,33 @@ reportRouter.get(
       )
     ).rows
 
-    res.json({ result })
+    res.json({
+      lastPage: result[0]?.lastPage ?? 0,
+      list:
+        result?.map(
+          ({
+            id,
+            reporterId,
+            reporterNickname,
+            reporteeId,
+            reporteeNickname,
+            isOffensive,
+            isPoorManner,
+            isCheating,
+            createdAt,
+          }) => ({
+            id,
+            reporterId,
+            reporterNickname,
+            reporteeId,
+            reporteeNickname,
+            isOffensive,
+            isPoorManner,
+            isCheating,
+            createdAt,
+          }),
+        ) ?? [],
+    })
   },
 )
 

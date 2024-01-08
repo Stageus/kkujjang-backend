@@ -23,6 +23,7 @@ import {
   validatePasswordReset,
   validateUserSearch,
 } from '@middleware/user'
+import { validatePageNumber } from '@middleware/page'
 
 configDotenv()
 
@@ -245,41 +246,46 @@ userRouter.get(
   '/search',
   requireAdminAuthority,
   validateUserSearch,
+  validatePageNumber,
   async (req, res) => {
-    const { username, nickname, isBanned } = req.query
+    const { username = null, nickname = null, isBanned = null } = req.query
+    const { page = 1 } = req.query
 
-    const conditions = []
-    const values = []
-    let conditionCnt = 1
-    if (username) {
-      conditions.push(`username LIKE $${conditionCnt++}`)
-      values.push(`%${username}%`)
-    }
-    if (nickname) {
-      conditions.push(`nickname LIKE $${conditionCnt++}`)
-      values.push(`%${nickname}%`)
-    }
-    if (isBanned) {
-      conditions.push(`is_banned = $${conditionCnt++}`)
-      values.push(isBanned)
-    }
+    const result = (
+      await pgQuery(
+        `SELECT id, username, nickname, 
+          is_banned AS "isBanned",
+          CEIL(user_count::float / 10) AS "lastPage"
+        FROM (
+          SELECT id, username, nickname, is_banned, created_at,
+            COUNT(*) OVER() AS user_count
+          FROM kkujjang.user
+          WHERE is_deleted = FALSE
+          AND ${username === null ? '$1=$1' : 'username LIKE $1'}
+          AND ${nickname === null ? '$2=$2' : 'nickname LIKE $2'}
+          AND ${isBanned === null ? '$3=$3' : 'is_banned = $3'}
+        ) AS sub_table
+        ORDER BY created_at DESC
+        OFFSET ${(page - 1) * 10} LIMIT 10`,
+        [
+          username === null ? '!' : `%${username}%`,
+          nickname === null ? '!' : `%${nickname}%`,
+          isBanned === null ? 0 : `%${isBanned}%`,
+        ],
+      )
+    ).rows
 
-    let queryString = `SELECT id, username, nickname, is_banned FROM kkujjang.user WHERE is_deleted = FALSE`
-
-    if (conditions.length) {
-      queryString += ' AND ' + conditions.join(' AND ')
-    }
-    const queryRes = await pgQuery(queryString, values)
-
-    const result = []
-    for (const data of queryRes.rows) {
-      const { id, username, nickname, is_banned } = data
-      const temp = { id, username, nickname, isBanned: is_banned }
-      result.push(temp)
-    }
+    console.log(result)
 
     res.json({
-      result,
+      lastPage: result[0]?.lastPage ?? 0,
+      list:
+        result?.map(({ id, username, nickname, isBanned }) => ({
+          id,
+          username,
+          nickname,
+          isBanned,
+        })) ?? [],
     })
   },
 )
