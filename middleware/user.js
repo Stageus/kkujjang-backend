@@ -149,3 +149,11 @@ export const validateUserSearch = (req, res, next) => {
 
   next()
 }
+
+export const validateUsername = (req, res, next) => {
+  const { username } = req.query
+
+  validation.check(username, 'username', validation.checkRegExp(/^[a-z0-9]+$/))
+
+  next()
+}
