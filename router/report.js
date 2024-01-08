@@ -103,30 +103,31 @@ reportRouter.get(
     ).rows
 
     res.json({
-      lastPage: result[0].lastPage,
-      list: result.map(
-        ({
-          id,
-          reporterId,
-          reporterNickname,
-          reporteeId,
-          reporteeNickname,
-          isOffensive,
-          isPoorManner,
-          isCheating,
-          createdAt,
-        }) => ({
-          id,
-          reporterId,
-          reporterNickname,
-          reporteeId,
-          reporteeNickname,
-          isOffensive,
-          isPoorManner,
-          isCheating,
-          createdAt,
-        }),
-      ),
+      lastPage: result[0]?.lastPage ?? 0,
+      list:
+        result?.map(
+          ({
+            id,
+            reporterId,
+            reporterNickname,
+            reporteeId,
+            reporteeNickname,
+            isOffensive,
+            isPoorManner,
+            isCheating,
+            createdAt,
+          }) => ({
+            id,
+            reporterId,
+            reporterNickname,
+            reporteeId,
+            reporteeNickname,
+            isOffensive,
+            isPoorManner,
+            isCheating,
+            createdAt,
+          }),
+        ) ?? [],
     })
   },
 )
