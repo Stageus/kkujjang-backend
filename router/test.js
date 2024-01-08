@@ -187,19 +187,13 @@ testRouter.get('/fileCount/:id', async (req, res) => {
 })
 
 testRouter.post('/fileUpload', async (req, res) => {
-  if (Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)) {
-    checkAuthor = {
-      userId: session.userId,
-      idColumnName: 'thread_id',
-      tableName: 'kkujjang.inquiry',
-    }
-    needAnswer = true
-  }
-
-  const config = {
-    fileSize: 1024 * 1024 * 5,
-    fieldNameSize: 100,
-  }
+  // if (Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)) {
+  //   checkAuthor = {
+  //     userId: session.userId,
+  //     idColumnName: 'thread_id',
+  //     tableName: 'kkujjang.inquiry',
+  //   }
+  // }
 
   const options = {
     checkAuthor,
