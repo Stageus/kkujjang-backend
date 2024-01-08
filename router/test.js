@@ -9,7 +9,7 @@ import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn, createSession, getSession } from '@utility/session'
 import { multer } from '@utility/kkujjang_multer/core'
-import { s3CountFile } from '@database/s3'
+import { s3CountFile } from '@utility/kkujjang_multer/s3'
 import { requireSignin, requireAdminAuthority } from '@middleware/auth'
 
 configDotenv()

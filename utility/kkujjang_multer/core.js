@@ -1,7 +1,7 @@
 import busboy from 'busboy'
 import * as uuid from 'uuid'
 import { PassThrough, pipeline } from 'stream'
-import { s3Upload, s3CountFile } from '@database/s3'
+import { s3Upload, s3CountFile } from '@utility/kkujjang_multer/s3'
 import {
   checkAuthor,
   checkExtension,
