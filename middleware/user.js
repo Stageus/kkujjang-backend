@@ -1,11 +1,11 @@
 import * as validation from '@utility/validation'
 
 export const validateSignIn = (req, res, next) => {
-  const { id = null, password = null } = req.body
+  const { username = null, password = null } = req.body
 
   validation.check(
-    id,
-    'id',
+    username,
+    'username',
     validation.checkExist(),
     validation.checkRegExp(/^[a-z0-9]{7,30}$/),
   )
@@ -16,7 +16,7 @@ export const validateSignIn = (req, res, next) => {
     validation.checkExist(),
     validation.checkRegExp(
       // 영문 대문자, 소문자, 키보드 내 특수문자,
-      /(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[`~!@#$%^&*()_+\-=\[\]{};':",.<>/?])[A-Za-z0-9`~!@#$%^&*()_+\-=\[\]{};':",.<>/?]{7,30}/,
+      /(?=.*[a-zA-Z])(?=.*\d)(?=.*[`~!@#$%^&*()_+\-=\[\]{};':",.<>/?])[A-Za-z0-9`~!@#$%^&*()_+\-=\[\]{};':",.<>/?]{7,30}/,
     ),
   )
 
@@ -39,7 +39,7 @@ export const validateSignUp = (req, res, next) => {
     validation.checkExist(),
     validation.checkLength(7, 30),
     validation.checkRegExp(
-      /(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[`~!@#$%^&*()_+\-=\[\]{};':",.<>/?])[A-Za-z0-9`~!@#$%^&*()_+\-=\[\]{};':",.<>/?]{7,30}/,
+      /(?=.*[a-zA-Z])(?=.*\d)(?=.*[`~!@#$%^&*()_+\-=\[\]{};':",.<>/?])[A-Za-z0-9`~!@#$%^&*()_+\-=\[\]{};':",.<>/?]{7,30}/,
     ),
   )
   validation.check(
@@ -116,7 +116,7 @@ export const validatePasswordReset = (req, res, next) => {
     'newPassword',
     validation.checkExist(),
     validation.checkRegExp(
-      /(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[`~!@#$%^&*()_+\-=\[\]{};':",.<>/?])[A-Za-z0-9`~!@#$%^&*()_+\-=\[\]{};':",.<>/?]{7,30}/,
+      /(?=.*[a-zA-Z])(?=.*\d)(?=.*[`~!@#$%^&*()_+\-=\[\]{};':",.<>/?])[A-Za-z0-9`~!@#$%^&*()_+\-=\[\]{};':",.<>/?]{7,30}/,
     ),
   )
 

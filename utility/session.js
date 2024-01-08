@@ -55,7 +55,8 @@ export const destorySession = async (sessionId) => {
 }
 
 export const isSignedIn = async (userId) => {
-  const { userId: userIdInSession = null } = await getSessionByUserId(userId)
+  const { userId: userIdInSession = null } =
+    (await getSessionByUserId(userId)) ?? {}
 
   console.log(`userId: ${userId}, userIdInSession: ${userIdInSession}`)
 
