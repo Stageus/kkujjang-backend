@@ -125,7 +125,6 @@ export const multer = async (req, limits, options) =>
                 fileCount = 0
               } else {
                 fileCount = await s3CountFile(`${textResult.id}/${subkey}/`)
-                console.log(`${textResult.id}/${subkey}/`)
               }
             }
 

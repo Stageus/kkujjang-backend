@@ -196,10 +196,9 @@ testRouter.post('/fileUpload', async (req, res) => {
   // }
 
   const options = {
-    checkAuthor,
     subkey: 1,
     fileCountLimit: 3,
-    allowedExtension: ['jpg', 'jpeg', 'png'],
+    allowedExtension: [],
   }
 
   const config = {

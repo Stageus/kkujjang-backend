@@ -29,7 +29,7 @@ export const checkExtension = (fileStream, filename, allowedExtension) => {
   if (!allowedExtension.includes(type.ext)) {
     return {
       valid: false,
-      message: `${filename} | 허용되지 않은 확장자입니다`,
+      message: `${filename} | 허가되지 않은 확장자입니다`,
     }
   }
 
