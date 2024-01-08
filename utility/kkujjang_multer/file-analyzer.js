@@ -1,266 +1,41 @@
 import path from 'path'
-import busboy from 'busboy'
-import * as uuid from 'uuid'
-import FormData from 'form-data'
-import fetch from 'node-fetch-commonjs'
 import { pgQuery } from '@database/postgres'
-import { checkFileCount } from '@database/s3'
-import { PassThrough, pipeline } from 'stream'
 
-export const fileAnalyzer = (req, limits, options) =>
-  new Promise(async (resolve, reject) => {
-    let { checkAuthor, type, allowedFileCount, allowedExtension } = options
-    if (checkAuthor) {
-      checkAuthor['isChecked'] = false
-      checkAuthor['authored'] = false
-    }
-    const bb = busboy({ headers: req.headers, limits })
-
-    const params = {}
-
-    const errResult = []
-    let fileCount = -1
-    const fetchPromises = []
-
-    // text 값 가져오기
-    bb.on('field', (fieldname, value, { nameTruncated, valueTruncated }) => {
-      if (fieldname == null) {
-        reject({
-          statusCode: 400,
-          message: 'MISSING_FIELD_NAME',
-        })
-      }
-      if (nameTruncated) {
-        reject({
-          statusCode: 400,
-          message: 'LIMIT_FIELD_KEY',
-        })
-      }
-      if (valueTruncated) {
-        reject({
-          statusCode: 400,
-          message: 'LIMIT_FIELD_VALUE',
-        })
-      }
-
-      if (fieldname === 'id') {
-        params['id'] = value
-      } else {
-        params[fieldname] = value
-      }
-    })
-
-    bb.on(
-      'file',
-      async (fieldname, fileStream, { filename, encoding, mimeType }) => {
-        // busyboy 매개변수 기본 예외처리
-        if (!filename) return fileStream.resume()
-        if (
-          limits &&
-          Object.prototype.hasOwnProperty.call(limits, 'fieldNameSize')
-        ) {
-          if (fieldname.length > limits.fieldNameSize) {
-            reject({
-              statusCode: 400,
-              message: 'LIMIT_FIELD_KEY',
-            })
-          }
-        }
-        // busyboy 매개변수 기본 예외처리 끝
-
-        // limit event 발생 시 fetch 취소 요청할 abortController 정의
-        const abortController = new AbortController()
-        const { signal } = abortController
-
-        if (!params.id) {
-          params['id'] = uuid.v4()
-          if (checkAuthor) {
-            // 새로운 글을 쓰면 checkAuthor 비활성화
-            checkAuthor = false
-          }
-        }
-        if (fieldname !== 'files') {
-          errResult.push({
-            message: `fileAnalyzer: ${filename} | filedname은 'files'여야합니다`,
-          })
-          return fileStream.resume()
-        }
-
-        if (fileCount === -1) {
-          if (type == 'edit') fileCount = await checkFileCount(params.id)
-        }
-        fileCount++
-
-        // 권한 체크 모드라면 해당 id에 대해 권한 검증
-        if (checkAuthor) {
-          let { authorId, table, columnName, isChecked } = checkAuthor
-          if (!isChecked) {
-            checkAuthor.authored = (
-              await pgQuery(
-                `SELECT count(*)
-                FROM kkujjang.${table}
-                WHERE ${columnName} = $1 AND author_id=$2`,
-                [params.id, authorId],
-              )
-            ).rows[0].count
-            console.log(authorId, checkAuthor.authored)
-            checkAuthor.isChecked = true
-          }
-          if (!Number(checkAuthor.authored)) {
-            console.log('123')
-            errResult.push({
-              message: `fileAnalyzer: ${filename} | ${params.id}/에 저장할 권한이 없습니다`,
-            })
-            return fileStream.resume()
-          }
-        }
-
-        // 해당 id의 저장 공간이 개수 초과라면 해당 파일 stream을 보내지 않는다
-        if (allowedFileCount < fileCount) {
-          errResult.push({
-            message: `fileAnalyzer: ${filename} | 저장 개수 한도 초과로 저장되지 않았습니다`,
-          })
-          return fileStream.resume()
-        }
-
-        // 업로드하다가 파일 사이즈 한계 도래
-        fileStream.on('limit', function () {
-          errResult.push({
-            message: `fileAnalyzer: ${filename} | 파일 용량 초과로 저장되지 않았습니다`,
-          })
-          fileCount--
-          abortController.abort()
-          return fileStream.resume()
-        })
-
-        // form Data 작성
-        let formData = new FormData()
-        let passThrough = new PassThrough()
-
-        // 첫번째 청크를 읽었을 때 매직 넘버 검사 수행
-        fileStream.once('data', function (firstChunk) {
-          const type = checkMagicNumber(firstChunk)
-          // 불일치한다면 해당 파일 stream을 보내지 않는다
-          if (
-            `.${type.ext}` !== path.extname(filename) ||
-            type.ext === 'unknown'
-          ) {
-            errResult.push({
-              message: `fileAnalyzer: ${filename} | 알 수 없는 확장자 또는 확장자가 변조된 파일입니다`,
-            })
-            fileCount--
-            return fileStream.resume()
-          }
-
-          if (!allowedExtension.includes(type.ext)) {
-            errResult.push({
-              message: `fileAnalyzer: ${filename} | 허용되지 않은 확장자입니다`,
-            })
-            fileCount--
-            return fileStream.resume()
-          }
-
-          // 일치한다면 pipeline 구성 작업
-          passThrough.write(firstChunk)
-          pipeline(fileStream, passThrough, (err) => {
-            if (err) {
-              reject({
-                statusCode: 500,
-                message: err,
-              })
-            }
-          })
-
-          // S3 업로드 경로를 설정해줄 id 와 filename을 함께 전달해준다
-          formData.append('id', params.id)
-          formData.append('filename', filename)
-          formData.append('files', passThrough, filename)
-          const fetchPromise = fetch(
-            'http://localhost:3000/test/S3-fileUpload',
-            {
-              method: 'POST',
-              headers: formData.getHeaders(),
-              body: formData,
-              signal: signal,
-            },
-          )
-            .then((response) => {
-              if (!response.ok) {
-                reject({
-                  statusCode: 500,
-                  message:
-                    'fileAnalyzer: S3-fileUpload로 fetch 요청 중 오류가 발생했습니다',
-                })
-              }
-              return response.text()
-            })
-            .then((data) => {
-              return data
-            })
-            .catch((err) => {
-              errResult.push({
-                filename,
-                message: err,
-              })
-              return reject(err)
-            })
-
-          fetchPromises.push(fetchPromise)
-        })
-
-        fileStream.on('end', async () => {
-          passThrough.end()
-        })
-
-        // fileStream 예외 이벤트 리스너 등록
-        fileStream.on('error', function (err) {
-          reject(err)
-        })
-      },
+export const checkAuthor = async (author, articleId) => {
+  let { userId, idColumnName, tableName } = author
+  const res = (
+    await pgQuery(
+      `SELECT COUNT(*) as count
+      FROM kkujjang.${tableName}
+      WHERE ${idColumnName} = $1 AND author_id=$2`,
+      [articleId, userId],
     )
+  ).rows[0].count
 
-    bb.on('finish', async () => {
-      // 모든 fetch 요청이 완료되었는지 확인
-      const resultMessages = await Promise.all(fetchPromises)
-      const result = {}
-      result['text'] = params
-      const filesResult = []
-      for (const resultMessage of resultMessages) {
-        filesResult.push({
-          url: resultMessage,
-        })
-      }
+  return Number(res) === 0 ? false : true
+}
 
-      result['files'] = filesResult
-      result['err'] = errResult
-      resolve(result)
-    })
+export const checkExtension = (fileStream, filename, allowedExtension) => {
+  // 불일치한다면 해당 파일 stream을 보내지 않는다
+  const type = checkMagicNumber(fileStream)
+  if (`.${type.ext}` !== path.extname(filename) || type.ext === 'unknown') {
+    return {
+      valid: false,
+      message: `${filename} | 알 수 없는 확장자 또는 확장자가 변조된 파일입니다`,
+    }
+  }
 
-    // busboy 기본 예외 이벤트 리스너 등록
-    bb.on('error', (err) => {
-      reject(err)
-    })
-    bb.on('partsLimit', function () {
-      reject({
-        statusCode: 400,
-        message: 'fileAnalyzer: LIMIT_PART_COUNT',
-      })
-    })
-    bb.on('filesLimit', function () {
-      reject({
-        statusCode: 400,
-        message: 'fileAnalyzer: LIMIT_FILE_COUNT',
-      })
-    })
-    bb.on('fieldsLimit', function () {
-      reject({
-        statusCode: 400,
-        message: 'fileAnalyzer: LIMIT_FIELD_COUNT',
-      })
-    })
+  if (!allowedExtension.includes(type.ext)) {
+    return {
+      valid: false,
+      message: `${filename} | 허가되지 않은 확장자입니다`,
+    }
+  }
 
-    req.pipe(bb)
-  })
+  return {
+    valid: true,
+  }
+}
 
 const checkMagicNumber = (buf) => {
   if (!(buf && buf.length > 1)) {
