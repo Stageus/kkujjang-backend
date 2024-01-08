@@ -29,7 +29,7 @@ export const multer = async (req, limits, options) =>
       checkAuthor = false,
       subkey = '',
       fileCountLimit = -1,
-      allowedExtension = ['jpg'],
+      allowedExtension = [],
     } = options
 
     // options 검증
