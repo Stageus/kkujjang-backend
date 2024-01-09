@@ -99,10 +99,10 @@ export const checkIsNumber = curry((target) => {
 })
 
 // min, max inclusive (>=, <=)
-export const checkIsInRange = curry((min, max, target) => {
+export const checkIsInNumberRange = curry((min, max, target) => {
   return {
     isValid: !isNumber(target) && min <= target && target <= max,
-    message: `checkIsInRange: 범위를 벗어난 수입니다.`,
+    message: `checkIsInRange: 대상이 숫자가 아니거나 ${min} <= x <= ${max} 범위를 벗어난 수(${target})입니다.`,
   }
 })
 
