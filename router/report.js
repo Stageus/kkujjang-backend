@@ -10,6 +10,7 @@ import {
   validateReportPathIndex,
   validateReportSearch,
 } from '@middleware/report'
+import { validatePageNumber } from '@middleware/page'
 
 configDotenv()
 
@@ -45,6 +46,7 @@ reportRouter.get(
   '/search',
   requireAdminAuthority,
   validateReportSearch,
+  validatePageNumber,
   async (req, res) => {
     const {
       page = 1,

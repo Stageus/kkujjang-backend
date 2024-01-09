@@ -267,7 +267,7 @@ userRouter.get(
           AND ${isBanned === null ? '$3=$3' : 'is_banned = $3'}
         ) AS sub_table
         ORDER BY created_at DESC
-        OFFSET ${(page - 1) * 10} LIMIT 10`,
+        OFFSET ${(Number(page) - 1) * 10} LIMIT 10`,
         [
           username === null ? '!' : `%${username}%`,
           nickname === null ? '!' : `%${nickname}%`,

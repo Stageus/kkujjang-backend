@@ -34,7 +34,7 @@ noticeRouter.post(
 )
 
 noticeRouter.get('/list', validatePageNumber, async (req, res) => {
-  const page = Number(req.query.page ?? 1)
+  const { page = 1 } = req.query
 
   const result = (
     await pgQuery(
@@ -50,7 +50,7 @@ noticeRouter.get('/list', validatePageNumber, async (req, res) => {
         ) AS sub_table
       WHERE is_deleted=FALSE
       ORDER BY created_at DESC
-      OFFSET ${(page - 1) * 10} LIMIT 10`,
+      OFFSET ${(Number(page) - 1) * 10} LIMIT 10`,
     )
   ).rows
 
@@ -72,8 +72,7 @@ noticeRouter.get(
   validatePageNumber,
   validateNoticeSearch,
   async (req, res) => {
-    const page = Number(req.query.page ?? 1)
-    const keyword = req.query.q
+    const { page = 1, q: keyword } = req.query
 
     const result = (
       await pgQuery(
@@ -82,7 +81,7 @@ noticeRouter.get(
       WHERE is_deleted=FALSE
       AND title LIKE '%${keyword}%'
       ORDER BY created_at DESC
-      OFFSET ${(page - 1) * 10} LIMIT 10`,
+      OFFSET ${(Number(page) - 1) * 10} LIMIT 10`,
       )
     ).rows
 
