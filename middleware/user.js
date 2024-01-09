@@ -1,11 +1,11 @@
 import * as validation from '@utility/validation'
 
 export const validateSignIn = (req, res, next) => {
-  const { id = null, password = null } = req.body
+  const { username = null, password = null } = req.body
 
   validation.check(
-    id,
-    'id',
+    username,
+    'username',
     validation.checkExist(),
     validation.checkRegExp(/^[a-z0-9]{7,30}$/),
   )
