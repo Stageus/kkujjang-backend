@@ -87,12 +87,22 @@ export const checkSame = curry((sameTarget, target) => {
   return result
 })
 
-export const checkIsNumber = curry((target) => {
-  const validity = !isNaN(Number(target))
+const isNumber = (target) => {
+  return !isNaN(parseInt(target))
+}
 
+export const checkIsNumber = curry((target) => {
   return {
-    isValid: validity,
+    isValid: isNumber(target),
     message: `checkIsNumber: 대상이 숫자가 아닙니다.`,
+  }
+})
+
+// min, max inclusive (>=, <=)
+export const checkIsInNumberRange = curry((min, max, target) => {
+  return {
+    isValid: isNumber(target) && min <= target && target <= max,
+    message: `checkIsInRange: 대상이 숫자가 아니거나 ${min} <= x <= ${max} 범위를 벗어난 수(${target})입니다.`,
   }
 })
 
