@@ -14,25 +14,25 @@ export const validateReport = (req, res, next) => {
     isOffensive,
     'isOffensive',
     validation.checkExist(),
-    validation.checkRegExp(/^0|1$/),
+    validation.checkRegExp(/^true|false$/),
   )
   validation.check(
     isPoorManner,
     'isPoorManner',
     validation.checkExist(),
-    validation.checkRegExp(/^0|1$/),
+    validation.checkRegExp(/^true|false$/),
   )
   validation.check(
     isCheating,
     'isCheating',
     validation.checkExist(),
-    validation.checkRegExp(/^0|1$/),
+    validation.checkRegExp(/^true|false$/),
   )
 
   if (
-    isOffensive === 0 &&
-    isPoorManner === 0 &&
-    isCheating === 0 &&
+    isOffensive === false &&
+    isPoorManner === false &&
+    isCheating === false &&
     note === ''
   ) {
     throw {
