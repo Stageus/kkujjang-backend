@@ -14,12 +14,12 @@ const curry =
 // 하나의 값을 return 또는 throw해 줍니다.
 // 결국 iter를 하나의 값으로 압축했기 때문에 combine 함수입니다.
 const combine = (iter) => {
-  const funcs = iter[Symbol.iterator]()
+  const args = iter[Symbol.iterator]()
 
-  const target = funcs.next().value
-  const targetName = funcs.next().value
+  const target = args.next().value
+  const targetName = args.next().value
 
-  Array.from(funcs).forEach((func) => func(target, targetName))
+  Array.from(args).forEach((func) => func(target, targetName))
 }
 
 export const checkExist = curry((target, targetName) => {
