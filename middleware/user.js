@@ -1,7 +1,7 @@
 import * as validation from '@utility/validation'
 
 export const validateSignIn = (req, res, next) => {
-  const { username = null, password = null } = req.body
+  const { username, password } = req.body
 
   validation.check(
     username,
