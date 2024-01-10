@@ -34,7 +34,7 @@ export const validateNoticePathIndex = (req, res, next) => {
     noticeId,
     'noticeId',
     validation.checkExist(),
-    validation.checkIsNumber(),
+    validation.checkParsedNumberInRange(1, Infinity),
   )
 
   next()

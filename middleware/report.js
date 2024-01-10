@@ -1,29 +1,38 @@
 import * as validation from '@utility/validation'
 
 export const validateReport = (req, res, next) => {
-  const {
-    reporteeId = null,
-    isOffensive = 0,
-    isPoorManner = 0,
-    isCheating = 0,
-    note = '',
-  } = req.body
+  const { reporteeId, isOffensive, isPoorManner, isCheating, note } = req.body
 
   validation.check(
     reporteeId,
     'reporteeId',
     validation.checkExist(),
-    validation.checkIsNumber(),
+    validation.checkParsedNumberInRange(1, Infinity),
   )
 
-  validation.check(isOffensive, 'isOffensive', validation.checkIsNumber())
-  validation.check(isPoorManner, 'isPoorManner', validation.checkIsNumber())
-  validation.check(isCheating, 'isCheating', validation.checkIsNumber())
+  validation.check(
+    isOffensive,
+    'isOffensive',
+    validation.checkExist(),
+    validation.checkRegExp(/^true|false$/),
+  )
+  validation.check(
+    isPoorManner,
+    'isPoorManner',
+    validation.checkExist(),
+    validation.checkRegExp(/^true|false$/),
+  )
+  validation.check(
+    isCheating,
+    'isCheating',
+    validation.checkExist(),
+    validation.checkRegExp(/^true|false$/),
+  )
 
   if (
-    isOffensive === 0 &&
-    isPoorManner === 0 &&
-    isCheating === 0 &&
+    isOffensive === false &&
+    isPoorManner === false &&
+    isCheating === false &&
     note === ''
   ) {
     throw {
@@ -36,46 +45,47 @@ export const validateReport = (req, res, next) => {
 }
 
 export const validateReportSearch = (req, res, next) => {
-  const {
-    page = 1,
-    reporterId,
-    reporteeId,
-    isOffensive,
-    isPoorManner,
-    isCheating,
-  } = req.body
+  const { reporterId, reporteeId, isOffensive, isPoorManner, isCheating } =
+    req.body
 
-  validation.check(page, 'page', validation.checkIsNumber())
   reporterId &&
-    validation.check(reporterId, 'reporterId', validation.checkIsNumber())
+    validation.check(
+      reporterId,
+      'reporterId',
+      validation.checkParsedNumberInRange(1, Infinity),
+    )
   reporteeId &&
-    validation.check(reporteeId, 'reporteeId', validation.checkIsNumber())
+    validation.check(
+      reporteeId,
+      'reporteeId',
+      validation.checkParsedNumberInRange(1, Infinity),
+    )
   isOffensive &&
-    validation.check(isOffensive, 'isOffensive', validation.checkIsNumber())
+    validation.check(
+      isOffensive,
+      'isOffensive',
+      validation.checkRegExp(/^0|1$/),
+    )
   isPoorManner &&
-    validation.check(isPoorManner, 'isPoorManner', validation.checkIsNumber())
+    validation.check(
+      isPoorManner,
+      'isPoorManner',
+      validation.checkRegExp(/^0|1$/),
+    )
   isCheating &&
-    validation.check(isCheating, 'isCheating', validation.checkIsNumber())
+    validation.check(isCheating, 'isCheating', validation.checkRegExp(/^0|1$/))
 
   next()
 }
 
 export const validateReportModification = (req, res, next) => {
-  const { reportId } = req.params
   const { reportStatus } = req.body
-
-  validation.check(
-    reportId,
-    'reportId',
-    validation.checkExist(),
-    validation.checkIsNumber(),
-  )
 
   validation.check(
     reportStatus,
     'reportStatus',
     validation.checkExist(),
-    validation.checkIsNumber(),
+    validation.checkRegExp(/^0|1$/),
   )
 
   next()
@@ -88,7 +98,7 @@ export const validateReportPathIndex = (req, res, next) => {
     reportId,
     'reportId',
     validation.checkExist(),
-    validation.checkIsNumber(),
+    validation.checkParsedNumberInRange(1, Infinity),
   )
 
   next()
