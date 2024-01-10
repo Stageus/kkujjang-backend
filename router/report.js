@@ -1,7 +1,6 @@
 import express from 'express'
 import asyncify from 'express-asyncify'
 import { configDotenv } from 'dotenv'
-import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
 import { requireAdminAuthority, requireSignin } from '@middleware/auth'
 import {
@@ -21,9 +20,9 @@ reportRouter.post('/', requireSignin, validateReport, async (req, res) => {
 
   const {
     reporteeId,
-    isOffensive = 0,
-    isPoorManner = 0,
-    isCheating = 0,
+    isOffensive,
+    isPoorManner,
+    isCheating,
     note = '',
   } = req.body
 
@@ -49,7 +48,7 @@ reportRouter.get(
   validatePageNumber,
   async (req, res) => {
     const {
-      page = 1,
+      page,
       reporterId = null,
       reporteeId = null,
       isOffensive = null,
@@ -138,6 +137,7 @@ reportRouter.get(
 reportRouter.put(
   '/:reportId',
   requireAdminAuthority,
+  validateReportPathIndex,
   validateReportModification,
   async (req, res) => {
     const { reportId } = req.params

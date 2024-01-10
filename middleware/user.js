@@ -72,7 +72,7 @@ export const validateReceiverNumber = (req, res, next) => {
     receiverNumber,
     'receiverNumber',
     validation.checkExist(),
-    validation.checkRegExp(/010-\d{4}-\d{4}/),
+    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
   )
 
   next()
@@ -88,14 +88,14 @@ export const validateAuthCodeCheck = (req, res, next) => {
     authNumber,
     'authNumber',
     validation.checkExist(),
-    validation.checkRegExp(/\d{6}/),
+    validation.checkRegExp(/^\d{6}$/),
   )
 
   validation.check(
     phoneNumber,
     'phoneNumber',
     validation.checkExist(),
-    validation.checkRegExp(/010-\d{4}-\d{4}/),
+    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
   )
 
   next()
@@ -145,7 +145,8 @@ export const validateUserSearch = (req, res, next) => {
       'nickname',
       validation.checkRegExp(/^[a-zA-Z0-9가-힣]+$/),
     )
-  isBanned && validation.check(isBanned, 'isBanned', validation.checkIsNumber())
+  isBanned &&
+    validation.check(isBanned, 'isBanned', validation.checkRegExp(/^0|1$/))
 
   next()
 }
@@ -156,6 +157,7 @@ export const validateUsername = (req, res, next) => {
   validation.check(
     username,
     'username',
+    validation.checkExist(),
     validation.checkRegExp(/^[a-z0-9]{7,30}$/),
   )
 
