@@ -17,96 +17,78 @@ const combine = (iter) => {
   const funcs = iter[Symbol.iterator]()
 
   const target = funcs.next().value
-  const targetType = funcs.next().value
+  const targetName = funcs.next().value
 
-  const messages = Array.from(funcs).reduce((errors, func) => {
-    const result = func(target)
-    result.isValid !== true && errors.push(result.message)
-    return errors
-  }, [])
-
-  if (messages.length != 0) {
-    throw {
-      statusCode: 400,
-      message: `올바르지 않은 형식입니다: ${targetType}`,
-      messages,
-    }
-  }
+  Array.from(funcs).forEach((func) => func(target, targetName))
 }
 
-export const checkExist = curry((target) => {
-  let result = {
-    isValid: true,
+export const checkExist = curry((target, targetName) => {
+  if (target === '' || target === null || target === undefined) {
+    throw {
+      statusCode: 400,
+      message: `값이 존재하지 않습니다. (${targetName}: ${target})`,
+    }
   }
-  if (target != '' && target != null && target != undefined) {
-    return result
-  }
-  result.isValid = false
-  result.message = `checkExist: 값이 존재하지 않습니다.`
-  return result
 })
 
-export const checkLength = curry((min, max, target) => {
-  let result = {
-    isValid: true,
-  }
-  if (min <= target.length && target.length <= max) {
-    return result
-  }
-  result.isValid = false
+export const checkLength = curry((min, max, target, targetName) => {
   if (target.length < min) {
-    result.message = `checkLength: 길이가 너무 짧습니다.`
+    throw {
+      statusCode: 400,
+      message: `길이가 너무 짧습니다. (${targetName}: ${target})`,
+    }
   }
+
   if (max < target.length) {
-    result.message = `checkLength: 길이가 너무 깁니다.`
+    throw {
+      statusCode: 400,
+      message: `길이가 너무 깁니다. (${targetName}: ${target})`,
+    }
   }
-  return result
 })
 
-export const checkRegExp = curry((std, target) => {
-  let result = {
-    isValid: true,
+export const checkRegExp = curry((std, target, targetName) => {
+  if (!RegExp(std).test(target)) {
+    throw {
+      statusCode: 400,
+      message: `정규표현식(${std.toString()})과 일치하지 않습니다. (${targetName}: ${target})`,
+    }
   }
-  if (RegExp(std).test(target)) {
-    return result
-  }
-  result.isValid = false
-  result.message = `checkRegExp: 정규표현식과 일치하지 않습니다.`
-  return result
 })
 
-export const checkSame = curry((sameTarget, target) => {
-  let result = {
-    isValid: true,
+export const checkSame = curry((sameTarget, target, targetName) => {
+  if (target !== sameTarget) {
+    return `비교 대상(${sameTarget})과 일치하지 않는 값입니다. (${targetName}: ${target})`
   }
-  if (target == sameTarget) {
-    return result
-  }
-  result.isValid = false
-  result.message = `checkSame: 비교 대상 문자열과 동일하지 않은 문자열입니다.`
-  return result
 })
 
 const isNumberParsableString = (target) => /^\d+$/.test(target)
 
-export const checkIsNumberParsableString = curry((target) => {
-  return {
-    isValid: isNumberParsableString(target),
-    message: `checkIsNumber: 대상이 숫자가 아닙니다.`,
+export const checkIsNumberParsableString = curry((target, targetName) => {
+  if (!isNumberParsableString(target)) {
+    throw {
+      statusCode: 400,
+      message: `대상이 숫자가 아닙니다. (${targetName}: ${target})`,
+    }
   }
 })
 
 // min, max inclusive (>=, <=)
-export const checkParsedNumberInRange = curry((min, max, target) => {
-  const targetNumber = Number(target)
+export const checkParsedNumberInRange = curry(
+  (min, max, target, targetName) => {
+    const targetNumber = Number(target)
 
-  return {
-    isValid:
-      isNumberParsableString(target) &&
-      min <= targetNumber &&
-      targetNumber <= max,
-    message: `checkIsInRange: 대상(${target})이 숫자가 아니거나 범위를 벗어난 수입니다.`,
-  }
-})
+    if (
+      !isNumberParsableString(target) ||
+      targetNumber < min ||
+      targetNumber > max
+    ) {
+      throw {
+        statusCode: 400,
+        message: `숫자가 아니거나 범위 [${min}, ${max}]를 벗어난 수입니다. (${targetName}: ${target})`,
+      }
+    }
+  },
+)
 
 export const check = (...args) => combine(args)
