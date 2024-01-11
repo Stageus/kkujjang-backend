@@ -23,7 +23,7 @@ export const validateInquiryGetBySearch = (req, res, next) => {
       type,
       'type',
       validation.checkExist(),
-      validation.checkIsNumber(),
+      validation.checkParsedNumberInRange(1, 99),
     )
     conditionValue.push(type)
     conditionStrArray.push(`AND type = $${conditionValue.length}`)
@@ -55,7 +55,7 @@ export const validateInquiryGetByPathIndex = (req, res, next) => {
     inquiryId,
     'inquiryId',
     validation.checkExist(),
-    validation.checkIsNumber(),
+    validation.checkParsedNumberInRange(1, Infinity),
   )
 
   const session = res.locals.session
@@ -66,7 +66,7 @@ export const validateInquiryGetByPathIndex = (req, res, next) => {
   }
 
   res.locals.conditionString = 'AND author_id = $3'
-  res.locals.condtionValue = [session.userId]
+  res.locals.conditionValue = [session.userId]
 
   next()
 }
@@ -144,7 +144,7 @@ export const validateInquiryupload = async (req, res, next) => {
     author = {
       userId: session.userId,
       idColumnName: 'thread_id',
-      tableName: 'kkujjang.inquiry',
+      tableName: 'kkujjang.inquiry_article',
     }
   }
 

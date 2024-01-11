@@ -137,7 +137,7 @@ inquiryRouter.get(
         FROM (
           SELECT *, COUNT(*) OVER() AS count
           FROM kkujjang.inquiry_article 
-          ORDER BY created_at DESC
+          ORDER BY created_at ASC
           OFFSET(${(Number(page) - 1) * 10}) LIMIT 10
         ) inq_article
 
