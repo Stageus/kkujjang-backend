@@ -1,7 +1,6 @@
 import express from 'express'
 import asyncify from 'express-asyncify'
 import { configDotenv } from 'dotenv'
-import * as validation from '@utility/validation'
 import { pgQuery } from '@database/postgres'
 import { requireAdminAuthority } from '@middleware/auth'
 import {
@@ -34,7 +33,7 @@ noticeRouter.post(
 )
 
 noticeRouter.get('/list', validatePageNumber, async (req, res) => {
-  const { page = 1 } = req.query
+  const { page } = req.query
 
   const result = (
     await pgQuery(
@@ -72,7 +71,7 @@ noticeRouter.get(
   validatePageNumber,
   validateNoticeSearch,
   async (req, res) => {
-    const { page = 1, q: keyword } = req.query
+    const { page, q: keyword } = req.query
 
     const result = (
       await pgQuery(
@@ -91,7 +90,6 @@ noticeRouter.get(
 
 noticeRouter.get('/:noticeId', validateNoticePathIndex, async (req, res) => {
   const { noticeId } = req.params
-  validation.check(noticeId, 'noticeId', validation.checkExist())
 
   const result = (
     await pgQuery(
@@ -116,13 +114,10 @@ noticeRouter.put(
   '/:noticeId',
   validateNoticePathIndex,
   requireAdminAuthority,
+  validateNotice,
   async (req, res) => {
     const { noticeId } = req.params
-    validation.check(noticeId, 'noticeId', validation.checkExist())
-
     const { title, content } = req.body
-    validation.check(title, 'title', validation.checkExist())
-    validation.check(content, 'content', validation.checkExist())
 
     await pgQuery(
       `UPDATE kkujjang.notice SET title=$1, content=$2 
@@ -136,16 +131,10 @@ noticeRouter.put(
 
 noticeRouter.delete(
   '/:noticeId',
-  validateNoticePathIndex,
   requireAdminAuthority,
+  validateNoticePathIndex,
   async (req, res) => {
     const { noticeId } = req.params
-    validation.check(noticeId, 'noticeId', validation.checkExist())
-
-    // TODO: remove line 117-119
-    const { title, content } = req.body
-    validation.check(title, 'title', validation.checkExist())
-    validation.check(content, 'content', validation.checkExist())
 
     await pgQuery(
       `UPDATE kkujjang.notice SET is_deleted=TRUE WHERE id=$1 AND is_deleted=FALSE`,

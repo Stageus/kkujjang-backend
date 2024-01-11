@@ -271,7 +271,7 @@ userRouter.get(
         [
           username === null ? '!' : `%${username}%`,
           nickname === null ? '!' : `%${nickname}%`,
-          isBanned === null ? 0 : `%${isBanned}%`,
+          isBanned === null ? 0 : isBanned,
         ],
       )
     ).rows
