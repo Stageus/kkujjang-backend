@@ -224,3 +224,13 @@ testRouter.get(
     res.json(res.locals.session)
   },
 )
+
+// 입력값 타입 검증과 정규표현식 검증
+testRouter.get('/regExp', async (req, res) => {
+  const { str, regExp } = req.body
+
+  res.json({
+    type: typeof str,
+    testResult: RegExp(regExp).test(str),
+  })
+})
