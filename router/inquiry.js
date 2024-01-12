@@ -8,6 +8,7 @@ import {
   validateInquiryGetByList,
   validateInquiryGetByPathIndex,
   validateInquiryPost,
+  validateInquiryAuthority,
   validateInquiryupload,
 } from '@middleware/inquiry'
 import { validatePageNumber } from '@middleware/page'
@@ -33,7 +34,7 @@ inquiryRouter.get(
         ARRAY_AGG(
           JSON_BUILD_OBJECT(
             'needAnswer', inq_thread.need_answer,
-            'id', inq_thread.id, 
+            'id', inq_thread.inquiry_id, 
             'title', inq_thread.title,
             'createdAt', TO_CHAR(inq_thread.created_at, 'YYYY-MM-DD HH24:MI:SS'),
             'updatedAt', TO_CHAR(inq_thread.updated_at, 'YYYY-MM-DD HH24:MI:SS'),
@@ -75,7 +76,7 @@ inquiryRouter.get(
         ARRAY_AGG(
           JSON_BUILD_OBJECT(
             'needAnswer', inq_thread.need_answer,
-            'id', inq_thread.id, 
+            'id', inq_thread.inquiry_id, 
             'title', inq_thread.title,
             'createdAt', TO_CHAR(inq_thread.created_at, 'YYYY-MM-DD HH24:MI:SS'),
             'updatedAt', TO_CHAR(inq_thread.updated_at, 'YYYY-MM-DD HH24:MI:SS'),
@@ -136,7 +137,12 @@ inquiryRouter.get(
 
         FROM (
           SELECT *, COUNT(*) OVER() AS count
-          FROM kkujjang.inquiry_article 
+          FROM kkujjang.inquiry_article
+          WHERE thread_id = (
+            SELECT thread_id
+            FROM kkujjang.inquiry_article
+            WHERE id = $1 ${conditionString}
+          )
           ORDER BY created_at ASC
           OFFSET(${(Number(page) - 1) * 10}) LIMIT 10
         ) inq_article
@@ -148,12 +154,6 @@ inquiryRouter.get(
           FROM kkujjang.inquiry_file
           GROUP BY inquiry_id
         ) inq_files ON inq_files.inquiry_id = inq_article.id  
-        
-        WHERE inq_article.thread_id = (
-          SELECT thread_id
-          FROM kkujjang.inquiry_article
-          WHERE id = $1 ${conditionString}
-        )
 
         GROUP BY 
             inq_thread.need_answer, inq_thread.thread_id, inq_thread.author_id, 
@@ -178,20 +178,44 @@ inquiryRouter.get(
 
 // 문의 등록
 inquiryRouter.post(
-  '/',
+  '/:id',
   requireSignin,
+  validateInquiryAuthority,
   validateInquiryupload,
   validateInquiryPost,
   async (req, res) => {
+    const fileNumberLimit = 3
     const session = res.locals.session
 
-    const { title, content, id, type } = req.body
+    const inquiryId = req.params.id
+    const { title, content, type } = req.body
 
-    const {
-      fileInsertQuery = 'SELECT 1 FROM inserted_article LIMIT 1',
-      fileValue = [],
-      needAnswer,
-    } = res.locals
+    const keySubarray = req.files.reduce((acc, file, index) => {
+      acc.push(`$${index + 7}`)
+      return acc
+    }, [])
+
+    const fileLength = keySubarray.length
+    const fileInsertQuery =
+      fileLength === 0
+        ? 'SELECT 1'
+        : `, values_to_insert AS (
+      SELECT
+        (SELECT COUNT(*) 
+        FROM inserted_article
+        JOIN kkujjang.inquiry_file inq_file ON inq_file.inquiry_id = inserted_article.id) as count,
+        (SELECT id FROM inserted_article) AS inquiry_id,
+        UNNEST(ARRAY[${keySubarray.join(', ')}]) AS key
+    )
+    INSERT INTO kkujjang.inquiry_file (inquiry_id, file_order, key)
+    SELECT inquiry_id, count + ROW_NUMBER() OVER(), key
+    FROM values_to_insert
+    WHERE count + ${fileLength} <= ${fileNumberLimit}`
+
+    const fileValue = req.files
+
+    const needAnswer =
+      session.authorityLevel !== process.env.ADMIN_AUTHORITY ? true : false
 
     await pgQuery(
       `WITH
@@ -208,7 +232,15 @@ inquiryRouter.post(
           DO UPDATE SET need_answer = $4, updated_at = CURRENT_TIMESTAMP
         )
         ${fileInsertQuery}`,
-      [session.userId, id, content, needAnswer, type, title, ...fileValue],
+      [
+        session.userId,
+        inquiryId,
+        content,
+        needAnswer,
+        type,
+        title,
+        ...fileValue,
+      ],
     )
 
     res.json({ result: 'success' })

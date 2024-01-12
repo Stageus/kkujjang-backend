@@ -1,3 +1,5 @@
+import * as uuid from 'uuid'
+import { pgQuery } from '@database/postgres'
 import * as validation from '@utility/validation'
 import { multer } from '@utility/kkujjang_multer/core'
 
@@ -93,75 +95,64 @@ export const validateInquiryPost = (req, res, next) => {
     validation.checkRegExp(/^[0-9]$/),
   )
 
+  next()
+}
+
+export const validateInquiryAuthority = async (req, res, next) => {
+  const checkAuthor = req.params.id !== 'new' ? true : false
+  const inquiryId = req.params.id === 'new' ? uuid.v4() : req.params.id
+
+  validation.check(
+    inquiryId,
+    'inquiryId',
+    validation.checkExist(),
+    validation.checkRegExp(
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
+    ),
+  )
+  req.params.id = inquiryId
+
   const session = res.locals.session
+  if (
+    checkAuthor &&
+    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
+  ) {
+    const valid = (
+      await pgQuery(
+        `SELECT COUNT(*) FROM kkujjang.inquiry_thread 
+      WHERE author_id = $1 AND thread_id = $2`,
+        [session.userId, inquiryId],
+      )
+    ).rows[0].count
 
-  res.locals.needAnswer =
-    session.authorityLevel !== process.env.ADMIN_AUTHORITY ? true : false
-
-  if (req.files.length === 0) {
-    next()
-    return
+    if (Number(valid) === 0) {
+      throw {
+        statusCode: 400,
+        message: `validateInquiryupload | 작성할 권한이 없습니다`,
+      }
+    }
   }
-
-  const fileOrderSubArray = req.files.reduce((acc, file, index) => {
-    acc.push(`$${index * 2 + 7}`)
-    return acc
-  }, [])
-  const keySubarray = req.files.reduce((acc, file, index) => {
-    acc.push(`$${index * 2 + 1 + 7}`)
-    return acc
-  }, [])
-  const fileOrderArrayStirng = `unnest(ARRAY[${fileOrderSubArray.join(', ')}])`
-  const keyArrayString = `unnest(ARRAY[${keySubarray.join(', ')}])`
-
-  const valuesToInsertQuery = `,
-  valuesToInsert AS (
-    SELECT
-      (SELECT id FROM inserted_article) AS inquiry_id,
-      ${fileOrderArrayStirng} AS file_order,
-      ${keyArrayString} AS key
-  )`
-  const fileInsertQuery = `${valuesToInsertQuery} INSERT INTO kkujjang.inquiry_file (inquiry_id, file_order, key)
-  SELECT inquiry_id, CAST(file_order AS INTEGER), key
-  FROM valuesToInsert`
-
-  const fileValue = req.files.reduce((acc, file, index) => {
-    acc.push(Number(index + 1), file)
-    return acc
-  }, [])
-
-  res.locals.fileInsertQuery = fileInsertQuery
-  res.locals.fileValue = fileValue
 
   next()
 }
 
 export const validateInquiryupload = async (req, res, next) => {
-  const session = res.locals.session
-  let author = null
+  const inquiryId = req.params.inquiryId
+  // multer 설정
+  const key = `thread/${inquiryId}`
 
-  if (Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)) {
-    author = {
-      userId: session.userId,
-      idColumnName: 'thread_id',
-      tableName: 'kkujjang.inquiry_article',
-    }
-  }
-
-  const options = {
-    author,
-    fileCountLimit: 3,
+  const option = {
+    fileNumberLimit: 3,
     allowedExtension: ['jpg', 'jpeg', 'png'],
   }
 
-  const config = {
+  const limits = {
     fileSize: 1024 * 1024 * 5,
-    fieldNameSize: 100,
+    fieldNameSize: 1,
   }
+  // multer 설정 끝
 
-  const parseReuslt = await multer(req, config, options)
-  req.body = parseReuslt.text
-  req.files = parseReuslt.files
+  await multer(req, key, option, limits)
 
   next()
 }

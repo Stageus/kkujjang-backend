@@ -4,7 +4,7 @@ export const validatePageNumber = (req, res, next) => {
   const { page } = req.query
 
   validation.check(
-    parseInt(page),
+    page,
     'page',
     validation.checkExist(),
     validation.checkParsedNumberInRange(1, Infinity),
