@@ -1,40 +1,38 @@
 import path from 'path'
 import { pgQuery } from '@database/postgres'
 
-export const checkAuthor = async (author, articleId) => {
-  let { userId, idColumnName, tableName } = author
-  const res = (
-    await pgQuery(
-      `SELECT COUNT(*) as count
-      FROM kkujjang.${tableName}
-      WHERE ${idColumnName} = $1 AND author_id=$2`,
-      [articleId, userId],
-    )
-  ).rows[0].count
+const makeValidResult = (valid, message) => {
+  return {
+    valid,
+    message,
+  }
+}
 
-  return Number(res) === 0 ? false : true
+export const checkFileName = (filename) => {
+  if (!filename) {
+    return makeValidResult(fasle, 'File | filename이 존재하지 않습니다')
+  }
+  if (201 <= filename.length) {
+    makeValidResult(false, 'File | filename은 200자 이하여야합니다')
+  }
+  return makeValidResult(true, '')
 }
 
 export const checkExtension = (fileStream, filename, allowedExtension) => {
   // 불일치한다면 해당 파일 stream을 보내지 않는다
   const type = checkMagicNumber(fileStream)
   if (`.${type.ext}` !== path.extname(filename) || type.ext === 'unknown') {
-    return {
-      valid: false,
-      message: `${filename} | 알 수 없는 확장자 또는 확장자가 변조된 파일입니다`,
-    }
+    return makeValidResult(
+      false,
+      `${filename} | 알 수 없는 확장자 또는 확장자가 변조된 파일입니다`,
+    )
   }
 
   if (!allowedExtension.includes(type.ext)) {
-    return {
-      valid: false,
-      message: `${filename} | 허가되지 않은 확장자입니다`,
-    }
+    return makeValidResult(false, `${filename} | 허가되지 않은 확장자입니다`)
   }
 
-  return {
-    valid: true,
-  }
+  return makeValidResult(true, '')
 }
 
 const checkMagicNumber = (buf) => {

@@ -1,22 +1,22 @@
 import busboy from 'busboy'
 import * as uuid from 'uuid'
 import { PassThrough, pipeline } from 'stream'
-import { s3Upload, s3CountFile } from '@utility/kkujjang_multer/s3'
+import { s3Upload } from '@utility/kkujjang_multer/s3'
 import {
-  checkAuthor,
+  checkFileName,
   checkExtension,
 } from '@utility/kkujjang_multer/file-analyzer'
 
-export const multer = async (req, limits, options) =>
+export const multer = async (req, key, option, limits) =>
   new Promise((resolve, reject) => {
     if (!req.headers['content-type'].startsWith('multipart/form-data')) {
       reject({
         statusCode: 400,
-        message: `kkujjang-multer : multipart 요청이 아닙니다`,
+        message: `kkujjang-multer : multipart/form-data 요청이 아닙니다`,
       })
     }
     // init
-    const bb = busboy({ headers: req.headers, limits })
+    const bb = busboy({ headers: req.headers, key, limits })
 
     const rejectEvent = (err) => {
       req.unpipe(bb)
@@ -28,40 +28,17 @@ export const multer = async (req, limits, options) =>
       })
     }
 
-    // options 불러오기
-    const {
-      author = null,
-      fileCountLimit = -1,
-      allowedExtension = [],
-    } = options
-    const isAuthorCheckMode = !(author === null)
-
-    let { subkey = '' } = options
-
-    // options 검증
-    if (isAuthorCheckMode) {
-      if (!(author?.userId && author?.idColumnName && author?.tableName)) {
-        rejectEvent(
-          'autor은 json 타입이며 userId, idColumnName, tableName의 값을 가지고 있어야합니다',
-        )
-      }
-    }
-
-    if (!(Number.isInteger(fileCountLimit) && -1 <= fileCountLimit)) {
-      rejectEvent(
-        'fileCountLimit은 -1 이상의 int 타입이어야합니다. | -1이면 파일 수를 체크하지 않음',
-      )
-    }
+    // option 불러오기
+    const { fileNumberLimit = Infinity, allowedExtension = [] } = option
 
     if (!Array.isArray(allowedExtension)) {
       rejectEvent('allowedExtension은 array 타입이어야합니다.')
     }
 
-    const textResult = {}
+    const parsedText = {}
     const promiseList = []
+    let fileCount = 0
 
-    let fileCount = -1
-    let isAuthorChecked = false
     // init 끝
 
     // text 값 가져오기
@@ -76,78 +53,43 @@ export const multer = async (req, limits, options) =>
         rejectEvent('Text | value 값의 길이 제한을 초과하였습니다')
       }
 
-      if (fieldname === 'id') {
-        if (!value) {
-          textResult[fieldname] = uuid.v4()
-          isAuthorChecked = true
-        } else {
-          RegExp(
-            /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
-          ).test(value)
-            ? null
-            : rejectEvent(
-                'TEXT | id 텍스트 필드의 value는 UUID 형식이여야합니다',
-              )
-          textResult[fieldname] = value
-        }
-        return
-      }
-
-      textResult[fieldname] = value
+      parsedText[fieldname] = value
     })
 
     bb.on(
       'file',
       async (fieldname, fileStream, { filename, encoding, mimeType }) => {
         // 예외처리
-        if (!textResult.id) {
-          rejectEvent(
-            `Text | form-data에서 id 텍스트 필드는 files 필드보다 앞서 지정해야합니다`,
-          )
-        }
         if (fieldname !== 'files') {
           rejectEvent(
             `File | 제출한 파일의 fieldname : ${fieldname} | filedname은 'files'여야합니다`,
           )
         }
-        if (!filename) {
-          rejectEvent('File | filename이 존재하지 않습니다')
-        }
-        if (201 <= filename.length) {
-          rejectEvent('File | filename은 200자 이하여야합니다')
-        }
-        if (isAuthorCheckMode && isAuthorChecked === false) {
-          // authorCheck 모드라면 해당 id에 대해 권한 검증
-          const valid = await checkAuthor(author, textResult.id)
-          isAuthorChecked = true
-          if (valid === false) {
-            rejectEvent(`File | ${textResult.id}에 저장할 권한이 없습니다.`)
-          }
+
+        // 파일이름 유효성 검증
+        const fileNameValidation = checkFileName(filename)
+        if (fileNameValidation.valid === false) {
+          rejectEvent(fileNameValidation.message)
         }
 
-        // countFile 모드라면 해당 id에 대해 권한 검증
-        if (fileCountLimit !== -1) {
-          if (fileCount === -1) {
-            if (subkey === '') {
-              subkey = (await s3CountFile(`${textResult.id}/`)) + 1
-              fileCount = 0
-            } else {
-              fileCount = await s3CountFile(`${textResult.id}/${subkey}/`)
-            }
-          }
-
-          fileCount++
-
-          if (fileCountLimit < fileCount) {
-            rejectEvent(`File | ${textResult.id}의 저장 개수가 초과되었습니다.`)
-          }
+        // 파일개수 유효성검증
+        fileCount++
+        if (fileNumberLimit < fileCount) {
+          rejectEvent(
+            `File | 파일 요청가능 최대 개수가 초과되었습니다. 최대 ${fileCountLimit}개`,
+          )
         }
 
-        // 첫번째 청크를 읽었을 때 파일 확장자 검사 수행
         fileStream.once('data', async (firstChunk) => {
-          const result = checkExtension(firstChunk, filename, allowedExtension)
-          if (!result.valid) {
-            rejectEvent(result.message)
+          // 파일 확장자 유효성 검증
+          const fileExtValidation = checkExtension(
+            firstChunk,
+            filename,
+            allowedExtension,
+          )
+
+          if (!fileExtValidation.valid) {
+            rejectEvent(fileExtValidation.message)
           }
 
           // 일치한다면 pipeline 구성 작업
@@ -159,9 +101,7 @@ export const multer = async (req, limits, options) =>
             }
           })
 
-          const filePath = `${
-            textResult.id
-          }/${subkey}/${Date.now()}-${filename}`
+          const filePath = `${key}/${Date.now()}-${filename}`
           const s3Promise = s3Upload(filePath, passThrough)
           promiseList.push(
             s3Promise
@@ -188,13 +128,12 @@ export const multer = async (req, limits, options) =>
 
     // 이벤트 리스너의 return은 아무 영향을 끼치지않으므로 resovle로 return한 것과 같은 효과를낸다
     bb.on('finish', async () => {
-      const result = {}
-      result.text = textResult
-      result.files = (await Promise.all(promiseList)).reduce(
+      req.body = parsedText
+      req.files = (await Promise.all(promiseList)).reduce(
         (prev, res) => [...prev, res.Location],
         [],
       )
-      resolve(result)
+      resolve()
     })
 
     // busboy 예외 이벤트 리스너 등록

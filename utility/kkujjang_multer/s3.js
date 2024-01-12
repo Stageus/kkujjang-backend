@@ -16,27 +16,9 @@ export const s3Upload = (filePath, fileStream) => {
       Bucket: process.env.AWS_BUCKET_NAME,
       Key: filePath,
       Body: fileStream,
-      ACL: 'public-read',
+      ACL: process.env.AWS_BUCKET_ACL,
     },
   })
 
   return parallelUploads3
-}
-
-export const s3CountFile = async (key) => {
-  const command = new ListObjectsV2Command({
-    Bucket: process.env.AWS_BUCKET_NAME,
-    Prefix: `${key}`,
-    Delimiter: '/',
-  })
-
-  const result = await s3.send(command)
-
-  if (result.Contents) {
-    return result.Contents.length
-  }
-  if (result.CommonPrefixes) {
-    return result.CommonPrefixes.length
-  }
-  return 0
 }
