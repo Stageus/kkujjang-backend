@@ -1,19 +1,20 @@
 import path from 'path'
-import { pgQuery } from '@database/postgres'
 
-const makeValidResult = (valid, message) => {
-  return {
-    valid,
-    message,
-  }
-}
-
-export const checkFileName = (filename) => {
+export const checkFileName = (filename, fileNameLength) => {
   if (!filename) {
     return makeValidResult(fasle, 'File | filename이 존재하지 않습니다')
   }
-  if (201 <= filename.length) {
-    makeValidResult(false, 'File | filename은 200자 이하여야합니다')
+  if (!RegExp(/^[^\\/:*?"<>|]*$/).test(filename)) {
+    return makeValidResult(
+      false,
+      `File | ${filename} : 파일명에 \\ / : * ? " < > |는 사용할 수 없습니다`,
+    )
+  }
+  if (fileNameLength < filename.length) {
+    return makeValidResult(
+      false,
+      `File | filename은 ${fileNameLength}자 이하여야합니다`,
+    )
   }
   return makeValidResult(true, '')
 }
@@ -33,6 +34,13 @@ export const checkExtension = (fileStream, filename, allowedExtension) => {
   }
 
   return makeValidResult(true, '')
+}
+
+const makeValidResult = (valid, message) => {
+  return {
+    valid,
+    message,
+  }
 }
 
 const checkMagicNumber = (buf) => {

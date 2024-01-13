@@ -1,3 +1,4 @@
+import path from 'path'
 import busboy from 'busboy'
 import * as uuid from 'uuid'
 import { PassThrough, pipeline } from 'stream'
@@ -12,11 +13,11 @@ export const multer = async (req, key, option, limits) =>
     if (!req.headers['content-type'].startsWith('multipart/form-data')) {
       reject({
         statusCode: 400,
-        message: `kkujjang-multer : multipart/form-data 요청이 아닙니다`,
+        message: `kkujjang-multer | multipart/form-data 요청이 아닙니다`,
       })
     }
     // init
-    const bb = busboy({ headers: req.headers, key, limits })
+    const bb = busboy({ headers: req.headers, limits })
 
     const rejectEvent = (err) => {
       req.unpipe(bb)
@@ -24,22 +25,36 @@ export const multer = async (req, key, option, limits) =>
       bb.removeAllListeners()
       reject({
         statusCode: 400,
-        message: `kkujjang-multer : ${err}`,
+        message: `kkujjang-multer | ${err}`,
       })
     }
 
     // option 불러오기
-    const { fileNumberLimit = Infinity, allowedExtension = [] } = option
+    const {
+      fileNameType = 'origin',
+      fileNameLength = 200,
+      allowedExtension = [],
+    } = option
+    // option 불러오기 끝
 
+    // option 검증
+    if (fileNameType !== 'origin' && fileNameType !== 'UUID') {
+      rejectEvent(
+        `${fileNameType} : fileNameType은 origin 또는 UUID이어야합니다.`,
+      )
+    }
+    if (typeof fileNameLength !== 'number') {
+      rejectEvent(
+        `${fileNameLength} : fileNameLength은 number type이어야합니다.`,
+      )
+    }
     if (!Array.isArray(allowedExtension)) {
       rejectEvent('allowedExtension은 array 타입이어야합니다.')
     }
+    // option 검증 끝
 
     const parsedText = {}
     const promiseList = []
-    let fileCount = 0
-
-    // init 끝
 
     // text 값 가져오기
     bb.on('field', (fieldname, value, { nameTruncated, valueTruncated }) => {
@@ -47,10 +62,18 @@ export const multer = async (req, key, option, limits) =>
         rejectEvent('Text | filedname이 존재하지 않습니다')
       }
       if (nameTruncated) {
-        rejectEvent('Text | filename의 길이 제한을 초과하였습니다')
+        rejectEvent(
+          `Text | filed name의 크기 제한을 초과하였습니다. 최대 ${
+            limits.fieldNameSize ?? '100'
+          } B`,
+        )
       }
       if (valueTruncated) {
-        rejectEvent('Text | value 값의 길이 제한을 초과하였습니다')
+        rejectEvent(
+          `Text | filed value의 크기 제한을 초과하였습니다. 최대 ${
+            limits.fieldSize ?? '1M'
+          }B`,
+        )
       }
 
       parsedText[fieldname] = value
@@ -67,17 +90,9 @@ export const multer = async (req, key, option, limits) =>
         }
 
         // 파일이름 유효성 검증
-        const fileNameValidation = checkFileName(filename)
+        const fileNameValidation = checkFileName(filename, fileNameLength)
         if (fileNameValidation.valid === false) {
           rejectEvent(fileNameValidation.message)
-        }
-
-        // 파일개수 유효성검증
-        fileCount++
-        if (fileNumberLimit < fileCount) {
-          rejectEvent(
-            `File | 파일 요청가능 최대 개수가 초과되었습니다. 최대 ${fileCountLimit}개`,
-          )
         }
 
         fileStream.once('data', async (firstChunk) => {
@@ -101,7 +116,12 @@ export const multer = async (req, key, option, limits) =>
             }
           })
 
-          const filePath = `${key}/${Date.now()}-${filename}`
+          const uploadFileName =
+            fileNameType === 'origin'
+              ? `${Date.now()}-${filename}`
+              : `${uuid.v4()}${path.extname(filename)}`
+
+          const filePath = `${key}/${uploadFileName}`
           const s3Promise = s3Upload(filePath, passThrough)
           promiseList.push(
             s3Promise
@@ -144,10 +164,14 @@ export const multer = async (req, key, option, limits) =>
       rejectEvent('Busboy | LIMIT_PART_COUNT')
     })
     bb.on('filesLimit', () => {
-      rejectEvent('Busboy | LIMIT_FILE_COUNT')
+      rejectEvent(
+        `File | 파일 요청가능 최대 개수가 초과되었습니다. 최대 ${limits.files}개`,
+      )
     })
     bb.on('fieldsLimit', () => {
-      rejectEvent('Busboy | LIMIT_FIELD_COUNT')
+      rejectEvent(
+        `Text | filed의 최대 개수가 초과되었습니다. 최대 ${limits.fields}개`,
+      )
     })
     // busboy 예외 이벤트 리스너 등록 끝
 
