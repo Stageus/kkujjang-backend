@@ -220,7 +220,15 @@ testRouter.get(
   '/middleware',
   requireSignin,
   requireAdminAuthority,
-  (req, res) => {
+  async (req, res) => {
     res.json(res.locals.session)
   },
 )
+
+testRouter.post('/regExp', async (req, res) => {
+  const { str, regExp } = req.body
+  res.json({
+    type: typeof str,
+    result: RegExp(regExp).test(str),
+  })
+})
