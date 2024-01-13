@@ -13,26 +13,27 @@ export const checkFileName = (filename, fileNameLength) => {
   if (fileNameLength < filename.length) {
     return makeValidResult(
       false,
-      `File | filename은 ${fileNameLength}자 이하여야합니다`,
+      `File | ${filename} : filename은 ${fileNameLength}자 이하여야합니다`,
     )
   }
   return makeValidResult(true, '')
 }
 
-export const checkExtension = (fileStream, filename, allowedExtension) => {
+export const checkExtension = (fileStream, filename, allowedExtensions) => {
   // 불일치한다면 해당 파일 stream을 보내지 않는다
   const type = checkMagicNumber(fileStream)
   if (`.${type.ext}` !== path.extname(filename) || type.ext === 'unknown') {
     return makeValidResult(
       false,
-      `${filename} | 알 수 없는 확장자 또는 확장자가 변조된 파일입니다`,
+      `${filename} : 알 수 없는 확장자 또는 확장자가 변조된 파일입니다`,
     )
   }
-
-  if (!allowedExtension.includes(type.ext)) {
-    return makeValidResult(false, `${filename} | 허가되지 않은 확장자입니다`)
+  if (
+    !allowedExtensions.includes('*') &&
+    !allowedExtensions.includes(type.ext)
+  ) {
+    return makeValidResult(false, `${filename} : 허가되지 않은 확장자입니다`)
   }
-
   return makeValidResult(true, '')
 }
 

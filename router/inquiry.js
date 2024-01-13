@@ -34,7 +34,7 @@ inquiryRouter.get(
         ARRAY_AGG(
           JSON_BUILD_OBJECT(
             'needAnswer', inq_thread.need_answer,
-            'id', inq_thread.inquiry_start_id, 
+            'id', inq_thread.start_inquiry_id, 
             'title', inq_thread.title,
             'createdAt', TO_CHAR(inq_thread.created_at, 'YYYY-MM-DD HH24:MI:SS'),
             'updatedAt', TO_CHAR(inq_thread.updated_at, 'YYYY-MM-DD HH24:MI:SS'),
@@ -76,7 +76,7 @@ inquiryRouter.get(
         ARRAY_AGG(
           JSON_BUILD_OBJECT(
             'needAnswer', inq_thread.need_answer,
-            'id', inq_thread.inquiry_start_id, 
+            'id', inq_thread.start_inquiry_id, 
             'title', inq_thread.title,
             'createdAt', TO_CHAR(inq_thread.created_at, 'YYYY-MM-DD HH24:MI:SS'),
             'updatedAt', TO_CHAR(inq_thread.updated_at, 'YYYY-MM-DD HH24:MI:SS'),
@@ -120,7 +120,7 @@ inquiryRouter.get(
         inq_thread.need_answer AS "needAnswer",
         inq_thread.thread_id AS "threadId",
         inq_thread.author_id AS "authorId",
-        inq_thread.type AS "threadType",
+        inq_thread.type AS "type",
         inq_thread.title AS "threadTitle",
         usr.nickname AS "nickname",
         TO_CHAR(inq_thread.updated_at, 'YYYY-MM-DD HH24:MI:SS') as "updatedAt",
@@ -225,7 +225,7 @@ inquiryRouter.post(
           RETURNING author_id, id, thread_id
         ),
         inserted_thread AS (
-          INSERT INTO kkujjang.inquiry_thread (need_answer, author_id, inquiry_start_id, thread_id, type, title)  
+          INSERT INTO kkujjang.inquiry_thread (need_answer, author_id, start_inquiry_id, thread_id, type, title)  
           SELECT $4, author_id, id, thread_id, $5, $6
           FROM inserted_article
           ON CONFLICT (thread_id)

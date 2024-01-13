@@ -187,35 +187,24 @@ testRouter.get('/fileCount/:id', async (req, res) => {
 })
 
 testRouter.post('/fileUpload', async (req, res) => {
-  // 업드할 파일 경로
+  // 업드할 파일 경로 (여기서는 test/에 업로드됩니다)
   const key = 'test'
 
   // 옵션
   const option = {
-    // origin으로 주면 timestamp-원래 파일명 (ex 1705140858101-fileName.png)
+    // timestamp으로주면 timestamp-원래 파일명 (ex 1705140858101-fileName.png)
     // UUID로 주면 UUID.원래 파일 확장자 (ex) b9d4c9a7-c67f-4d72-bc1b-19d742edfc5b.png)
-    fileNameType: 'origin',
-    // 최대 파일명(확장자 포함) 길이
-    fileNameLength: 200,
-    // 허가할 확장자
-    allowedExtension: ['jpg', 'jpeg', 'png', 'tif'],
-  }
-
-  // 리미트
-  const limits = {
-    // 필드 이름의 최대 Byte
-    fieldNameSize: 100,
-    // 문자 value의 최대 Byte
-    fieldSize: 1024 * 1024,
-    // 텍스트 필드의 최대 개수
-    fields: 3,
+    fileNameType: 'timestamp',
     // 파일 하나당 최대 Byte
-    fileSize: 1024 * 1024 * 5,
+    fileSize: 1024 * 1024 * 6,
     // 파일의 최대 개수
-    files: 3,
+    maxFileCount: 3,
+    // 허가할 확장자
+    // 생략시 기본값: 모든 확장자를 허가함
+    allowedExtensions: ['jpg', 'jpeg', 'png', 'tif'],
   }
 
-  await multer(req, key, option, limits)
+  await multer(req, key, option)
 
   res.json({
     result: {
@@ -233,13 +222,3 @@ testRouter.get(
     res.json(res.locals.session)
   },
 )
-
-// 입력값 타입 검증과 정규표현식 검증
-testRouter.get('/regExp', async (req, res) => {
-  const { str, regExp } = req.body
-
-  res.json({
-    type: typeof str,
-    testResult: RegExp(regExp).test(str),
-  })
-})

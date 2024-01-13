@@ -92,7 +92,7 @@ export const validateInquiryPost = (req, res, next) => {
     type,
     'type',
     validation.checkExist(),
-    validation.checkRegExp(/^[0-9]$/),
+    validation.checkParsedNumberInRange(0, 99),
   )
 
   next()
@@ -142,24 +142,13 @@ export const validateInquiryupload = async (req, res, next) => {
   const key = `thread/${inquiryId}`
 
   const option = {
-    allowedExtension: ['jpg', 'jpeg', 'png'],
+    fileNameType: 'timestamp',
+    fileSize: 1024 * 1024 * 6,
+    maxFileCount: 3,
+    allowedExtensions: ['jpg', 'jpeg', 'png'],
   }
 
-  const limits = {
-    // 필드 이름의 최대 Byte
-    fieldNameSize: 100,
-    // 문자 value의 최대 Byte
-    fieldSize: 1024 * 1024,
-    // 텍스트 필드의 최대 개수
-    fields: 3,
-    // 파일 하나당 최대 Byte
-    fileSize: 1024 * 1024 * 5,
-    // 파일의 최대 개수
-    files: 3,
-  }
-  // multer 설정 끝
-
-  await multer(req, key, option, limits)
+  await multer(req, key, option)
 
   next()
 }

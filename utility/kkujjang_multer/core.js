@@ -3,10 +3,12 @@ import busboy from 'busboy'
 import * as uuid from 'uuid'
 import { PassThrough, pipeline } from 'stream'
 import { s3Upload } from '@utility/kkujjang_multer/s3'
+import { config } from '@utility/kkujjang_multer/config'
+import { validataion } from '@utility/kkujjang_multer/module/option-validataion'
 import {
   checkFileName,
   checkExtension,
-} from '@utility/kkujjang_multer/file-analyzer'
+} from '@utility/kkujjang_multer/module/file-analyzer'
 
 export const multer = async (req, key, option, limits) =>
   new Promise((resolve, reject) => {
@@ -16,8 +18,40 @@ export const multer = async (req, key, option, limits) =>
         message: `kkujjang-multer | multipart/form-data 요청이 아닙니다`,
       })
     }
-    // init
-    const bb = busboy({ headers: req.headers, limits })
+
+    // option 불러오기
+    const optionValidation = validataion(option)
+    if (optionValidation.valid === false) {
+      reject({
+        statusCode: 400,
+        message: `kkujjang-multer | ${optionValidation.message}`,
+      })
+    }
+
+    const {
+      fileNameType,
+      fileSize,
+      maxFileCount,
+      allowedExtensions = ['*'],
+    } = option
+    // option 불러오기 끝
+
+    // config 불러오기
+    const { fileNameLength, fieldNameSize, fieldSize, fields } = config
+    // config 불러오기 끝
+
+    // busboy 객체 생성
+    const bb = busboy({
+      headers: req.headers,
+      limits: {
+        fileSize,
+        files: maxFileCount,
+        fieldNameSize,
+        fieldSize,
+        fields,
+      },
+    })
+    // busboy 객체 생성 끝
 
     const rejectEvent = (err) => {
       req.unpipe(bb)
@@ -29,50 +63,22 @@ export const multer = async (req, key, option, limits) =>
       })
     }
 
-    // option 불러오기
-    const {
-      fileNameType = 'origin',
-      fileNameLength = 200,
-      allowedExtension = [],
-    } = option
-    // option 불러오기 끝
-
-    // option 검증
-    if (fileNameType !== 'origin' && fileNameType !== 'UUID') {
-      rejectEvent(
-        `${fileNameType} : fileNameType은 origin 또는 UUID이어야합니다.`,
-      )
-    }
-    if (typeof fileNameLength !== 'number') {
-      rejectEvent(
-        `${fileNameLength} : fileNameLength은 number type이어야합니다.`,
-      )
-    }
-    if (!Array.isArray(allowedExtension)) {
-      rejectEvent('allowedExtension은 array 타입이어야합니다.')
-    }
-    // option 검증 끝
-
     const parsedText = {}
     const promiseList = []
 
     // text 값 가져오기
     bb.on('field', (fieldname, value, { nameTruncated, valueTruncated }) => {
       if ((fieldname ?? null) === null) {
-        rejectEvent('Text | filedname이 존재하지 않습니다')
+        rejectEvent('Text | fieldname이 존재하지 않습니다')
       }
       if (nameTruncated) {
         rejectEvent(
-          `Text | filed name의 크기 제한을 초과하였습니다. 최대 ${
-            limits.fieldNameSize ?? '100'
-          } B`,
+          `Text | field name의 크기 제한을 초과하였습니다. 최대 ${fieldNameSize}Byte`,
         )
       }
       if (valueTruncated) {
         rejectEvent(
-          `Text | filed value의 크기 제한을 초과하였습니다. 최대 ${
-            limits.fieldSize ?? '1M'
-          }B`,
+          `Text | field value의 크기 제한을 초과하였습니다. 최대 ${fieldSize}Byte`,
         )
       }
 
@@ -85,7 +91,7 @@ export const multer = async (req, key, option, limits) =>
         // 예외처리
         if (fieldname !== 'files') {
           rejectEvent(
-            `File | 제출한 파일의 fieldname : ${fieldname} | filedname은 'files'여야합니다`,
+            `File | 제출한 파일의 fieldname은 ${fieldname} : fieldname은 'files'여야합니다`,
           )
         }
 
@@ -100,7 +106,7 @@ export const multer = async (req, key, option, limits) =>
           const fileExtValidation = checkExtension(
             firstChunk,
             filename,
-            allowedExtension,
+            allowedExtensions,
           )
 
           if (!fileExtValidation.valid) {
@@ -117,7 +123,7 @@ export const multer = async (req, key, option, limits) =>
           })
 
           const uploadFileName =
-            fileNameType === 'origin'
+            fileNameType === 'timestamp'
               ? `${Date.now()}-${filename}`
               : `${uuid.v4()}${path.extname(filename)}`
 
@@ -165,13 +171,11 @@ export const multer = async (req, key, option, limits) =>
     })
     bb.on('filesLimit', () => {
       rejectEvent(
-        `File | 파일 요청가능 최대 개수가 초과되었습니다. 최대 ${limits.files}개`,
+        `File | 파일 요청가능 최대 개수가 초과되었습니다. 최대 ${maxFileCount}개`,
       )
     })
     bb.on('fieldsLimit', () => {
-      rejectEvent(
-        `Text | filed의 최대 개수가 초과되었습니다. 최대 ${limits.fields}개`,
-      )
+      rejectEvent(`Text | field의 최대 개수가 초과되었습니다. 최대 ${fields}개`)
     })
     // busboy 예외 이벤트 리스너 등록 끝
 
