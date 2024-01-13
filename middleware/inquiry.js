@@ -137,7 +137,7 @@ export const validateInquiryAuthority = async (req, res, next) => {
 }
 
 export const validateInquiryupload = async (req, res, next) => {
-  const inquiryId = req.params.inquiryId
+  const inquiryId = req.params.id
   // multer 설정
   const key = `thread/${inquiryId}`
 
@@ -160,7 +160,6 @@ export const validateInquiryupload = async (req, res, next) => {
   // multer 설정 끝
 
   await multer(req, key, option, limits)
-  console.log(req.body)
 
   next()
 }
