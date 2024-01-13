@@ -1,5 +1,6 @@
 import { configDotenv } from 'dotenv'
 import express from 'express'
+import expressWs from 'express-ws'
 import https from 'https'
 import asyncify from 'express-asyncify'
 import cookieParser from 'cookie-parser'
@@ -7,10 +8,28 @@ import { testRouter } from '@router/test'
 import { userRouter } from '@router/user'
 import { noticeRouter } from '@router/notice'
 import { reportRouter } from '@router/report'
+import { getMessageResult } from '@socket/kkujjang'
 
 configDotenv()
 
 const server = asyncify(express())
+expressWs(server) // 웹소켓 기능 추가
+
+server.ws('/websocket', (ws, req) => {
+  ws.on('connection', (stream) => {
+    console.log(`Connected to Client ${stream}`)
+  })
+
+  ws.on('close', () => {
+    console.log(`Connection closed.`)
+  })
+
+  ws.on('message', (message) => {
+    const result = getMessageResult(JSON.parse(message), req.cookies?.sessionId)
+
+    ws.send(JSON.stringify(result))
+  })
+})
 
 const sslOptions =
   process.env.NODE_ENV === 'production'
