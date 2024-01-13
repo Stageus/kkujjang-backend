@@ -175,17 +175,6 @@ testRouter.get('/user/session', async (req, res) => {
     })
 })
 
-testRouter.get('/fileCount', async (req, res) => {
-  const cnt = await s3CountFile('')
-  res.send(`s3://${process.env.AWS_BUCKET_NAME}: ${cnt} folders`)
-})
-
-testRouter.get('/fileCount/:id', async (req, res) => {
-  const key = req.params.id
-  const cnt = await s3CountFile(`${key}/`)
-  res.send(`s3://${process.env.AWS_BUCKET_NAME}/${key}: ${cnt} folders`)
-})
-
 testRouter.post('/fileUpload', async (req, res) => {
   // 업드할 파일 경로 (여기서는 test/에 업로드됩니다)
   const key = 'test'
