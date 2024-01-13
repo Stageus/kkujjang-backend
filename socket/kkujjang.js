@@ -8,7 +8,9 @@ export const getMessageResult = (message, sessionId) => {
       'socket message type',
       validation.checkExist(),
     )
-    validation.check(sessionId, 'sessionId', validation.checkExist())
+
+    // session 관련 테스트가 진행되고 나서 아래 코드를 사용하여 sessionId 예외처리합니다.
+    // validation.check(sessionId, 'sessionId', validation.checkExist())
 
     switch (message.type) {
       case 'TEST':
