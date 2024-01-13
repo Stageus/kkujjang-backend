@@ -187,32 +187,41 @@ testRouter.get('/fileCount/:id', async (req, res) => {
 })
 
 testRouter.post('/fileUpload', async (req, res) => {
-  // author 할당 예시
-  // const session = await getSession(req.cookies.sessionId)
-  // let author
-  // author = {
-  //   userId: session.userId,
-  //   idColumnName: 'thread_id',
-  //   tableName: 'kkujjang.inquiry',
-  // }
-  const options = {
-    // author,
-    fileCountLimit: 3,
-    allowedExtension: ['jpg', 'png'],
+  // 업드할 파일 경로
+  const key = 'test'
+
+  // 옵션
+  const option = {
+    // origin으로 주면 timestamp-원래 파일명 (ex 1705140858101-fileName.png)
+    // UUID로 주면 UUID.원래 파일 확장자 (ex) b9d4c9a7-c67f-4d72-bc1b-19d742edfc5b.png)
+    fileNameType: 'origin',
+    // 최대 파일명(확장자 포함) 길이
+    fileNameLength: 200,
+    // 허가할 확장자
+    allowedExtension: ['jpg', 'jpeg', 'png', 'tif'],
   }
 
-  const config = {
-    // 하나당 파일 크기 제한
-    fileSize: 1024 * 1024 * 10,
-    // form-data key의 글자 길이 제한
+  // 리미트
+  const limits = {
+    // 필드 이름의 최대 Byte
     fieldNameSize: 100,
+    // 문자 value의 최대 Byte
+    fieldSize: 1024 * 1024,
+    // 텍스트 필드의 최대 개수
+    fields: 3,
+    // 파일 하나당 최대 Byte
+    fileSize: 1024 * 1024 * 5,
+    // 파일의 최대 개수
+    files: 3,
   }
 
-  const message = await multer(req, config, options)
+  await multer(req, key, option, limits)
 
-  res.send({
-    result: 'success',
-    message,
+  res.json({
+    result: {
+      text: req.body,
+      files: req.files,
+    },
   })
 })
 

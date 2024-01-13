@@ -142,17 +142,25 @@ export const validateInquiryupload = async (req, res, next) => {
   const key = `thread/${inquiryId}`
 
   const option = {
-    fileNumberLimit: 3,
     allowedExtension: ['jpg', 'jpeg', 'png'],
   }
 
   const limits = {
+    // 필드 이름의 최대 Byte
+    fieldNameSize: 100,
+    // 문자 value의 최대 Byte
+    fieldSize: 1024 * 1024,
+    // 텍스트 필드의 최대 개수
+    fields: 3,
+    // 파일 하나당 최대 Byte
     fileSize: 1024 * 1024 * 5,
-    fieldNameSize: 1,
+    // 파일의 최대 개수
+    files: 3,
   }
   // multer 설정 끝
 
   await multer(req, key, option, limits)
+  console.log(req.body)
 
   next()
 }
