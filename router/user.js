@@ -399,8 +399,8 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
   }
 
   if (authorityLevel !== process.env.ADMIN_AUTHORITY) {
-    delete searchedUser['isBanned']
-    delete searchedUser['bannedReason']
+    delete searchedUser[0]['isBanned']
+    delete searchedUser[0]['bannedReason']
   }
 
   res.json({ result: searchedUser[0] })
