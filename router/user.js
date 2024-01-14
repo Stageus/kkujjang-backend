@@ -62,7 +62,9 @@ userRouter.get('/oauth/kakao', allowGuestOnly, async (req, res) => {
 
   // 첫 로그인 여부 판단
   const firstSigninValidation = await pgQuery(
-    `SELECT count(*) AS count FROM kkujjang.user WHERE kakao_id=$1 AND is_deleted=FALSE;`,
+    `SELECT count(*) AS count 
+    FROM kkujjang.user 
+    WHERE kakao_id=$1 AND is_deleted=FALSE;`,
     [kakaoId],
   )
 
@@ -70,14 +72,18 @@ userRouter.get('/oauth/kakao', allowGuestOnly, async (req, res) => {
   if (firstSigninValidation.rows[0].count == 0) {
     console.log('First Login...')
 
-    await pgQuery(`INSERT INTO kkujjang.user (kakao_id) VALUES ($1);`, [
-      kakaoId,
-    ])
+    await pgQuery(
+      `INSERT INTO kkujjang.user (kakao_id, nickname) 
+      VALUES ($1, '끝짱');`,
+      [kakaoId],
+    )
   }
 
   const { id: userId, authority_level: authorityLevel } = (
     await pgQuery(
-      `SELECT id, authority_level FROM kkujjang.user WHERE kakao_id = $1;`,
+      `SELECT id, authority_level 
+      FROM kkujjang.user 
+      WHERE kakao_id = $1;`,
       [kakaoId],
     )
   ).rows[0]
@@ -115,9 +121,12 @@ userRouter.get('/oauth/unlink', requireSignin, async (req, res) => {
   // 세션 삭제
   await destorySession(sessionId)
 
-  await pgQuery(`UPDATE kkujjang.user SET is_deleted = TRUE WHERE id=$1`, [
-    userId,
-  ])
+  await pgQuery(
+    `UPDATE kkujjang.user 
+    SET is_deleted = TRUE 
+    WHERE id=$1`,
+    [userId],
+  )
 
   // 세션 쿠키 삭제
   res
@@ -206,10 +215,12 @@ userRouter.get('/signout', requireSignin, async (req, res) => {
 userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
   const { username, password } = req.body
 
-  const queryString = `SELECT id, authority_level FROM kkujjang.user
-  WHERE username = $1 AND password = crypt($2, password)`
-  const values = [username, password]
-  const queryRes = await pgQuery(queryString, values)
+  const queryRes = await pgQuery(
+    `SELECT id, authority_level 
+    FROM kkujjang.user
+    WHERE username = $1 AND password = crypt($2, password)`,
+    [username, password],
+  )
 
   if (queryRes.rowCount == 0) {
     throw {
@@ -254,7 +265,7 @@ userRouter.get(
 
     const result = (
       await pgQuery(
-        `SELECT id, username, nickname, 
+        `SELECT id, username, (nickname || '#' || CAST(id AS varchar)) AS nickname, 
           is_banned AS "isBanned",
           CEIL(user_count::float / 10) AS "lastPage"
         FROM (
@@ -300,19 +311,28 @@ userRouter.post(
   async (req, res) => {
     const { username, newPassword, phone } = req.body
 
-    let queryString = `SELECT count(*) AS count FROM kkujjang.user WHERE username = $1 AND phone = $2`
-    let values = [username, phone]
-    const { count } = (await pgQuery(queryString, values)).rows[0]
-    if (count === 0) {
+    const result = (
+      await pgQuery(
+        `WITH 
+        is_valid AS (
+        SELECT count(*) AS count 
+        FROM kkujjang.user 
+        WHERE username = $1 AND phone = $2
+        )
+        UPDATE kkujjang.user 
+        SET password = crypt($3, gen_salt('bf')) 
+        WHERE (SELECT count FROM is_valid) = 1 AND username = $1 AND phone = $2
+        RETURNING (SELECT count FROM is_valid)`,
+        [username, phone, newPassword],
+      )
+    ).rows[0]
+
+    if (result === undefined) {
       throw {
         statusCode: 400,
         message: '해당하는 계정 정보가 존재하지 않습니다.',
       }
     }
-
-    queryString = `UPDATE kkujjang.user SET password = crypt($1, gen_salt('bf')) WHERE username = $2 AND phone = $3`
-    values = [newPassword, username, phone]
-    await pgQuery(queryString, values)
 
     res.json({
       result: 'success',
@@ -352,43 +372,35 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
   const { userId } = req.params
   const { authorityLevel } = res.locals.session
 
-  const queryString = `SELECT level, exp, nickname, wins, loses, is_banned, banned_reason FROM kkujjang.user WHERE id = $1 AND is_deleted = FALSE`
-  const values = [userId]
-  const queryRes = await pgQuery(queryString, values)
+  const searchedUser = (
+    await pgQuery(
+      `SELECT level, exp, (nickname || '#' || CAST(id AS varchar)) AS nickname, 
+      CASE 
+        WHEN wins = 0 AND loses = 0 THEN 0.0
+        WHEN loses = 0 THEN 100.0
+        ELSE ROUND((wins * 1.0 / (wins + loses)) * 100, 2)
+      END AS "winRate",
+      is_banned AS "isBanned", 
+      banned_reason AS "bannedReason"
+      FROM kkujjang.user 
+      WHERE id = $1 AND is_deleted = FALSE`,
+      [userId],
+    )
+  ).rows[0]
 
-  if (queryRes.rowCount == 0) {
+  if (searchedUser === undefined) {
     throw {
       statusCode: 400,
       message: '존재하지 않는 사용자입니다.',
     }
   }
 
-  const { level, exp, nickname, wins, loses, is_banned, banned_reason } =
-    queryRes.rows[0]
-
-  let winRate
-  if (wins == 0 && loses == 0) {
-    winRate = 0.0
-  } else if (loses == 0) {
-    winRate = 100.0
-  } else {
-    winRate = (wins / (wins + loses)) * 100
-    winRate = winRate.toFixed(1)
-    winRate = Number(winRate)
-  }
-  let result = {
-    level,
-    exp,
-    nickname,
-    winRate,
+  if (authorityLevel !== process.env.ADMIN_AUTHORITY) {
+    delete searchedUser['isBanned']
+    delete searchedUser['bannedReason']
   }
 
-  if (authorityLevel === process.env.ADMIN_AUTHORITY) {
-    result.isBanned = is_banned
-    result.bannedReason = banned_reason
-  }
-
-  res.json({ result })
+  res.json({ result: searchedUser })
 })
 
 // 회원 탈퇴
@@ -396,9 +408,12 @@ userRouter.delete('/', requireSignin, async (req, res) => {
   const { sessionId } = req.cookies
   const { userId } = res.locals.session
 
-  const queryString = `UPDATE kkujjang.user SET kakao_id = NULL, username = NULL, phone = NULL, nickname = NULL, is_deleted = TRUE WHERE id = $1`
-  const values = [userId]
-  await pgQuery(queryString, values)
+  await pgQuery(
+    `UPDATE kkujjang.user 
+    SET kakao_id = NULL, username = NULL, phone = NULL, is_deleted = TRUE 
+    WHERE id = $1`,
+    [userId],
+  )
 
   await destorySession(sessionId)
 
@@ -421,9 +436,12 @@ userRouter.put(
     const { nickname } = req.body
     const { id } = res.locals.session
 
-    const queryString = `UPDATE kkujjang.user SET nickname = $1 WHERE id = $2`
-    const values = [`${nickname}#${id}`, id]
-    await pgQuery(queryString, values)
+    await pgQuery(
+      `UPDATE kkujjang.user 
+      SET nickname = $1 
+      WHERE id = $2`,
+      [nickname, id],
+    )
 
     res.json({
       result: 'success',
@@ -440,9 +458,11 @@ userRouter.post(
   async (req, res) => {
     const { username, password, phone } = req.body
 
-    const queryString = `INSERT INTO kkujjang.user (username, password, phone) VALUES ($1, crypt($2, gen_salt('bf')), $3)`
-    const values = [username, password, phone]
-    await pgQuery(queryString, values)
+    await pgQuery(
+      `INSERT INTO kkujjang.user (username, password, phone, nickname) 
+      VALUES ($1, crypt($2, gen_salt('bf')), $3, '끝짱')`,
+      [username, password, phone],
+    )
 
     res.json({
       result: 'success',
@@ -460,8 +480,8 @@ userRouter.get(
     const count = (
       await pgQuery(
         `SELECT COUNT(*) AS "count"
-      FROM kkujjang.user 
-      WHERE username = $1`,
+        FROM kkujjang.user 
+        WHERE username = $1`,
         [username],
       )
     ).rows[0].count
