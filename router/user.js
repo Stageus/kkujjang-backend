@@ -271,7 +271,7 @@ userRouter.get(
             JSON_BUILD_OBJECT(
               'id', id,
               'username', username,
-              'nickname', nickname || '#' || CAST(sub_table.id AS varchar),
+              'nickname', nickname,
               'isBanned', is_banned
             ) ORDER BY created_at DESC
           ) AS list
@@ -359,10 +359,10 @@ userRouter.post(
       )
     ).rows
 
-    const { username } = queryRes
+    const { username } = queryRes[0]
 
     res.json({
-      result: username[0],
+      result: username,
     })
   },
 )
@@ -377,7 +377,7 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
       `SELECT 
         level, 
         exp, 
-        (nickname || '#' || CAST(id AS varchar)) AS nickname, 
+        nickname, 
         CASE 
           WHEN wins = 0 AND loses = 0 THEN 0.0
           WHEN loses = 0 THEN 100.0
@@ -452,7 +452,7 @@ userRouter.put(
 
     await pgQuery(
       `UPDATE kkujjang.user 
-      SET nickname = $1 
+      SET nickname = $1 || '#' || CAST(id AS VARCHAR)  
       WHERE id = $2`,
       [nickname, userId],
     )
@@ -472,9 +472,21 @@ userRouter.post(
   async (req, res) => {
     const { username, password, phone } = req.body
 
+    const defaultNickname = '끝짱'
+
     await pgQuery(
-      `INSERT INTO kkujjang.user (username, password, phone) 
-      VALUES ($1, crypt($2, gen_salt('bf')), $3)`,
+      `WITH 
+      my_serial AS (
+        SELECT nextval('kkujjang.user_id_seq'::regclass) AS id
+      )
+      INSERT INTO kkujjang.user (id, username, password, phone, nickname)
+      SELECT 
+        my_serial.id, 
+        $1, 
+        crypt($2, gen_salt('bf')), 
+        $3, 
+        '${defaultNickname}' || '#' || CAST(my_serial.id AS VARCHAR)
+      FROM my_serial`,
       [username, password, phone],
     )
 
