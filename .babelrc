@@ -9,7 +9,9 @@
           "@utility": ["./utility"],
           "@model": ["./model"],
           "@database": ["./database"],
-          "@middleware": ["./middleware"]
+          "@middleware": ["./middleware"],
+          "@socket": ["./socket"],
+          "@game": ["./game"]
         }
       }
     ]
