@@ -120,7 +120,7 @@ export const validateInquiryAuthority = async (req, res, next) => {
     const valid = (
       await pgQuery(
         `SELECT COUNT(*) FROM kkujjang.inquiry_thread 
-      WHERE author_id = $1 AND thread_id = $2`,
+        WHERE author_id = $1 AND thread_id = $2`,
         [session.userId, inquiryId],
       )
     ).rows[0].count

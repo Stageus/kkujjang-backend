@@ -41,14 +41,14 @@ inquiryRouter.get(
             'type', inq_thread.type
           ) ORDER BY inq_thread.created_at DESC
         ) AS list
-      FROM (
+        FROM (
           SELECT *, COUNT(*) OVER() AS count
           FROM kkujjang.inquiry_thread
           WHERE 1 = 1 ${conditionString}
           ORDER BY created_at DESC
           OFFSET ${(Number(page) - 1) * 10} LIMIT 10
-      ) inq_thread
-      GROUP BY inq_thread.count`,
+        ) inq_thread
+        GROUP BY inq_thread.count`,
         conditionValue,
       )
     ).rows
@@ -83,7 +83,7 @@ inquiryRouter.get(
             'type', inq_thread.type
           ) ORDER BY inq_thread.created_at DESC
         ) AS list
-        
+
         FROM (
             SELECT *, COUNT(*) OVER() AS count
             FROM kkujjang.inquiry_thread
