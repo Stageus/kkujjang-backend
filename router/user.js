@@ -73,8 +73,8 @@ userRouter.get('/oauth/kakao', allowGuestOnly, async (req, res) => {
     console.log('First Login...')
 
     await pgQuery(
-      `INSERT INTO kkujjang.user (kakao_id, nickname) 
-      VALUES ($1, '끝짱');`,
+      `INSERT INTO kkujjang.user (kakao_id) 
+      VALUES ($1);`,
       [kakaoId],
     )
   }
@@ -261,24 +261,33 @@ userRouter.get(
   validatePageNumber,
   async (req, res) => {
     const { username = null, nickname = null, isBanned = null } = req.query
-    const { page = 1 } = req.query
+    const { page } = req.query
 
     const result = (
       await pgQuery(
-        `SELECT id, username, (nickname || '#' || CAST(id AS varchar)) AS nickname, 
-          is_banned AS "isBanned",
-          CEIL(user_count::float / 10) AS "lastPage"
+        `SELECT  
+          CEIL(user_count::float / 10) AS "lastPage",
+          ARRAY_AGG(
+            JSON_BUILD_OBJECT(
+              'id', id,
+              'username', username,
+              'nickname', nickname || '#' || CAST(sub_table.id AS varchar),
+              'isBanned', is_banned
+            ) ORDER BY created_at DESC
+          ) AS list
         FROM (
           SELECT id, username, nickname, is_banned, created_at,
             COUNT(*) OVER() AS user_count
           FROM kkujjang.user
-          WHERE is_deleted = FALSE
-          AND ${username === null ? '$1=$1' : 'username LIKE $1'}
-          AND ${nickname === null ? '$2=$2' : 'nickname LIKE $2'}
-          AND ${isBanned === null ? '$3=$3' : 'is_banned = $3'}
+          WHERE 
+            is_deleted = FALSE
+            AND ${username === null ? '$1=$1' : 'username LIKE $1'}
+            AND ${nickname === null ? '$2=$2' : 'nickname LIKE $2'}
+            AND ${isBanned === null ? '$3=$3' : 'is_banned = $3'}
+            ORDER BY created_at DESC
+            OFFSET ${(Number(page) - 1) * 10} LIMIT 10
         ) AS sub_table
-        ORDER BY created_at DESC
-        OFFSET ${(Number(page) - 1) * 10} LIMIT 10`,
+        GROUP BY user_count`,
         [
           username === null ? '!' : `%${username}%`,
           nickname === null ? '!' : `%${nickname}%`,
@@ -287,17 +296,10 @@ userRouter.get(
       )
     ).rows
 
-    console.log(result)
+    result.length === 0 ? result.push({ lastPage: 0, list: [] }) : null
 
     res.json({
-      lastPage: result[0]?.lastPage ?? 0,
-      list:
-        result?.map(({ id, username, nickname, isBanned }) => ({
-          id,
-          username,
-          nickname,
-          isBanned,
-        })) ?? [],
+      result: result[0],
     })
   },
 )
@@ -315,9 +317,9 @@ userRouter.post(
       await pgQuery(
         `WITH 
         is_valid AS (
-        SELECT count(*) AS count 
-        FROM kkujjang.user 
-        WHERE username = $1 AND phone = $2
+          SELECT count(*) AS count 
+          FROM kkujjang.user 
+          WHERE username = $1 AND phone = $2
         )
         UPDATE kkujjang.user 
         SET password = crypt($3, gen_salt('bf')) 
@@ -325,9 +327,9 @@ userRouter.post(
         RETURNING (SELECT count FROM is_valid)`,
         [username, phone, newPassword],
       )
-    ).rows[0]
+    ).rows
 
-    if (result === undefined) {
+    if (result.length === 0) {
       throw {
         statusCode: 400,
         message: '해당하는 계정 정보가 존재하지 않습니다.',
@@ -348,11 +350,16 @@ userRouter.post(
   async (req, res) => {
     const { phone } = req.body
 
-    const queryString = `SELECT username FROM kkujjang.user WHERE phone = $1`
-    const values = [phone]
-    const queryRes = await pgQuery(queryString, values)
+    const queryRes = (
+      await pgQuery(
+        `SELECT username 
+        FROM kkujjang.user 
+        WHERE phone = $1`,
+        [phone],
+      )
+    ).rows[0]
 
-    const { username } = queryRes.rows[0]
+    const { username } = queryRes
 
     res.json({
       result: username,
@@ -367,15 +374,18 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
 
   const searchedUser = (
     await pgQuery(
-      `SELECT level, exp, (nickname || '#' || CAST(id AS varchar)) AS nickname, 
-      CASE 
-        WHEN wins = 0 AND loses = 0 THEN 0.0
-        WHEN loses = 0 THEN 100.0
-        ELSE ROUND((wins * 1.0 / (wins + loses)) * 100, 2)
-      END AS "winRate",
-      is_banned AS "isBanned", 
-      banned_reason AS "bannedReason"
-      FROM kkujjang.user 
+      `SELECT 
+        level, 
+        exp, 
+        (nickname || '#' || CAST(id AS varchar)) AS nickname, 
+        CASE 
+          WHEN wins = 0 AND loses = 0 THEN 0.0
+          WHEN loses = 0 THEN 100.0
+          ELSE ROUND((wins * 1.0 / (wins + loses)) * 100, 2)
+        END AS "winRate",
+        is_banned AS "isBanned", 
+        banned_reason AS "bannedReason"
+        FROM kkujjang.user 
       WHERE id = $1 AND is_deleted = FALSE`,
       [userId],
     )
@@ -427,13 +437,24 @@ userRouter.put(
   validateUserModification,
   async (req, res) => {
     const { nickname } = req.body
-    const { id } = res.locals.session
+    const { userId, authorityLevel } = res.locals.session
+
+    const notAllowedNickNames = ['운영', '관리', '운영자', '관리자', 'admin']
+    authorityLevel !== process.env.ADMIN_AUTHORITY &&
+      notAllowedNickNames.map((notAllowedNickName) => {
+        if (RegExp(notAllowedNickName).test(nickname)) {
+          throw {
+            statusCode: 400,
+            message: `${nickname}: 부적절한 닉네임입니다`,
+          }
+        }
+      })
 
     await pgQuery(
       `UPDATE kkujjang.user 
       SET nickname = $1 
       WHERE id = $2`,
-      [nickname, id],
+      [nickname, userId],
     )
 
     res.json({
@@ -452,8 +473,8 @@ userRouter.post(
     const { username, password, phone } = req.body
 
     await pgQuery(
-      `INSERT INTO kkujjang.user (username, password, phone, nickname) 
-      VALUES ($1, crypt($2, gen_salt('bf')), $3, '끝짱')`,
+      `INSERT INTO kkujjang.user (username, password, phone) 
+      VALUES ($1, crypt($2, gen_salt('bf')), $3)`,
       [username, password, phone],
     )
 
