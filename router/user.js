@@ -352,13 +352,6 @@ userRouter.post(
     const values = [phone]
     const queryRes = await pgQuery(queryString, values)
 
-    if (queryRes.rowCount == 0) {
-      throw {
-        statusCode: 400,
-        message: '해당하는 계정 정보가 존재하지 않습니다.',
-      }
-    }
-
     const { username } = queryRes.rows[0]
 
     res.json({

@@ -113,7 +113,7 @@ testRouter.post('/tempAuth-code', async (req, res) => {
 
   // 휴대폰 인증 성공 세션 생성
   await redisClient.hSet(`auth-${authId}`, {
-    phoeNumber: phone,
+    phoneNumber: phone,
     fulfilled: 'true',
   })
   await redisClient.expire(
