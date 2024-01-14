@@ -357,12 +357,12 @@ userRouter.post(
         WHERE phone = $1`,
         [phone],
       )
-    ).rows[0]
+    ).rows
 
     const { username } = queryRes
 
     res.json({
-      result: username,
+      result: username[0],
     })
   },
 )
@@ -389,9 +389,9 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
       WHERE id = $1 AND is_deleted = FALSE`,
       [userId],
     )
-  ).rows[0]
+  ).rows
 
-  if (searchedUser === undefined) {
+  if (searchedUser.length === 0) {
     throw {
       statusCode: 400,
       message: '존재하지 않는 사용자입니다.',
@@ -403,7 +403,7 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
     delete searchedUser['bannedReason']
   }
 
-  res.json({ result: searchedUser })
+  res.json({ result: searchedUser[0] })
 })
 
 // 회원 탈퇴
