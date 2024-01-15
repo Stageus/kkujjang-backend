@@ -1,13 +1,9 @@
 import * as uuid from 'uuid'
 import { pgQuery } from '@database/postgres'
 import * as validation from '@utility/validation'
-import { multer } from '@utility/kkujjang_multer/core'
 
 export const validateInquiryGetBySearch = (req, res, next) => {
   const { needAnswer, type } = req.query
-
-  const conditionStrArray = []
-  const conditionValue = []
 
   if (needAnswer !== null && needAnswer !== undefined) {
     validation.check(
@@ -16,8 +12,6 @@ export const validateInquiryGetBySearch = (req, res, next) => {
       validation.checkExist(),
       validation.checkRegExp(/^(true|false)$/),
     )
-    conditionValue.push(needAnswer)
-    conditionStrArray.push(`AND need_answer = $${conditionValue.length}`)
   }
 
   if (type !== null && type !== undefined) {
@@ -27,25 +21,7 @@ export const validateInquiryGetBySearch = (req, res, next) => {
       validation.checkExist(),
       validation.checkParsedNumberInRange(1, 99),
     )
-    conditionValue.push(type)
-    conditionStrArray.push(`AND type = $${conditionValue.length}`)
   }
-
-  res.locals.conditionString = conditionStrArray.join(' ')
-  res.locals.conditionValue = conditionValue
-
-  next()
-}
-
-export const validateInquiryGetByList = (req, res, next) => {
-  const session = res.locals.session
-  if (session.authorityLevel === process.env.ADMIN_AUTHORITY) {
-    next()
-    return
-  }
-
-  res.locals.conditionString = 'WHERE author_id = $1'
-  res.locals.conditionValue = [session.userId]
 
   next()
 }
@@ -59,16 +35,6 @@ export const validateInquiryGetByPathIndex = (req, res, next) => {
     validation.checkExist(),
     validation.checkParsedNumberInRange(1, Infinity),
   )
-
-  const session = res.locals.session
-
-  if (Number(session.authorityLevel) === Number(process.env.ADMIN_AUTHORITY)) {
-    next()
-    return
-  }
-
-  res.locals.conditionString = 'AND author_id = $3'
-  res.locals.conditionValue = [session.userId]
 
   next()
 }
@@ -133,25 +99,6 @@ export const validateInquiryAuthority = async (req, res, next) => {
       }
     }
   }
-
-  next()
-}
-
-export const validateInquiryupload = async (req, res, next) => {
-  const inquiryId = req.params.inquiryId
-
-  // multer 설정
-  const key = `thread/${inquiryId}`
-
-  const option = {
-    fileNameType: 'timestamp',
-    fileSize: 1024 * 1024 * 6,
-    maxFileCount: 3,
-    allowedExtensions: ['jpg', 'jpeg', 'png'],
-  }
-  // // multer 설정 끝
-
-  await multer(req, key, option)
 
   next()
 }

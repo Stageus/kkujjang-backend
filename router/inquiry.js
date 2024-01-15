@@ -5,13 +5,12 @@ import { pgQuery } from '@database/postgres'
 import { requireSignin, requireAdminAuthority } from '@middleware/auth'
 import {
   validateInquiryGetBySearch,
-  validateInquiryGetByList,
   validateInquiryGetByPathIndex,
   validateInquiryPost,
   validateInquiryAuthority,
-  validateInquiryupload,
 } from '@middleware/inquiry'
 import { validatePageNumber } from '@middleware/page'
+import { upload } from '@utility/kkujjang_multer/index'
 
 configDotenv()
 
@@ -25,7 +24,22 @@ inquiryRouter.get(
   validateInquiryGetBySearch,
   async (req, res) => {
     const { page } = req.query
-    const { conditionString, conditionValue } = res.locals
+    const { needAnswer = null, type = null } = req.query
+
+    const conditionStrArray = []
+    const conditionValue = []
+
+    if (needAnswer !== null) {
+      conditionValue.push(needAnswer)
+      conditionStrArray.push(`AND need_answer = $${conditionValue.length}`)
+    }
+
+    if (type !== null) {
+      conditionValue.push(type)
+      conditionStrArray.push(`AND type = $${conditionValue.length}`)
+    }
+
+    const conditionString = conditionStrArray.join(' ')
 
     const searchedInquiry = (
       await pgQuery(
@@ -53,9 +67,8 @@ inquiryRouter.get(
       )
     ).rows
 
-    searchedInquiry.length === 0
-      ? searchedInquiry.push({ lastPage: 0, list: [] })
-      : null
+    searchedInquiry.length === 0 &&
+      searchedInquiry.push({ lastPage: 0, list: [] })
 
     res.json({
       result: searchedInquiry[0],
@@ -68,10 +81,18 @@ inquiryRouter.get(
   '/list',
   requireSignin,
   validatePageNumber,
-  validateInquiryGetByList,
   async (req, res) => {
     const { page } = req.query
-    const { conditionString = '', conditionValue = [] } = res.locals
+
+    const session = res.locals.session
+    const conditionString =
+      Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
+        ? 'WHERE author_id = $1'
+        : ''
+
+    const conditionValue = []
+    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY) &&
+      conditionValue.push(session.userId)
 
     const listedInquiry = (
       await pgQuery(
@@ -101,9 +122,7 @@ inquiryRouter.get(
       )
     ).rows
 
-    listedInquiry.length === 0
-      ? listedInquiry.push({ lastPage: 0, list: [] })
-      : null
+    listedInquiry.length === 0 && listedInquiry.push({ lastPage: 0, list: [] })
 
     res.json({
       result: listedInquiry[0],
@@ -120,7 +139,15 @@ inquiryRouter.get(
   async (req, res) => {
     const { page } = req.query
     const { inquiryId } = req.params
-    const { conditionString = '', conditionValue = [] } = res.locals
+
+    const session = res.locals.session
+    const conditionString =
+      Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY)
+        ? 'AND author_id = $3'
+        : ''
+    const conditionValue = []
+    Number(session.authorityLevel) !== Number(process.env.ADMIN_AUTHORITY) &&
+      conditionValue.push(session.userId)
 
     const inquiryByInquiryId = (
       await pgQuery(
@@ -172,9 +199,8 @@ inquiryRouter.get(
       )
     ).rows
 
-    inquiryByInquiryId.length === 0
-      ? inquiryByInquiryId.push({ lastPage: 0, list: [] })
-      : null
+    inquiryByInquiryId.length === 0 &&
+      inquiryByInquiryId.push({ lastPage: 0, list: [] })
 
     res.json({
       result: inquiryByInquiryId[0],
@@ -187,7 +213,12 @@ inquiryRouter.post(
   '/:inquiryId',
   requireSignin,
   validateInquiryAuthority,
-  validateInquiryupload,
+  upload((req) => `thread/${req.params.inquiryId}`, {
+    fileNameType: 'timestamp',
+    fileSize: 1024 * 1024 * 6,
+    maxFileCount: 3,
+    allowedExtensions: ['jpg', 'jpeg', 'png'],
+  }),
   validateInquiryPost,
   async (req, res) => {
     const fileNumberLimit = 3

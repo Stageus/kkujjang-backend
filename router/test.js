@@ -8,8 +8,7 @@ import { redisClient } from '@database/redis'
 import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn, createSession, getSession } from '@utility/session'
-import { multer } from '@utility/kkujjang_multer/core'
-import { s3CountFile } from '@utility/kkujjang_multer/s3'
+import { upload } from '@utility/kkujjang_multer/index'
 import { requireSignin, requireAdminAuthority } from '@middleware/auth'
 
 configDotenv()
@@ -175,33 +174,23 @@ testRouter.get('/user/session', async (req, res) => {
     })
 })
 
-testRouter.post('/fileUpload', async (req, res) => {
-  // 업드할 파일 경로 (여기서는 test/에 업로드됩니다)
-  const key = 'test'
-
-  // 옵션
-  const option = {
-    // timestamp으로주면 timestamp-원래 파일명 (ex 1705140858101-fileName.png)
-    // UUID로 주면 UUID.원래 파일 확장자 (ex) b9d4c9a7-c67f-4d72-bc1b-19d742edfc5b.png)
+testRouter.post(
+  '/fileUpload',
+  upload('test', {
     fileNameType: 'timestamp',
-    // 파일 하나당 최대 Byte
     fileSize: 1024 * 1024 * 6,
-    // 파일의 최대 개수
     maxFileCount: 3,
-    // 허가할 확장자
-    // 생략시 기본값: 모든 확장자를 허가함
     allowedExtensions: ['jpg', 'jpeg', 'png', 'tif'],
-  }
-
-  await multer(req, key, option)
-
-  res.json({
-    result: {
-      text: req.body,
-      files: req.files,
-    },
-  })
-})
+  }),
+  async (req, res) => {
+    res.json({
+      result: {
+        text: req.body,
+        files: req.files,
+      },
+    })
+  },
+)
 
 testRouter.get(
   '/middleware',
