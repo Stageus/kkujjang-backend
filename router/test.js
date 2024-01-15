@@ -8,7 +8,7 @@ import { redisClient } from '@database/redis'
 import * as uuid from 'uuid'
 import * as validation from '@utility/validation'
 import { isSignedIn, createSession, getSession } from '@utility/session'
-import { upload } from '@utility/kkujjang_multer/index'
+import { upload } from '@utility/kkujjang_multer'
 import { requireSignin, requireAdminAuthority } from '@middleware/auth'
 
 configDotenv()

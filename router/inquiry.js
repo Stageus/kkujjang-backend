@@ -10,7 +10,7 @@ import {
   validateInquiryAuthority,
 } from '@middleware/inquiry'
 import { validatePageNumber } from '@middleware/page'
-import { upload } from '@utility/kkujjang_multer/index'
+import { upload } from '@utility/kkujjang_multer'
 
 configDotenv()
 
