@@ -99,8 +99,9 @@ export const validateInquiryPost = (req, res, next) => {
 }
 
 export const validateInquiryAuthority = async (req, res, next) => {
-  const checkAuthor = req.params.id !== 'new' ? true : false
-  const inquiryId = req.params.id === 'new' ? uuid.v4() : req.params.id
+  const checkAuthor = req.params.inquiryId !== 'new' ? true : false
+  const inquiryId =
+    req.params.inquiryId === 'new' ? uuid.v4() : req.params.inquiryId
 
   validation.check(
     inquiryId,
@@ -110,7 +111,7 @@ export const validateInquiryAuthority = async (req, res, next) => {
       /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
     ),
   )
-  req.params.id = inquiryId
+  req.params.inquiryId = inquiryId
 
   const session = res.locals.session
   if (
@@ -137,7 +138,8 @@ export const validateInquiryAuthority = async (req, res, next) => {
 }
 
 export const validateInquiryupload = async (req, res, next) => {
-  const inquiryId = req.params.id
+  const inquiryId = req.params.inquiryId
+
   // multer 설정
   const key = `thread/${inquiryId}`
 
@@ -147,6 +149,7 @@ export const validateInquiryupload = async (req, res, next) => {
     maxFileCount: 3,
     allowedExtensions: ['jpg', 'jpeg', 'png'],
   }
+  // // multer 설정 끝
 
   await multer(req, key, option)
 

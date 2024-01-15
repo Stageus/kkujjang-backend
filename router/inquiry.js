@@ -53,8 +53,12 @@ inquiryRouter.get(
       )
     ).rows
 
+    searchedInquiry.length === 0
+      ? searchedInquiry.push({ lastPage: 0, list: [] })
+      : null
+
     res.json({
-      result: searchedInquiry,
+      result: searchedInquiry[0],
     })
   },
 )
@@ -97,8 +101,12 @@ inquiryRouter.get(
       )
     ).rows
 
+    listedInquiry.length === 0
+      ? listedInquiry.push({ lastPage: 0, list: [] })
+      : null
+
     res.json({
-      result: listedInquiry,
+      result: listedInquiry[0],
     })
   },
 )
@@ -122,7 +130,8 @@ inquiryRouter.get(
         inq_thread.author_id AS "authorId",
         inq_thread.type AS "type",
         inq_thread.title AS "threadTitle",
-        usr.nickname AS "nickname",
+        (SELECT nickname FROM kkujjang.user
+        WHERE id = inq_thread.author_id) AS "nick",
         TO_CHAR(inq_thread.updated_at, 'YYYY-MM-DD HH24:MI:SS') as "updatedAt",
         CEIL(inq_article.count::float / 10) AS "lastPage",
 
@@ -148,7 +157,7 @@ inquiryRouter.get(
         ) inq_article
 
         LEFT JOIN kkujjang.inquiry_thread inq_thread ON inq_thread.thread_id = inq_article.thread_id
-        LEFT JOIN kkujjang.user usr ON usr.id = inq_article.author_id 
+        LEFT JOIN kkujjang.user usr ON usr.id = inq_article.author_id
         LEFT JOIN (
           SELECT inquiry_id, ARRAY_AGG(key ORDER BY file_order ASC) AS files
           FROM kkujjang.inquiry_file
@@ -157,28 +166,25 @@ inquiryRouter.get(
 
         GROUP BY 
             inq_thread.need_answer, inq_thread.thread_id, inq_thread.author_id, 
-            inq_thread.type, inq_thread.title, usr.nickname, 
-            inq_thread.updated_at, inq_article.count`,
+            inq_thread.type, inq_thread.title, inq_thread.updated_at, 
+            inq_article.count`,
         [inquiryId, process.env.ADMIN_AUTHORITY, ...conditionValue],
       )
     ).rows
 
-    if (inquiryByInquiryId.length === 0) {
-      throw {
-        statusCode: 404,
-        message: '존재하지 않는 페이지입니다',
-      }
-    }
+    inquiryByInquiryId.length === 0
+      ? inquiryByInquiryId.push({ lastPage: 0, list: [] })
+      : null
 
     res.json({
-      result: inquiryByInquiryId,
+      result: inquiryByInquiryId[0],
     })
   },
 )
 
 // 문의 등록
 inquiryRouter.post(
-  '/:id',
+  '/:inquiryId',
   requireSignin,
   validateInquiryAuthority,
   validateInquiryupload,
@@ -187,7 +193,7 @@ inquiryRouter.post(
     const fileNumberLimit = 3
     const session = res.locals.session
 
-    const inquiryId = req.params.id
+    const { inquiryId } = req.params
     const { title, content, type } = req.body
 
     const keySubarray = req.files.reduce((acc, file, index) => {
