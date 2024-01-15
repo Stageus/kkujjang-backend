@@ -10,7 +10,7 @@ import {
   checkExtension,
 } from '@utility/kkujjang_multer/module/file-analyzer'
 
-export const multer = async (req, key, option, limits) =>
+export const multer = async (req, key, option) =>
   new Promise((resolve, reject) => {
     if (!req.headers['content-type'].startsWith('multipart/form-data')) {
       reject({

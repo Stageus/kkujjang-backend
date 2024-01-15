@@ -1,5 +1,5 @@
 import { Upload } from '@aws-sdk/lib-storage'
-import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
+import { S3Client } from '@aws-sdk/client-s3'
 
 export const s3 = new S3Client({
   region: process.env.AWS_REGION,

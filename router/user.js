@@ -296,7 +296,7 @@ userRouter.get(
       )
     ).rows
 
-    result.length === 0 ? result.push({ lastPage: 0, list: [] }) : null
+    result.length === 0 && result.push({ lastPage: 0, list: [] })
 
     res.json({
       result: result[0],
