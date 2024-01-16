@@ -1,5 +1,12 @@
 import * as validation from '@utility/validation'
 
+export const validateKakaoSignIn = (req, res, next) => {
+  const { code, redirectURL } = req.query
+
+  validation.check(code, 'code', validation.checkExist())
+  validation.check(redirectURL, 'redirectURL', validation.checkExist())
+}
+
 export const validateSignIn = (req, res, next) => {
   const { username, password } = req.body
 

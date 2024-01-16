@@ -23,6 +23,7 @@ import {
   validatePasswordReset,
   validateUserSearch,
   validateUsername,
+  validateKakaoSignIn,
 } from '@middleware/user'
 import { validatePageNumber } from '@middleware/page'
 
@@ -32,112 +33,86 @@ export const userRouter = asyncify(express.Router())
 
 // 카카오 로그인 콜백
 // 토큰 발급 -> 사용자 정보 조회 -> 첫 가입 시 DB 등록 -> 세션 등록 -> 쿠키에 세션 ID 저장
-userRouter.get('/oauth/kakao', allowGuestOnly, async (req, res) => {
-  // 토큰 발급
-  const tokenData = await kakao.getToken(req.query.code)
+userRouter.get(
+  '/oauth/kakao',
+  allowGuestOnly,
+  validateKakaoSignIn,
+  async (req, res) => {
+    const { code, redirectURL } = req.query
 
-  tokenData.access_token ??
-    (() => {
-      throw {
-        statusCode: 401,
-        message: '유효하지 않은 인증 코드입니다.',
-      }
-    })()
+    // 토큰 발급
+    const tokenData = await kakao.getToken(code)
 
-  console.log(`Access Token: ${tokenData.access_token}`)
+    tokenData.access_token ??
+      (() => {
+        throw {
+          statusCode: 401,
+          message: '유효하지 않은 인증 코드입니다.',
+        }
+      })()
 
-  // 사용자 ID 조회
-  const kakaoUserData = await kakao.getUserData(tokenData.access_token)
+    console.log(`Access Token: ${tokenData.access_token}`)
 
-  kakaoUserData.id ??
-    (() => {
-      throw {
-        statusCode: 401,
-        message: '유효하지 않은 토큰입니다.',
-      }
-    })()
+    // 사용자 ID 조회
+    const kakaoUserData = await kakao.getUserData(tokenData.access_token)
 
-  const kakaoId = kakaoUserData.id
-  console.log(`Kakao User ID: ${kakaoId}`)
+    kakaoUserData.id ??
+      (() => {
+        throw {
+          statusCode: 401,
+          message: '유효하지 않은 토큰입니다.',
+        }
+      })()
 
-  // 첫 로그인 여부 판단
-  const firstSigninValidation = await pgQuery(
-    `SELECT count(*) AS count 
+    const kakaoId = kakaoUserData.id
+    console.log(`Kakao User ID: ${kakaoId}`)
+
+    // 첫 로그인 여부 판단
+    const firstSigninValidation = await pgQuery(
+      `SELECT count(*) AS count 
     FROM kkujjang.user 
     WHERE kakao_id=$1 AND is_deleted=FALSE;`,
-    [kakaoId],
-  )
-
-  // 첫 로그인 시 DB에 정보 저장
-  if (firstSigninValidation.rows[0].count == 0) {
-    console.log('First Login...')
-
-    await pgQuery(
-      `INSERT INTO kkujjang.user (kakao_id) 
-      VALUES ($1);`,
       [kakaoId],
     )
-  }
 
-  const { id: userId, authority_level: authorityLevel } = (
-    await pgQuery(
-      `SELECT id, authority_level 
+    // 첫 로그인 시 DB에 정보 저장
+    if (firstSigninValidation.rows[0].count == 0) {
+      console.log('First Login...')
+
+      await pgQuery(
+        `INSERT INTO kkujjang.user (kakao_id) 
+      VALUES ($1);`,
+        [kakaoId],
+      )
+    }
+
+    const { id: userId, authority_level: authorityLevel } = (
+      await pgQuery(
+        `SELECT id, authority_level 
       FROM kkujjang.user 
       WHERE kakao_id = $1;`,
-      [kakaoId],
-    )
-  ).rows[0]
+        [kakaoId],
+      )
+    ).rows[0]
 
-  console.log(`User ID: ${userId}, Authority Level: ${authorityLevel}`)
+    console.log(`User ID: ${userId}, Authority Level: ${authorityLevel}`)
 
-  const sessionId = await createSession({
-    userId,
-    kakaoToken: tokenData.access_token,
-    authorityLevel,
-  })
-
-  console.log('session successfully stored')
-  console.log(JSON.stringify(await getSession(sessionId)))
-
-  res.setHeader(
-    'Set-Cookie',
-    `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=7200`,
-  )
-
-  res.json({
-    result: 'success',
-  })
-})
-
-userRouter.get('/oauth/unlink', requireSignin, async (req, res) => {
-  const sessionId = req.cookies.sessionId
-  const { userId, kakaoToken } = res.locals.session
-
-  console.log(`User ID: ${userId}, token: ${kakaoToken}`)
-
-  // 카카오 계정 연결 해제
-  await kakao.unlink(kakaoToken)
-
-  // 세션 삭제
-  await destorySession(sessionId)
-
-  await pgQuery(
-    `UPDATE kkujjang.user 
-    SET is_deleted = TRUE 
-    WHERE id=$1`,
-    [userId],
-  )
-
-  // 세션 쿠키 삭제
-  res
-    .setHeader(
-      'Set-Cookie',
-      `sessionId=none; HttpOnly; Path=/; Secure; Max-Age=0`,
-    )
-    .json({
-      result: 'success',
+    const sessionId = await createSession({
+      userId,
+      kakaoToken: tokenData.access_token,
+      authorityLevel,
     })
-})
+
+    console.log(JSON.stringify(await getSession(sessionId)))
+
+    res
+      .setHeader(
+        'Set-Cookie',
+        `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=7200`,
+      )
+      .redirect(redirectURL)
+  },
+)
 
 userRouter.get('/auth-code', validateReceiverNumber, async (req, res) => {
   const { receiverNumber } = req.query
@@ -197,7 +172,14 @@ userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
 
 // 로그아웃
 userRouter.get('/signout', requireSignin, async (req, res) => {
-  const sessionId = req.cookies.sessionId
+  const { sessionId } = req.cookies
+  const { session } = res.locals
+
+  // 카카오 로그아웃
+  if (session.kakaoToken) {
+    console.log('signing out kakao...')
+    await kakao.logout(session.kakaoToken)
+  }
 
   // 세션과 쿠키 삭제
   await destorySession(sessionId)
@@ -409,7 +391,12 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
 // 회원 탈퇴
 userRouter.delete('/', requireSignin, async (req, res) => {
   const { sessionId } = req.cookies
-  const { userId } = res.locals.session
+  const { userId, kakaoToken } = res.locals.session
+
+  if (kakaoToken) {
+    // 카카오 계정 연결 해제
+    await kakao.unlink(kakaoToken)
+  }
 
   await pgQuery(
     `UPDATE kkujjang.user 
