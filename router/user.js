@@ -355,16 +355,13 @@ userRouter.post(
   async (req, res) => {
     const { phone } = req.body
 
-    const queryRes = (
-      await pgQuery(
-        `SELECT username 
-        FROM kkujjang.user 
-        WHERE phone = $1`,
-        [phone],
-      )
+    const result = (
+      await pgQuery(`SELECT username FROM kkujjang.user WHERE phone = $1`, [
+        phone,
+      ])
     ).rows
 
-    const { username } = queryRes[0]
+    const { username } = result[0]
 
     res.json({
       result: username,
