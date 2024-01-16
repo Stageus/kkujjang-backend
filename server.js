@@ -63,10 +63,10 @@ app.use(async (err, req, res, next) => {
 
 if (sslOptions) {
   https.createapp(sslOptions, server).listen(process.env.HTTPS_PORT, () => {
-    console.log(`Sever is listening on port ${process.env.HTTPS_PORT}`)
+    console.log(`Server is listening on port ${process.env.HTTPS_PORT}`)
   })
 } else {
   server.listen(process.env.HTTP_PORT, () => {
-    console.log(`Sever is listening on port ${process.env.HTTP_PORT}`)
+    console.log(`Server is listening on port ${process.env.HTTP_PORT}`)
   })
 }
