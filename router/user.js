@@ -366,7 +366,7 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
   const { userId } = req.params
   const { authorityLevel } = res.locals.session
 
-  const searchedUser = (
+  const foundUsers = (
     await pgQuery(
       `SELECT 
         level, 
@@ -376,28 +376,27 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
           WHEN wins = 0 AND loses = 0 THEN 0.0
           WHEN loses = 0 THEN 100.0
           ELSE ROUND((wins * 1.0 / (wins + loses)) * 100, 2)
-        END AS "winRate",
+        END AS "winRate"${
+          authorityLevel === process.env.ADMIN_AUTHORITY
+            ? `,
         is_banned AS "isBanned", 
-        banned_reason AS "bannedReason"
-        FROM kkujjang.user 
+        banned_reason AS "bannedReason"`
+            : ''
+        } 
+      FROM kkujjang.user 
       WHERE id = $1 AND is_deleted = FALSE`,
       [userId],
     )
   ).rows
 
-  if (searchedUser.length === 0) {
+  if (foundUsers.length === 0) {
     throw {
       statusCode: 400,
       message: '존재하지 않는 사용자입니다.',
     }
   }
 
-  if (authorityLevel !== process.env.ADMIN_AUTHORITY) {
-    delete searchedUser[0]['isBanned']
-    delete searchedUser[0]['bannedReason']
-  }
-
-  res.json({ result: searchedUser[0] })
+  res.json({ result: foundUsers[0] })
 })
 
 // 회원 탈퇴
