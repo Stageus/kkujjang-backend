@@ -116,7 +116,7 @@ reportRouter.get(
       list: [],
     }
 
-    res.json([result])
+    res.json({ result })
   },
 )
 
