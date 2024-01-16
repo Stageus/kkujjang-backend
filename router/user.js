@@ -215,21 +215,21 @@ userRouter.get('/signout', requireSignin, async (req, res) => {
 userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
   const { username, password } = req.body
 
-  const queryRes = await pgQuery(
+  const result = await pgQuery(
     `SELECT id, authority_level 
     FROM kkujjang.user
-    WHERE username = $1 AND password = crypt($2, password)`,
+    WHERE username = $1 AND password = crypt($2, password) AND is_deleted=FALSE`,
     [username, password],
   )
 
-  if (queryRes.rowCount == 0) {
+  if (result.rowCount === 0) {
     throw {
       statusCode: 401,
       message: '존재하지 않는 계정 정보입니다.',
     }
   }
 
-  const { id: userId, authority_level: authorityLevel } = queryRes.rows[0]
+  const { id: userId, authority_level: authorityLevel } = result.rows[0]
 
   if (await isSignedIn(userId.toString())) {
     throw {
@@ -243,14 +243,14 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
     authorityLevel,
   })
 
-  res.setHeader(
-    'Set-Cookie',
-    `sessionId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=7200`,
-  )
-
-  res.json({
-    result: 'suecess',
-  })
+  res
+    .setHeader(
+      'Set-Cookie',
+      `sessionId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=7200`,
+    )
+    .json({
+      result: 'suecess',
+    })
 })
 
 // 특정 조건에 맞는 사용자 검색
