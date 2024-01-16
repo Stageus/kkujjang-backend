@@ -62,23 +62,32 @@ reportRouter.get(
     const result = (
       await pgQuery(
         `SELECT
-          id, 
-          "reporterId", "reporterNickname", 
-          "reporteeId", "reporteeNickname",
-          "isOffensive", "isPoorManner", "isCheating", 
-          "createdAt",
-          CEIL(report_count::float / 10) AS "lastPage"
+          CEIL(report_count::float / 10) AS "lastPage",
+          ARRAY_AGG(
+            JSON_BUILD_OBJECT(
+              'id', id, 
+              'isOffensive', is_offensive,
+              'isPoorManner', is_poor_manner,
+              'isCheating', is_cheating,
+              'note', note,
+              'createdAt', report_created_at,
+              'reporterId', reporter_id,
+              'reporterNickname', reporter_nickname,
+              'reporteeId', reportee_id,
+              'reporteeNickname', reportee_nickname
+            )
+          ) AS list
         FROM (
           SELECT 
             report.id,
-            author_id AS "reporterId", 
-            reporter_user_table.nickname AS "reporterNickname",
-            reportee_id AS "reporteeId", 
-            reportee_user_table.nickname AS "reporteeNickname",
-            is_offensive AS "isOffensive", 
-            is_poor_manner AS "isPoorManner", 
-            is_cheating AS "isCheating", 
-            report.created_at AS "createdAt",
+            author_id AS reporter_id, 
+            reporter_user_table.nickname AS reporter_nickname,
+            reportee_id, 
+            reportee_user_table.nickname AS reportee_nickname,
+            is_offensive, 
+            is_poor_manner, 
+            is_cheating, 
+            report.created_at AS report_created_at,
             note,
             COUNT(*) OVER() AS report_count
           FROM kkujjang.report
@@ -89,10 +98,11 @@ reportRouter.get(
             ${reporteeId === null ? `AND $2=$2` : `AND reportee_id=$2`} 
             ${isOffensive === null ? `AND $3=$3` : `AND is_offensive=$3`} 
             ${isPoorManner === null ? `AND $4=$4` : `AND is_poor_manner=$4 `} 
-            ${isCheating === null ? `AND $5=$5` : `AND is_cheating=$5`} 
+            ${isCheating === null ? `AND $5=$5` : `AND is_cheating=$5`}
+          ORDER BY report_created_at DESC
+          OFFSET ${(Number(page) - 1) * 10} LIMIT 10
         ) AS sub_table
-      ORDER BY "createdAt" DESC
-      OFFSET ${(page - 1) * 10} LIMIT 10`,
+        GROUP BY report_count`,
         [
           Number(reporterId ?? 1),
           Number(reporteeId ?? 1),
@@ -101,35 +111,12 @@ reportRouter.get(
           isCheating ?? 1,
         ],
       )
-    ).rows
+    ).rows[0] ?? {
+      lastPage: 0,
+      list: [],
+    }
 
-    res.json({
-      lastPage: result[0]?.lastPage ?? 0,
-      list:
-        result?.map(
-          ({
-            id,
-            reporterId,
-            reporterNickname,
-            reporteeId,
-            reporteeNickname,
-            isOffensive,
-            isPoorManner,
-            isCheating,
-            createdAt,
-          }) => ({
-            id,
-            reporterId,
-            reporterNickname,
-            reporteeId,
-            reporteeNickname,
-            isOffensive,
-            isPoorManner,
-            isCheating,
-            createdAt,
-          }),
-        ) ?? [],
-    })
+    res.json([result])
   },
 )
 
