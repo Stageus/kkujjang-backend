@@ -40,3 +40,14 @@ export const unlink = async (token) => {
     },
   })
 }
+
+export const logout = async (token) => {
+  const response = await fetch('https://kapi.kakao.com/v1/user/logout', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  return await response.json()
+}

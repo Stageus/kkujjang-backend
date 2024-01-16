@@ -197,7 +197,14 @@ userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
 
 // 로그아웃
 userRouter.get('/signout', requireSignin, async (req, res) => {
-  const sessionId = req.cookies.sessionId
+  const { sessionId } = req.cookies
+  const { session } = res.locals
+
+  // 카카오 로그아웃
+  if (session.kakaoToken) {
+    console.log('signing out kakao...')
+    await kakao.logout(session.kakaoToken)
+  }
 
   // 세션과 쿠키 삭제
   await destorySession(sessionId)
