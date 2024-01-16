@@ -49,16 +49,16 @@ reportRouter.get(
   async (req, res) => {
     const {
       page,
-      reporterId = null,
-      reporteeId = null,
-      isOffensive = null,
-      isPoorManner = null,
-      isCheating = null,
+      reporterId,
+      reporteeId,
+      isOffensive,
+      isPoorManner,
+      isCheating,
     } = req.query
 
     // 입력받은 필터에 대해서만 WHERE 조건 추가
     // 1=1 등 같은 값 비교 시 반드시 true이므로 매개변수 개수 유지를 위해
-    // null 값인 필터에 대해 해당 표현으로 대체
+    // 빈 값인 필터에 대해 해당 표현으로 대체
     const result = (
       await pgQuery(
         `SELECT
