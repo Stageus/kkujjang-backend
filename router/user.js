@@ -348,9 +348,10 @@ userRouter.post(
     const { phone } = req.body
 
     const result = (
-      await pgQuery(`SELECT username FROM kkujjang.user WHERE phone = $1`, [
-        phone,
-      ])
+      await pgQuery(
+        `SELECT username FROM kkujjang.user WHERE phone = $1 AND is_deleted = FALSE`,
+        [phone],
+      )
     ).rows
 
     const { username } = result[0]
