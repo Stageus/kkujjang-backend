@@ -1,7 +1,8 @@
 import { configDotenv } from 'dotenv'
 import express from 'express'
-import expressWs from 'express-ws'
+import http from 'http'
 import https from 'https'
+import { Server } from 'socket.io'
 import asyncify from 'express-asyncify'
 import cookieParser from 'cookie-parser'
 import { testRouter } from '@router/test'
@@ -9,28 +10,15 @@ import { userRouter } from '@router/user'
 import { noticeRouter } from '@router/notice'
 import { reportRouter } from '@router/report'
 import { inquiryRouter } from '@router/inquiry'
-import { getMessageResult } from '@socket/kkujjang'
+import { setSocket } from '@socket/kkujjang'
 
 configDotenv()
 
-const server = asyncify(express())
-expressWs(server) // 웹소켓 기능 추가
+const app = asyncify(express())
+const server = http.createServer(app)
 
-server.ws('/websocket', (ws, req) => {
-  ws.on('connection', (stream) => {
-    console.log(`Connected to Client ${stream}`)
-  })
-
-  ws.on('close', () => {
-    console.log(`Connection closed.`)
-  })
-
-  ws.on('message', (message) => {
-    const result = getMessageResult(JSON.parse(message), req.cookies?.sessionId)
-
-    ws.send(JSON.stringify(result))
-  })
-})
+const io = new Server(server)
+setSocket(io)
 
 const sslOptions =
   process.env.NODE_ENV === 'production'
@@ -41,16 +29,20 @@ const sslOptions =
       }
     : null
 
-server.use(express.json())
-server.use(cookieParser())
+app.get('/', function (req, res) {
+  res.sendFile(__dirname + '/client.html')
+})
 
-server.use('/test', testRouter)
-server.use('/user', userRouter)
-server.use('/notice', noticeRouter)
-server.use('/report', reportRouter)
-server.use('/inquiry', inquiryRouter)
+app.use(express.json())
+app.use(cookieParser())
 
-server.use(async (err, req, res, next) => {
+app.use('/test', testRouter)
+app.use('/user', userRouter)
+app.use('/notice', noticeRouter)
+app.use('/report', reportRouter)
+app.use('/inquiry', inquiryRouter)
+
+app.use(async (err, req, res, next) => {
   const { statusCode = 500, message = 'undefined error', messages = [] } = err
 
   // message만 값 존재 -> message
@@ -70,11 +62,11 @@ server.use(async (err, req, res, next) => {
 })
 
 if (sslOptions) {
-  https.createServer(sslOptions, server).listen(process.env.HTTPS_PORT, () => {
-    console.log(`Server is listening on port ${process.env.HTTPS_PORT}`)
+  https.createapp(sslOptions, server).listen(process.env.HTTPS_PORT, () => {
+    console.log(`Sever is listening on port ${process.env.HTTPS_PORT}`)
   })
 } else {
   server.listen(process.env.HTTP_PORT, () => {
-    console.log(`Server is listening on port ${process.env.HTTP_PORT}`)
+    console.log(`Sever is listening on port ${process.env.HTTP_PORT}`)
   })
 }

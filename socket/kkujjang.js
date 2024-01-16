@@ -1,35 +1,10 @@
-import * as game from '@game/core'
-import * as validation from '@utility/validation'
+import { createLobbySocket } from '@socket/lobby'
+import { createGameRoomSocket } from '@socket/game_room'
 
-export const getMessageResult = (message, sessionId) => {
-  try {
-    validation.check(
-      message.type,
-      'socket message type',
-      validation.checkExist(),
-    )
+export const setSocket = (io) => {
+  const lobbyNamece = io.of('/lobby')
+  const gameRoomNamespace = io.of('/gameRoom')
 
-    // session 관련 테스트가 진행되고 나서 아래 코드를 사용하여 sessionId 예외처리합니다.
-    // validation.check(sessionId, 'sessionId', validation.checkExist())
-
-    switch (message.type) {
-      case 'TEST':
-        const result = game.socketTest(message)
-        return {
-          type: 'TEST',
-          value: `returned "${result}"`,
-        }
-      default:
-        return {
-          type: 'ERROR',
-          message: `undefined type: ${message.type}`,
-        }
-    }
-  } catch (error) {
-    console.log(JSON.stringify(error))
-    return {
-      type: 'ERROR',
-      message: JSON.stringify(error),
-    }
-  }
+  createLobbySocket(lobbyNamece)
+  createGameRoomSocket(gameRoomNamespace, lobbyNamece)
 }

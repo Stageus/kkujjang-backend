@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+  <head>
+    <title>끝말잇기의 짱, 끝짱</title>
+    <style>
+      #messages {
+        position: fixed;
+        bottom: 100px;
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        width: 90%;
+        height: 150px;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+      #messages li {
+        padding: 5px 10px;
+      }
+      #form {
+        background: #000;
+        padding: 3px;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+      }
+      #input {
+        border: none;
+        padding: 10px;
+        width: 90%;
+        margin-right: 0.5%;
+      }
+      #submit {
+        width: 9%;
+        background: rgb(130, 224, 255);
+        border: none;
+        padding: 10px;
+      }
+      #gameRoom {
+        display: block;
+        position: fixed;
+        top: 0;
+        width: 600px;
+        height: 500px;
+        background: rgb(100, 100, 100);
+      }
+    </style>
+  </head>
+  <body>
+    <ul id="messages"></ul>
+    <form id="form" action="">
+      <input id="input" autocomplete="off" /><button id="submit">전송</button>
+    </form>
+    <!-- 방 만들기 버튼 추가 -->
+    <button id="createGameRoomBtn" onclick="createGameRoom()">방 만들기</button>
+
+    <h2>방 목록</h2>
+    <div id="gameRoomList"></div>
+
+    <div id="gameRoomContain"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault()
+        var input = document.getElementById('input')
+        socket.emit('chat', input.value)
+        input.value = ''
+      })
+
+      const leaveGameRoom = () => {
+        socket.emit('leave game room')
+        socket.disconnect()
+        gameRoomContain.innerHTML = ''
+        joinLobby()
+      }
+
+      const drawGameRoom = () => {
+        gameRoomContain.innerHTML = `
+          <div id="gameRoom">
+            <button onclick="leaveGameRoom()">나가기</button>
+            <h2>방제 : 아무나 오셈</h2>
+          </div>`
+      }
+
+      const addChatEvnetListener = () => {
+        socket.on('chat', (msg) => {
+          var messages = document.getElementById('messages')
+          var li = document.createElement('li')
+          li.textContent = msg
+          messages.appendChild(li)
+          messages.scrollTop = messages.scrollHeight
+        })
+      }
+
+      const joinLobby = () => {
+        socket = io('http://localhost:3000/lobby')
+        addChatEvnetListener()
+
+        socket.on('load game room', (rooms) => {
+          var gameRoomList = document.getElementById('gameRoomList')
+          gameRoomList.innerHTML = ''
+          for (roomInfo of rooms) {
+            var newRoom = document.createElement('div')
+            newRoom.id = JSON.parse(roomInfo).id
+            newRoom.textContent = roomInfo
+            gameRoomList.appendChild(newRoom)
+
+            // 누르면 참가하기 이벤트 리스너 등록
+            newRoom.addEventListener('click', (event) => {
+              socket.disconnect()
+              joinGameRoom(event.id)
+            })
+          }
+        })
+
+        socket.on('new game room', (roomInfo) => {
+          var gameRoomList = document.getElementById('gameRoomList')
+          var newRoom = document.createElement('div')
+          newRoom.id = JSON.parse(roomInfo).id
+          newRoom.textContent = roomInfo
+          gameRoomList.appendChild(newRoom)
+
+          // 누르면 참가하기 이벤트 리스너 등록
+          newRoom.addEventListener('click', function (event) {
+            joinGameRoom(event.target.id)
+          })
+        })
+
+        socket.on('remove game room', (roomId) => {
+          document.getElementById(roomId).remove()
+        })
+      }
+
+      const createGameRoom = () => {
+        socket.disconnect()
+        socket = io('http://localhost:3000/gameRoom')
+        addChatEvnetListener()
+
+        socket.on('connect', () => {
+          socket.emit('create game room')
+        })
+
+        drawGameRoom()
+      }
+
+      const joinGameRoom = (roomId) => {
+        socket.disconnect()
+        socket = io('http://localhost:3000/gameRoom')
+        addChatEvnetListener()
+
+        socket.on('connect', () => {
+          socket.emit('join game room', roomId)
+        })
+
+        drawGameRoom()
+      }
+
+      joinLobby()
+    </script>
+  </body>
+</html>
