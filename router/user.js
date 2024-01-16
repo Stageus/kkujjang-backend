@@ -474,21 +474,37 @@ userRouter.post(
 
     const defaultNickname = '끝짱'
 
-    await pgQuery(
-      `WITH 
-      my_serial AS (
-        SELECT nextval('kkujjang.user_id_seq'::regclass) AS id
+    const result = (
+      await pgQuery(
+        `WITH my_serial AS (
+          SELECT nextval('kkujjang.user_id_seq'::regclass) AS id
+        )
+        INSERT INTO kkujjang.user (id, username, password, phone, nickname)
+        SELECT 
+            my_serial.id, 
+            $1, 
+            crypt($2, gen_salt('bf')), 
+            $3, 
+            '${defaultNickname}' || '#' || CAST(my_serial.id AS VARCHAR)
+        FROM my_serial
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM kkujjang.user
+            WHERE (username = CAST($1 AS VARCHAR) 
+              OR phone = CAST($3 AS VARCHAR))
+              AND is_deleted = false
+        )
+        RETURNING id`,
+        [username, password, phone],
       )
-      INSERT INTO kkujjang.user (id, username, password, phone, nickname)
-      SELECT 
-        my_serial.id, 
-        $1, 
-        crypt($2, gen_salt('bf')), 
-        $3, 
-        '${defaultNickname}' || '#' || CAST(my_serial.id AS VARCHAR)
-      FROM my_serial`,
-      [username, password, phone],
-    )
+    ).rows
+
+    if (result.length !== 1) {
+      throw {
+        statusCode: 400,
+        message: '회원가입에 실패했습니다.',
+      }
+    }
 
     res.json({
       result: 'success',
