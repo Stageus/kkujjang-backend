@@ -320,11 +320,15 @@ userRouter.post(
         is_valid AS (
           SELECT count(*) AS count 
           FROM kkujjang.user 
-          WHERE username = $1 AND phone = $2
+          WHERE username = $1 AND phone = $2 AND is_deleted = FALSE
         )
         UPDATE kkujjang.user 
         SET password = crypt($3, gen_salt('bf')) 
-        WHERE (SELECT count FROM is_valid) = 1 AND username = $1 AND phone = $2
+        WHERE
+          (SELECT count FROM is_valid) = 1
+          AND username = $1
+          AND phone = $2
+          AND is_deleted = FALSE
         RETURNING (SELECT count FROM is_valid)`,
         [username, phone, newPassword],
       )
