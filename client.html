@@ -111,7 +111,7 @@
             // 누르면 참가하기 이벤트 리스너 등록
             newRoom.addEventListener('click', (event) => {
               socket.disconnect()
-              joinGameRoom(event.id)
+              joinGameRoom(event.target.id)
             })
           }
         })
