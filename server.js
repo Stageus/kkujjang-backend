@@ -29,12 +29,9 @@ const sslOptions =
       }
     : null
 
-app.get('/', function (req, res) {
-  res.sendFile(__dirname + '/client.html')
-})
-
 app.use(express.json())
 app.use(cookieParser())
+app.use(express.static('public'))
 
 app.use('/test', testRouter)
 app.use('/user', userRouter)
