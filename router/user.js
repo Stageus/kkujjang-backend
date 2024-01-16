@@ -1,13 +1,15 @@
 import { configDotenv } from 'dotenv'
-import { redisClient } from '@database/redis'
 import { pgQuery } from '@database/postgres'
 import express from 'express'
 import asyncify from 'express-asyncify'
 import * as kakao from '@utility/kakao'
 import { getSession, createSession, destorySession } from '@utility/session'
-import * as uuid from 'uuid'
 import { isSignedIn } from '@utility/session'
-import { sendSMS } from '@utility/sms-auth'
+import {
+  createSmsAuthSession,
+  isValidSmsAuthorization,
+  sendSMS,
+} from '@utility/sms-auth'
 import {
   allowGuestOnly,
   requireAdminAuthority,
@@ -117,23 +119,14 @@ userRouter.get(
 userRouter.get('/auth-code', validateReceiverNumber, async (req, res) => {
   const { receiverNumber } = req.query
 
-  const smsAuthId = uuid.v4()
   const authNumber = String(Math.floor(Math.random() * 900000) + 100000)
 
-  console.log(`smsAuthId: ${smsAuthId}, authNumber: ${authNumber}`)
-
-  await redisClient.hSet(`auth-${smsAuthId}`, {
-    authNumber: authNumber,
-    fulfilled: 'false',
-    phoneNumber: receiverNumber,
-  })
-  await redisClient.expire(`auth-${smsAuthId}`, 300)
-
-  const snsResult = await sendSMS(
+  const smsAuthId = await createSmsAuthSession(authNumber, receiverNumber)
+  const sendSmsResult = await sendSMS(
     receiverNumber,
     `끝짱 인증번호: ${authNumber}`,
   )
-  console.log(snsResult)
+  console.log(sendSmsResult)
 
   res
     .setHeader(
@@ -149,18 +142,17 @@ userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
   const { smsAuthId } = req.cookies
   const { authNumber, phoneNumber } = req.body
 
-  const { authNumber: answer, phoneNumber: targetPhoneNumber } =
-    await redisClient.hGetAll(`auth-${smsAuthId}`)
   const result = {
     result: 'success',
   }
 
-  if (phoneNumber === targetPhoneNumber && authNumber === answer) {
-    redisClient.hSet(`auth-${smsAuthId}`, {
-      fulfilled: 'true',
-    })
-    redisClient.expire(`auth-${smsAuthId}`, 1800)
-  } else {
+  const isValid = await isValidSmsAuthorization(
+    authNumber,
+    phoneNumber,
+    smsAuthId,
+  )
+
+  if (!isValid) {
     throw {
       statusCode: 400,
       message: '잘못된 인증 정보입니다.',
@@ -197,22 +189,23 @@ userRouter.get('/signout', requireSignin, async (req, res) => {
 userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
   const { username, password } = req.body
 
-  const queryRes = await pgQuery(
+  const result = await pgQuery(
     `SELECT id, authority_level 
     FROM kkujjang.user
-    WHERE username = $1 AND password = crypt($2, password)`,
+    WHERE username = $1 AND password = crypt($2, password) AND is_deleted=FALSE`,
     [username, password],
   )
 
-  if (queryRes.rowCount == 0) {
+  if (result.rowCount === 0) {
     throw {
       statusCode: 401,
       message: '존재하지 않는 계정 정보입니다.',
     }
   }
 
-  const { id: userId, authority_level: authorityLevel } = queryRes.rows[0]
+  const { id: userId, authority_level: authorityLevel } = result.rows[0]
 
+  // 다른 기기에서 접속중인 계정 확인
   if (await isSignedIn(userId.toString())) {
     throw {
       statusCode: 400,
@@ -225,14 +218,14 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
     authorityLevel,
   })
 
-  res.setHeader(
-    'Set-Cookie',
-    `sessionId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=7200`,
-  )
-
-  res.json({
-    result: 'suecess',
-  })
+  res
+    .setHeader(
+      'Set-Cookie',
+      `sessionId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=7200`,
+    )
+    .json({
+      result: 'suecess',
+    })
 })
 
 // 특정 조건에 맞는 사용자 검색
@@ -301,11 +294,15 @@ userRouter.post(
         is_valid AS (
           SELECT count(*) AS count 
           FROM kkujjang.user 
-          WHERE username = $1 AND phone = $2
+          WHERE username = $1 AND phone = $2 AND is_deleted = FALSE
         )
         UPDATE kkujjang.user 
         SET password = crypt($3, gen_salt('bf')) 
-        WHERE (SELECT count FROM is_valid) = 1 AND username = $1 AND phone = $2
+        WHERE
+          (SELECT count FROM is_valid) = 1
+          AND username = $1
+          AND phone = $2
+          AND is_deleted = FALSE
         RETURNING (SELECT count FROM is_valid)`,
         [username, phone, newPassword],
       )
@@ -332,16 +329,14 @@ userRouter.post(
   async (req, res) => {
     const { phone } = req.body
 
-    const queryRes = (
+    const result = (
       await pgQuery(
-        `SELECT username 
-        FROM kkujjang.user 
-        WHERE phone = $1`,
+        `SELECT username FROM kkujjang.user WHERE phone = $1 AND is_deleted = FALSE`,
         [phone],
       )
     ).rows
 
-    const { username } = queryRes[0]
+    const { username } = result[0]
 
     res.json({
       result: username,
@@ -354,7 +349,7 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
   const { userId } = req.params
   const { authorityLevel } = res.locals.session
 
-  const searchedUser = (
+  const foundUsers = (
     await pgQuery(
       `SELECT 
         level, 
@@ -364,28 +359,27 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
           WHEN wins = 0 AND loses = 0 THEN 0.0
           WHEN loses = 0 THEN 100.0
           ELSE ROUND((wins * 1.0 / (wins + loses)) * 100, 2)
-        END AS "winRate",
+        END AS "winRate"${
+          authorityLevel === process.env.ADMIN_AUTHORITY
+            ? `,
         is_banned AS "isBanned", 
-        banned_reason AS "bannedReason"
-        FROM kkujjang.user 
+        banned_reason AS "bannedReason"`
+            : ''
+        } 
+      FROM kkujjang.user 
       WHERE id = $1 AND is_deleted = FALSE`,
       [userId],
     )
   ).rows
 
-  if (searchedUser.length === 0) {
+  if (foundUsers.length === 0) {
     throw {
       statusCode: 400,
       message: '존재하지 않는 사용자입니다.',
     }
   }
 
-  if (authorityLevel !== process.env.ADMIN_AUTHORITY) {
-    delete searchedUser[0]['isBanned']
-    delete searchedUser[0]['bannedReason']
-  }
-
-  res.json({ result: searchedUser[0] })
+  res.json({ result: foundUsers[0] })
 })
 
 // 회원 탈퇴
@@ -424,18 +418,7 @@ userRouter.put(
   validateUserModification,
   async (req, res) => {
     const { nickname } = req.body
-    const { userId, authorityLevel } = res.locals.session
-
-    const notAllowedNickNames = ['운영', '관리', '운영자', '관리자', 'admin']
-    authorityLevel !== process.env.ADMIN_AUTHORITY &&
-      notAllowedNickNames.map((notAllowedNickName) => {
-        if (RegExp(notAllowedNickName).test(nickname)) {
-          throw {
-            statusCode: 400,
-            message: `${nickname}: 부적절한 닉네임입니다`,
-          }
-        }
-      })
+    const { userId } = res.locals.session
 
     await pgQuery(
       `UPDATE kkujjang.user 
@@ -461,21 +444,37 @@ userRouter.post(
 
     const defaultNickname = '끝짱'
 
-    await pgQuery(
-      `WITH 
-      my_serial AS (
-        SELECT nextval('kkujjang.user_id_seq'::regclass) AS id
+    const result = (
+      await pgQuery(
+        `WITH my_serial AS (
+          SELECT nextval('kkujjang.user_id_seq'::regclass) AS id
+        )
+        INSERT INTO kkujjang.user (id, username, password, phone, nickname)
+        SELECT 
+            my_serial.id, 
+            $1, 
+            crypt($2, gen_salt('bf')), 
+            $3, 
+            '${defaultNickname}' || '#' || CAST(my_serial.id AS VARCHAR)
+        FROM my_serial
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM kkujjang.user
+            WHERE (username = CAST($1 AS VARCHAR) 
+              OR phone = CAST($3 AS VARCHAR))
+              AND is_deleted = false
+        )
+        RETURNING id`,
+        [username, password, phone],
       )
-      INSERT INTO kkujjang.user (id, username, password, phone, nickname)
-      SELECT 
-        my_serial.id, 
-        $1, 
-        crypt($2, gen_salt('bf')), 
-        $3, 
-        '${defaultNickname}' || '#' || CAST(my_serial.id AS VARCHAR)
-      FROM my_serial`,
-      [username, password, phone],
-    )
+    ).rows
+
+    if (result.length !== 1) {
+      throw {
+        statusCode: 400,
+        message: '회원가입에 실패했습니다.',
+      }
+    }
 
     res.json({
       result: 'success',

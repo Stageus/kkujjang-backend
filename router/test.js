@@ -161,7 +161,7 @@ testRouter.get('/user/session/admin', async (req, res) => {
 testRouter.get('/user/session', async (req, res) => {
   const sessionId = await createSession({
     userId: 1,
-    authorityLevel: process.env.ADMIN_AUTHORITY,
+    authorityLevel: 1,
   })
 
   res
