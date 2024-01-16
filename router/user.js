@@ -33,8 +33,10 @@ export const userRouter = asyncify(express.Router())
 // 카카오 로그인 콜백
 // 토큰 발급 -> 사용자 정보 조회 -> 첫 가입 시 DB 등록 -> 세션 등록 -> 쿠키에 세션 ID 저장
 userRouter.get('/oauth/kakao', allowGuestOnly, async (req, res) => {
+  const { code, redirectURL } = req.query
+
   // 토큰 발급
-  const tokenData = await kakao.getToken(req.query.code)
+  const tokenData = await kakao.getToken(code)
 
   tokenData.access_token ??
     (() => {
@@ -96,17 +98,14 @@ userRouter.get('/oauth/kakao', allowGuestOnly, async (req, res) => {
     authorityLevel,
   })
 
-  console.log('session successfully stored')
   console.log(JSON.stringify(await getSession(sessionId)))
 
-  res.setHeader(
-    'Set-Cookie',
-    `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=7200`,
-  )
-
-  res.json({
-    result: 'success',
-  })
+  res
+    .setHeader(
+      'Set-Cookie',
+      `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=7200`,
+    )
+    .redirect(redirectURL)
 })
 
 userRouter.get('/oauth/unlink', requireSignin, async (req, res) => {
