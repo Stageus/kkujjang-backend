@@ -114,36 +114,6 @@ userRouter.get(
   },
 )
 
-userRouter.get('/oauth/unlink', requireSignin, async (req, res) => {
-  const sessionId = req.cookies.sessionId
-  const { userId, kakaoToken } = res.locals.session
-
-  console.log(`User ID: ${userId}, token: ${kakaoToken}`)
-
-  // 카카오 계정 연결 해제
-  await kakao.unlink(kakaoToken)
-
-  // 세션 삭제
-  await destorySession(sessionId)
-
-  await pgQuery(
-    `UPDATE kkujjang.user 
-    SET is_deleted = TRUE 
-    WHERE id=$1`,
-    [userId],
-  )
-
-  // 세션 쿠키 삭제
-  res
-    .setHeader(
-      'Set-Cookie',
-      `sessionId=none; HttpOnly; Path=/; Secure; Max-Age=0`,
-    )
-    .json({
-      result: 'success',
-    })
-})
-
 userRouter.get('/auth-code', validateReceiverNumber, async (req, res) => {
   const { receiverNumber } = req.query
 
@@ -421,14 +391,16 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
 // 회원 탈퇴
 userRouter.delete('/', requireSignin, async (req, res) => {
   const { sessionId } = req.cookies
-  const { userId } = res.locals.session
+  const { userId, kakaoToken } = res.locals.session
 
-  await pgQuery(
-    `UPDATE kkujjang.user 
-    SET kakao_id = NULL, username = NULL, phone = NULL, is_deleted = TRUE 
-    WHERE id = $1`,
-    [userId],
-  )
+  if (kakaoToken) {
+    // 카카오 계정 연결 해제
+    await kakao.unlink(kakaoToken)
+  }
+
+  await pgQuery(`UPDATE kkujjang.user SET is_deleted = TRUE WHERE id = $1`, [
+    userId,
+  ])
 
   await destorySession(sessionId)
 
