@@ -56,6 +56,15 @@ export const checkRegExp = curry((std, target, targetName) => {
   }
 })
 
+export const checkRegExpUnmatch = curry((std, target, targetName) => {
+  if (RegExp(std).test(target)) {
+    throw {
+      statusCode: 400,
+      message: `정규표현식(${std.toString()})에 의해 금지된 문자열입니다. (${targetName}: ${target})`,
+    }
+  }
+})
+
 export const checkSame = curry((sameTarget, target, targetName) => {
   if (target !== sameTarget) {
     return `비교 대상(${sameTarget})과 일치하지 않는 값입니다. (${targetName}: ${target})`

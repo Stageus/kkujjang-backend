@@ -1,4 +1,7 @@
 import * as validation from '@utility/validation'
+import { configDotenv } from 'dotenv'
+
+configDotenv()
 
 export const validateSignIn = (req, res, next) => {
   const { username, password } = req.body
@@ -52,6 +55,7 @@ export const validateSignUp = (req, res, next) => {
 
 export const validateUserModification = (req, res, next) => {
   const { nickname } = req.body
+  const { authorityLevel } = res.locals.session
 
   validation.check(
     nickname,
@@ -59,6 +63,23 @@ export const validateUserModification = (req, res, next) => {
     validation.checkExist(),
     validation.checkRegExp(/^[a-zA-Z0-9가-힣]{1,15}$/),
   )
+
+  if (authorityLevel !== process.env.ADMIN_AUTHORITY) {
+    try {
+      validation.check(
+        nickname,
+        `nickname`,
+        validation.checkRegExpUnmatch(/운영[진팀자]?/),
+        validation.checkRegExpUnmatch(/관리[자팀]?/),
+        validation.checkRegExpUnmatch(/[Aa][Dd][Mm][Ii][Nn]/),
+      )
+    } catch (e) {
+      throw {
+        statusCode: 400,
+        message: '부적절한 닉네임입니다.',
+      }
+    }
+  }
 
   next()
 }

@@ -431,18 +431,7 @@ userRouter.put(
   validateUserModification,
   async (req, res) => {
     const { nickname } = req.body
-    const { userId, authorityLevel } = res.locals.session
-
-    const notAllowedNickNames = ['운영', '관리', '운영자', '관리자', 'admin']
-    authorityLevel !== process.env.ADMIN_AUTHORITY &&
-      notAllowedNickNames.map((notAllowedNickName) => {
-        if (RegExp(notAllowedNickName).test(nickname)) {
-          throw {
-            statusCode: 400,
-            message: `${nickname}: 부적절한 닉네임입니다`,
-          }
-        }
-      })
+    const { userId } = res.locals.session
 
     await pgQuery(
       `UPDATE kkujjang.user 
