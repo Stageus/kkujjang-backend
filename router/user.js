@@ -398,9 +398,12 @@ userRouter.delete('/', requireSignin, async (req, res) => {
     await kakao.unlink(kakaoToken)
   }
 
-  await pgQuery(`UPDATE kkujjang.user SET is_deleted = TRUE WHERE id = $1`, [
-    userId,
-  ])
+  await pgQuery(
+    `UPDATE kkujjang.user 
+    SET kakao_id = NULL, username = NULL, phone = NULL, is_deleted = TRUE 
+    WHERE id = $1`,
+    [userId],
+  )
 
   await destorySession(sessionId)
 
