@@ -158,7 +158,7 @@ inquiryRouter.get(
         inq_thread.type AS "type",
         inq_thread.title AS "threadTitle",
         (SELECT nickname FROM kkujjang.user
-        WHERE id = inq_thread.author_id) AS "nick",
+        WHERE id = inq_thread.author_id) AS "nickname",
         TO_CHAR(inq_thread.updated_at, 'YYYY-MM-DD HH24:MI:SS') as "updatedAt",
         CEIL(inq_article.count::float / 10) AS "lastPage",
 
