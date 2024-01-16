@@ -1,13 +1,15 @@
 import { configDotenv } from 'dotenv'
-import { redisClient } from '@database/redis'
 import { pgQuery } from '@database/postgres'
 import express from 'express'
 import asyncify from 'express-asyncify'
 import * as kakao from '@utility/kakao'
 import { getSession, createSession, destorySession } from '@utility/session'
-import * as uuid from 'uuid'
 import { isSignedIn } from '@utility/session'
-import { createSmsAuthSession, sendSMS } from '@utility/sms-auth'
+import {
+  createSmsAuthSession,
+  isValidSmsAuthorization,
+  sendSMS,
+} from '@utility/sms-auth'
 import {
   allowGuestOnly,
   requireAdminAuthority,
@@ -144,14 +146,12 @@ userRouter.get('/auth-code', validateReceiverNumber, async (req, res) => {
 
   const authNumber = String(Math.floor(Math.random() * 900000) + 100000)
 
-  console.log(`smsAuthId: ${smsAuthId}, authNumber: ${authNumber}`)
-
   const smsAuthId = await createSmsAuthSession(authNumber, receiverNumber)
-  const snsResult = await sendSMS(
+  const sendSmsResult = await sendSMS(
     receiverNumber,
     `끝짱 인증번호: ${authNumber}`,
   )
-  console.log(snsResult)
+  console.log(sendSmsResult)
 
   res
     .setHeader(
@@ -167,18 +167,17 @@ userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
   const { smsAuthId } = req.cookies
   const { authNumber, phoneNumber } = req.body
 
-  const { authNumber: answer, phoneNumber: targetPhoneNumber } =
-    await redisClient.hGetAll(`auth-${smsAuthId}`)
   const result = {
     result: 'success',
   }
 
-  if (phoneNumber === targetPhoneNumber && authNumber === answer) {
-    redisClient.hSet(`auth-${smsAuthId}`, {
-      fulfilled: 'true',
-    })
-    redisClient.expire(`auth-${smsAuthId}`, 1800)
-  } else {
+  const isValid = await isValidSmsAuthorization(
+    authNumber,
+    phoneNumber,
+    smsAuthId,
+  )
+
+  if (!isValid) {
     throw {
       statusCode: 400,
       message: '잘못된 인증 정보입니다.',
