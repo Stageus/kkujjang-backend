@@ -231,6 +231,7 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
 
   const { id: userId, authority_level: authorityLevel } = result.rows[0]
 
+  // 다른 기기에서 접속중인 계정 확인
   if (await isSignedIn(userId.toString())) {
     throw {
       statusCode: 400,
