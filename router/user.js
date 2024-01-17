@@ -28,7 +28,7 @@ import {
   validateKakaoSignIn,
 } from '@middleware/user'
 import { validatePageNumber } from '@middleware/page'
-import { globalConfig } from 'global'
+import { globalConfig } from '@/global'
 
 configDotenv()
 

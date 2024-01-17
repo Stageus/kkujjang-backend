@@ -2,6 +2,7 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
+      "@/*": ["./*"],
       "@router/*": ["router/*"],
       "@utility/*": ["utility/*"],
       "@model/*": ["model/*"],
