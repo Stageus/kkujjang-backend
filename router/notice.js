@@ -18,7 +18,7 @@ export const noticeRouter = asyncify(express.Router())
 noticeRouter.post(
   '/',
   requireAdminAuthority,
-  upload((req) => `notice`, {
+  upload('notice', {
     fileNameType: 'timestamp',
     fileSize: 1024 * 1024 * 10,
     maxFileCount: 3,
