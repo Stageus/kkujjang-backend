@@ -4,10 +4,11 @@ import { configDotenv } from 'dotenv'
 configDotenv()
 
 export const validateKakaoSignIn = (req, res, next) => {
-  const { code, redirectURL } = req.query
+  const { code } = req.query
 
   validation.check(code, 'code', validation.checkExist())
-  validation.check(redirectURL, 'redirectURL', validation.checkExist())
+
+  next()
 }
 
 export const validateSignIn = (req, res, next) => {
