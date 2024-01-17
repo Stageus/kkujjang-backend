@@ -28,6 +28,7 @@ import {
   validateKakaoSignIn,
 } from '@middleware/user'
 import { validatePageNumber } from '@middleware/page'
+import { globalConfig } from 'global'
 
 configDotenv()
 
@@ -40,7 +41,9 @@ userRouter.get(
   allowGuestOnly,
   validateKakaoSignIn,
   async (req, res) => {
-    const { code, redirectURL } = req.query
+    console.log('카카오 로그인...')
+
+    const { code } = req.query
 
     // 토큰 발급
     const tokenData = await kakao.getToken(code)
@@ -81,11 +84,33 @@ userRouter.get(
     if (firstSigninValidation.rows[0].count == 0) {
       console.log('First Login...')
 
-      await pgQuery(
-        `INSERT INTO kkujjang.user (kakao_id) 
-      VALUES ($1);`,
-        [kakaoId],
-      )
+      const signUpResult = (
+        await pgQuery(
+          `WITH my_serial AS (
+          SELECT nextval('kkujjang.user_id_seq'::regclass) AS id
+        )
+        INSERT INTO kkujjang.user (id, nickname, kakao_id)
+        SELECT 
+          my_serial.id,
+          '${globalConfig.DEFAULT_NICKNAME}' || '#' || CAST(my_serial.id AS VARCHAR),
+          $1
+        FROM my_serial
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM kkujjang.user
+          WHERE kakao_id = CAST($1 AS VARCHAR) AND is_deleted = false
+        ) RETURNING id`,
+          [kakaoId],
+        )
+      ).rows
+
+      if (signUpResult?.length !== 1) {
+        kakao.unlink(tokenData.access_token)
+        throw {
+          statusCode: 400,
+          message: '회원가입에 실패했습니다.',
+        }
+      }
     }
 
     const { id: userId, authority_level: authorityLevel } = (
@@ -96,6 +121,15 @@ userRouter.get(
         [kakaoId],
       )
     ).rows[0]
+
+    // 다른 기기에서 접속중인 계정 확인
+    if (await isSignedIn(userId.toString())) {
+      kakao.logout(tokenData.access_token)
+      throw {
+        statusCode: 400,
+        message: '접속중인 계정입니다.',
+      }
+    }
 
     console.log(`User ID: ${userId}, Authority Level: ${authorityLevel}`)
 
@@ -112,7 +146,9 @@ userRouter.get(
         'Set-Cookie',
         `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=7200`,
       )
-      .redirect(redirectURL)
+      .send({
+        result: 'success',
+      })
   },
 )
 
@@ -224,7 +260,7 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
       `sessionId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=7200`,
     )
     .json({
-      result: 'suecess',
+      result: 'success',
     })
 })
 
@@ -389,6 +425,7 @@ userRouter.delete('/', requireSignin, async (req, res) => {
 
   if (kakaoToken) {
     // 카카오 계정 연결 해제
+    console.log('deleteing kakao data...')
     await kakao.unlink(kakaoToken)
   }
 
@@ -442,8 +479,6 @@ userRouter.post(
   async (req, res) => {
     const { username, password, phone } = req.body
 
-    const defaultNickname = '끝짱'
-
     const result = (
       await pgQuery(
         `WITH my_serial AS (
@@ -455,7 +490,7 @@ userRouter.post(
             $1, 
             crypt($2, gen_salt('bf')), 
             $3, 
-            '${defaultNickname}' || '#' || CAST(my_serial.id AS VARCHAR)
+            '${globalConfig.DEFAULT_NICKNAME}' || '#' || CAST(my_serial.id AS VARCHAR)
         FROM my_serial
         WHERE NOT EXISTS (
             SELECT 1
