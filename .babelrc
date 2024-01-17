@@ -5,6 +5,7 @@
       "module-resolver",
       {
         "alias": {
+          "@": ["."],
           "@router": ["./router"],
           "@utility": ["./utility"],
           "@model": ["./model"],
