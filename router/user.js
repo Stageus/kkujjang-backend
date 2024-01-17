@@ -260,7 +260,7 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
       `sessionId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=7200`,
     )
     .json({
-      result: 'suecess',
+      result: 'success',
     })
 })
 
