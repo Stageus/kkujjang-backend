@@ -486,18 +486,18 @@ userRouter.post(
         )
         INSERT INTO kkujjang.user (id, username, password, phone, nickname)
         SELECT 
-            my_serial.id, 
-            $1, 
-            crypt($2, gen_salt('bf')), 
-            $3, 
-            '${globalConfig.DEFAULT_NICKNAME}' || '#' || CAST(my_serial.id AS VARCHAR)
+          my_serial.id, 
+          $1, 
+          crypt($2, gen_salt('bf')), 
+          $3, 
+          '${globalConfig.DEFAULT_NICKNAME}' || '#' || CAST(my_serial.id AS VARCHAR)
         FROM my_serial
         WHERE NOT EXISTS (
-            SELECT 1
-            FROM kkujjang.user
-            WHERE (username = CAST($1 AS VARCHAR) 
-              OR phone = CAST($3 AS VARCHAR))
-              AND is_deleted = false
+          SELECT 1
+          FROM kkujjang.user
+          WHERE (username = CAST($1 AS VARCHAR) 
+            OR phone = CAST($3 AS VARCHAR))
+            AND is_deleted = false
         )
         RETURNING id`,
         [username, password, phone],
@@ -526,9 +526,7 @@ userRouter.get(
 
     const count = (
       await pgQuery(
-        `SELECT COUNT(*) AS "count"
-        FROM kkujjang.user 
-        WHERE username = $1`,
+        `SELECT COUNT(*) AS "count" FROM kkujjang.user WHERE username = $1`,
         [username],
       )
     ).rows[0].count
