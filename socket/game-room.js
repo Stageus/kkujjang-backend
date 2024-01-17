@@ -1,6 +1,7 @@
 import * as uuid from 'uuid'
 
 export const gameRooms = {}
+export const gameRoomPasswords = {}
 
 const addChatEventLinstener = (gameRoomNamespace, gameRoomId, socket) => {
   socket.on('chat', (msg) => {
@@ -50,11 +51,19 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
     }
 
     // 방 만들기 이벤트리스너 등록
-    socket.on('create game room', () => {
+    socket.on('create game room', (roomInfo) => {
       const gameRoomId = uuid.v4()
+      const { title, password, memberLimit, roundCount } = roomInfo
+
+      const isPasswordRoom = password !== '' ? true : false
+      gameRoomPasswords[gameRoomId] = password
+
       const gameRoomInfo = (gameRooms[gameRoomId] = {
-        title: '아무나 환영',
+        isPasswordRoom,
+        title,
         memberCount: 1,
+        memberLimit,
+        roundCount,
         members: [socket.userInfo],
       })
 
@@ -81,12 +90,13 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
 
       socket.join(gameRoomId)
       gameRooms[gameRoomId].memberCount++
+
       gameRooms[gameRoomId].members.push(socket.userInfo)
       const gameRoomInfo = gameRooms[gameRoomId]
-      addChatEventLinstener(gameRoomNamespace, gameRoomId, socket)
 
-      emitRefreshGameRoom(lobbyNamespace, gameRoomId)
+      addChatEventLinstener(gameRoomNamespace, gameRoomId, socket)
       emitDrawGameRoom(socket, gameRoomInfo)
+      emitRefreshGameRoom(lobbyNamespace, gameRoomId)
     })
 
     // 방 나가기 이벤트리스너 등록
@@ -98,6 +108,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
 
         const curRoomMeberCount = --gameRooms[gameRoomId].memberCount
         const curRooMembers = gameRooms[gameRoomId].members
+
         const index = curRooMembers.indexOf(socket.userInfo)
         if (index > -1) {
           curRooMembers.splice(index, 1)
@@ -107,6 +118,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
         if (curRoomMeberCount === 0) {
           lobbyNamespace.emit('remove game room', gameRoomId)
           delete gameRooms[gameRoomId]
+          delete gameRoomPasswords[gameRoomId]
         } else {
           emitRefreshGameRoom(lobbyNamespace, gameRoomId)
           gameRoomNamespace

@@ -76,26 +76,6 @@
         joinLobby()
       }
 
-      const drawGameRoom = (roomInfo) => {
-        const roomInfoJson = JSON.parse(roomInfo)
-        gameRoomContain.innerHTML = `
-          <div id="gameRoom">
-            <button onclick="leaveGameRoom()">나가기</button>
-            <h2>${roomInfoJson.title}</h2>
-            <div id="member">
-            </div>
-          </div>`
-        console.log(roomInfo)
-        const roomMembers = roomInfoJson.members
-
-        for (roomMember of roomMembers) {
-          var div = document.createElement('div')
-          div.id = `user${roomMember.id}`
-          div.innerHTML = roomMember.nickname
-          member.appendChild(div)
-        }
-      }
-
       const addGameRoomMember = (userInfo) => {
         var div = document.createElement('div')
         div.id = `user${userInfo.id}`
@@ -118,8 +98,25 @@
       }
 
       const addDrawGameRoomEventListener = () => {
-        socket.on('draw game room', (roomInfo) => {
-          drawGameRoom(roomInfo)
+        socket.on('draw game room', (gameRoomInfo) => {
+          const roomInfoJson = JSON.parse(gameRoomInfo)
+          // 방 그리기
+          gameRoomContain.innerHTML = `
+          <div id="gameRoom">
+            <button onclick="leaveGameRoom()">나가기</button>
+            <h2>${roomInfoJson.title}</h2>
+            <div id="member">
+            </div>
+          </div>`
+
+          // 현존 멤버들 그리기
+          const roomMembers = roomInfoJson.members
+          for (roomMember of roomMembers) {
+            var div = document.createElement('div')
+            div.id = `user${roomMember.id}`
+            div.innerHTML = roomMember.nickname
+            member.appendChild(div)
+          }
         })
       }
 
@@ -132,78 +129,127 @@
         })
       }
 
+      const createGameRoom = () => {
+        const title = prompt('방 제목을 입력해주세요')
+        const password = prompt('비밀번호는 뭐죠')
+        const memberLimit = prompt('인원수 제한은 몇명인가요')
+        const roundCount = prompt('몇 라운드인가요')
+
+        socket.disconnect()
+        socket = io('http://localhost:3000/gameRoom')
+        addChatEventListener()
+        addRefreshRoomEventListener()
+        addDrawGameRoomEventListener()
+
+        socket.on('connect', () => {
+          socket.emit('create game room', {
+            title,
+            password,
+            memberLimit: Number(memberLimit),
+            roundCount: Number(roundCount),
+          })
+        })
+      }
+
       const joinLobby = () => {
         socket = io('http://localhost:3000/lobby')
         addChatEventListener()
+
+        socket.on('fail join game room', (msg) => {
+          alert(msg)
+        })
+
+        socket.on('success join game room', (roomId) => {
+          socket.disconnect()
+          socket = io('http://localhost:3000/gameRoom')
+          addChatEventListener()
+          addRefreshRoomEventListener()
+          addDrawGameRoomEventListener()
+
+          socket.on('connect', () => {
+            socket.emit('join game room', roomId)
+          })
+        })
 
         socket.on('load game room', (gameRooms) => {
           var gameRoomList = document.getElementById('gameRoomList')
           gameRoomList.innerHTML = ''
           const gameRoomsJson = JSON.parse(gameRooms)
-          for (const gameRoom in gameRoomsJson) {
-            var newRoom = document.createElement('div')
-            newRoom.id = gameRoom
-            newRoom.textContent = JSON.stringify(gameRoomsJson[gameRoom])
-            gameRoomList.appendChild(newRoom)
+          for (const gameRoomId in gameRoomsJson) {
+            var newGameRoom = document.createElement('div')
+            const gameRoomInfo = gameRoomsJson[gameRoomId]
+
+            if (gameRoomInfo.isPasswordRoom) {
+              newGameRoom.setAttribute('data-isPasswordRoom', 'true')
+            } else {
+              newGameRoom.setAttribute('data-isPasswordRoom', 'false')
+            }
+
+            newGameRoom.id = gameRoomId
+            newGameRoom.textContent = JSON.stringify(gameRoomInfo)
+
+            gameRoomList.appendChild(newGameRoom)
 
             // 누르면 참가하기 이벤트 리스너 등록
-            newRoom.addEventListener('click', (event) => {
-              socket.disconnect()
-              joinGameRoom(event.target.id)
+            newGameRoom.addEventListener('click', function (event) {
+              const roomId = event.target.id
+              const joinTicket = {
+                gameRoomId,
+                password: '',
+              }
+              if (event.target.getAttribute('data-isPasswordRoom') === 'true') {
+                const password = prompt('비밀번호를 입력해주세요')
+                joinTicket.password = password
+              }
+
+              socket.emit('try join game room', joinTicket)
             })
           }
         })
 
-        socket.on('new game room', (gameRoom) => {
+        socket.on('new game room', (roomInfoWithId) => {
           var gameRoomList = document.getElementById('gameRoomList')
-          var newRoom = document.createElement('div')
-          const gameRoomJson = JSON.parse(gameRoom)
+          var newGameRoom = document.createElement('div')
+          const gameRoomWithIdJson = JSON.parse(roomInfoWithId)
+          const { gameRoomId, gameRoomInfo } = gameRoomWithIdJson
 
-          newRoom.id = gameRoomJson.gameRoomId
-          newRoom.textContent = gameRoom
+          if (gameRoomInfo.isPasswordRoom) {
+            newGameRoom.setAttribute('data-isPasswordRoom', 'true')
+          } else {
+            newGameRoom.setAttribute('data-isPasswordRoom', 'false')
+          }
 
-          gameRoomList.appendChild(newRoom)
+          newGameRoom.id = gameRoomId
+          newGameRoom.textContent = JSON.stringify(gameRoomInfo)
+
+          gameRoomList.appendChild(newGameRoom)
 
           // 누르면 참가하기 이벤트 리스너 등록
-          newRoom.addEventListener('click', function (event) {
-            joinGameRoom(event.target.id)
+          newGameRoom.addEventListener('click', function (event) {
+            const roomId = event.target.id
+            const joinTicket = {
+              gameRoomId,
+              password: '',
+            }
+            if (event.target.getAttribute('data-isPasswordRoom') === 'true') {
+              const password = prompt('비밀번호를 입력해주세요')
+              joinTicket.password = password
+            }
+
+            socket.emit('try join game room', joinTicket)
           })
         })
 
-        socket.on('refresh game room', (gameRoom) => {
-          const gameRoomJson = JSON.parse(gameRoom)
-          const targetRoomId = gameRoomJson.gameRoomId
+        socket.on('refresh game room', (roomInfoWithId) => {
+          const gameRoomWithIdJson = JSON.parse(roomInfoWithId)
+          const { gameRoomId, gameRoomInfo } = gameRoomWithIdJson
 
-          const targetGameRoom = document.getElementById(targetRoomId)
-          targetGameRoom.textContent = gameRoom
+          const targetGameRoom = document.getElementById(gameRoomId)
+          targetGameRoom.textContent = JSON.stringify(gameRoomInfo)
         })
 
         socket.on('remove game room', (roomId) => {
           document.getElementById(roomId).remove()
-        })
-      }
-
-      const createGameRoom = () => {
-        socket.disconnect()
-        socket = io('http://localhost:3000/gameRoom')
-        addChatEventListener()
-        addRefreshRoomEventListener()
-        addDrawGameRoomEventListener()
-
-        socket.on('connect', () => {
-          socket.emit('create game room')
-        })
-      }
-
-      const joinGameRoom = (roomId) => {
-        socket.disconnect()
-        socket = io('http://localhost:3000/gameRoom')
-        addChatEventListener()
-        addRefreshRoomEventListener()
-        addDrawGameRoomEventListener()
-
-        socket.on('connect', () => {
-          socket.emit('join game room', roomId)
         })
       }
 
