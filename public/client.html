@@ -69,24 +69,7 @@
         input.value = ''
       })
 
-      const leaveGameRoom = () => {
-        socket.emit('leave game room')
-        socket.disconnect()
-        gameRoomContain.innerHTML = ''
-        joinLobby()
-      }
-
-      const addGameRoomMember = (userInfo) => {
-        var div = document.createElement('div')
-        div.id = `user${userInfo.id}`
-        div.innerHTML = userInfo.nickname
-        member.appendChild(div)
-      }
-
-      const removeGameRoomMember = (userId) => {
-        document.getElementById(`user${userId}`).remove()
-      }
-
+      // 로비 소켓, 룸 소켓 공용 채팅 이벤트 리스너
       const addChatEventListener = () => {
         socket.on('chat', (msg) => {
           var messages = document.getElementById('messages')
@@ -97,6 +80,54 @@
         })
       }
 
+      //==================== 룸 ====================//
+      // 룸 소켓 용 함수
+      // 나가기 버튼을 누르면 방을 나감
+      const leaveGameRoom = () => {
+        socket.emit('leave game room')
+        socket.disconnect()
+        gameRoomContain.innerHTML = ''
+        accessToLobbySocket()
+      }
+
+      // add game room member 이벤트가 발생하면 추가된 멤버를 그림
+      const addGameRoomMember = (userInfo) => {
+        var div = document.createElement('div')
+        div.id = `user${userInfo.id}`
+        div.innerHTML = userInfo.nickname
+        member.appendChild(div)
+      }
+
+      // remove game room membe 이벤트가 발생하면 나간 멤버를 그림
+      const removeGameRoomMember = (userId) => {
+        document.getElementById(`user${userId}`).remove()
+      }
+
+      // change member state 이벤트가 발생하면 그 멤버의 상태를 갱신함
+      // const changeMemberState = (userInfo) => {
+      //   var div = document.createElement('div')
+      //   div.id = `user${userInfo.id}`
+      //   div.innerHTML = userInfo.nickname
+      //   member.appendChild(div)
+      // }
+
+      // 방 갱신이 됐을 때 발생하는 이벤트 리스너들을 등록함
+      const addRefreshRoomEventListener = () => {
+        // 어떤 플레이어가 들어옴
+        socket.on('add game room member', (userInfo) => {
+          addGameRoomMember(JSON.parse(userInfo))
+        })
+        // 어떤 플레이어가 나감
+        socket.on('remove game room member', (userId) => {
+          removeGameRoomMember(userId)
+        })
+        // 어떤 멤버의 상태가 바뀜
+        socket.on('change member state', (userInfo) => {
+          // changeMemberState(userInfo)
+        })
+      }
+
+      // 서버에서 draw game room 이벤트를 발생시키면 주어진 정보를 바탕으로 룸을 그림
       const addDrawGameRoomEventListener = () => {
         socket.on('draw game room', (gameRoomInfo) => {
           const roomInfoJson = JSON.parse(gameRoomInfo)
@@ -119,16 +150,28 @@
           }
         })
       }
+      // 룸 소켓 용 함수 끝
 
-      const addRefreshRoomEventListener = () => {
-        socket.on('add game room member', (userInfo) => {
-          addGameRoomMember(JSON.parse(userInfo))
-        })
-        socket.on('remove game room member', (userId) => {
-          removeGameRoomMember(userId)
+      // 룸 소켓에 접속을 시도
+      const accessToGameRoomSocket = (accessType) => {
+        socket = io('http://localhost:3000/gameRoom')
+
+        const { isGameRoomCreate, gameRoomInfo } = accessType
+        //  isGameRoomCreate가 true라면 새 방을 만드는 것임
+        const emitMsg =
+          isGameRoomCreate === true ? 'create game room' : 'join game room'
+
+        socket.on('connect', () => {
+          socket.emit(emitMsg, gameRoomInfo)
+          addChatEventListener()
+          addRefreshRoomEventListener()
+          addDrawGameRoomEventListener()
         })
       }
 
+      //==================== 로비 ====================//
+      // 로비 용 함수
+      // 방 만들기를 누르면 방을 만듬
       const createGameRoom = () => {
         const title = prompt('방 제목을 입력해주세요')
         const password = prompt('비밀번호는 뭐죠')
@@ -136,110 +179,90 @@
         const roundCount = prompt('몇 라운드인가요')
 
         socket.disconnect()
-        socket = io('http://localhost:3000/gameRoom')
-        addChatEventListener()
-        addRefreshRoomEventListener()
-        addDrawGameRoomEventListener()
-
-        socket.on('connect', () => {
-          socket.emit('create game room', {
+        accessToGameRoomSocket({
+          isGameRoomCreate: true,
+          gameRoomInfo: {
             title,
             password,
-            memberLimit: Number(memberLimit),
-            roundCount: Number(roundCount),
-          })
+            memberLimit,
+            roundCount,
+          },
         })
       }
 
-      const joinLobby = () => {
+      // 로비에 게임방 입구를 그림
+      const drawGameEnterance = (gameRoomId, gameRoomInfo) => {
+        var gameRoomList = document.getElementById('gameRoomList')
+        var newGameRoom = document.createElement('div')
+        if (gameRoomInfo.isPasswordRoom) {
+          newGameRoom.setAttribute('data-isPasswordRoom', 'true')
+        } else {
+          newGameRoom.setAttribute('data-isPasswordRoom', 'false')
+        }
+
+        newGameRoom.id = gameRoomId
+        newGameRoom.textContent = JSON.stringify(gameRoomInfo)
+
+        gameRoomList.appendChild(newGameRoom)
+
+        // 게임 입구 클릭 시 이벤트 리스너 등록
+        newGameRoom.addEventListener('click', function (event) {
+          const roomId = event.target.id
+          const joinTicket = {
+            gameRoomId,
+            password: '',
+          }
+          if (event.target.getAttribute('data-isPasswordRoom') === 'true') {
+            const password = prompt('비밀번호를 입력해주세요')
+            joinTicket.password = password
+          }
+
+          // 해당 roomId에 접속을 시도
+          socket.emit('try join game room', joinTicket)
+        })
+      }
+      // 로비 용 함수 끝
+
+      // 로비 소켓에 연결과 연결됐을때 이벤트리스너 세팅
+      const accessToLobbySocket = () => {
         socket = io('http://localhost:3000/lobby')
+
+        // 채팅 이벤트리스너를 등록함
         addChatEventListener()
 
+        // 룸에 접속을 시도했는데 실패함
         socket.on('fail join game room', (msg) => {
           alert(msg)
         })
 
+        // 룸에 접속을 시도해서 성공함
         socket.on('success join game room', (roomId) => {
           socket.disconnect()
-          socket = io('http://localhost:3000/gameRoom')
-          addChatEventListener()
-          addRefreshRoomEventListener()
-          addDrawGameRoomEventListener()
-
-          socket.on('connect', () => {
-            socket.emit('join game room', roomId)
+          accessToGameRoomSocket({
+            isGameRoomCreate: false,
+            gameRoomInfo: roomId,
           })
         })
 
+        // 로비 연결시에 게임방을 로딩함
         socket.on('load game room', (gameRooms) => {
           var gameRoomList = document.getElementById('gameRoomList')
           gameRoomList.innerHTML = ''
           const gameRoomsJson = JSON.parse(gameRooms)
           for (const gameRoomId in gameRoomsJson) {
-            var newGameRoom = document.createElement('div')
             const gameRoomInfo = gameRoomsJson[gameRoomId]
-
-            if (gameRoomInfo.isPasswordRoom) {
-              newGameRoom.setAttribute('data-isPasswordRoom', 'true')
-            } else {
-              newGameRoom.setAttribute('data-isPasswordRoom', 'false')
-            }
-
-            newGameRoom.id = gameRoomId
-            newGameRoom.textContent = JSON.stringify(gameRoomInfo)
-
-            gameRoomList.appendChild(newGameRoom)
-
-            // 누르면 참가하기 이벤트 리스너 등록
-            newGameRoom.addEventListener('click', function (event) {
-              const roomId = event.target.id
-              const joinTicket = {
-                gameRoomId,
-                password: '',
-              }
-              if (event.target.getAttribute('data-isPasswordRoom') === 'true') {
-                const password = prompt('비밀번호를 입력해주세요')
-                joinTicket.password = password
-              }
-
-              socket.emit('try join game room', joinTicket)
-            })
+            drawGameEnterance(gameRoomId, gameRoomInfo)
           }
         })
 
+        // 새로운 룸이 생성됨
         socket.on('new game room', (roomInfoWithId) => {
-          var gameRoomList = document.getElementById('gameRoomList')
-          var newGameRoom = document.createElement('div')
           const gameRoomWithIdJson = JSON.parse(roomInfoWithId)
           const { gameRoomId, gameRoomInfo } = gameRoomWithIdJson
-
-          if (gameRoomInfo.isPasswordRoom) {
-            newGameRoom.setAttribute('data-isPasswordRoom', 'true')
-          } else {
-            newGameRoom.setAttribute('data-isPasswordRoom', 'false')
-          }
-
-          newGameRoom.id = gameRoomId
-          newGameRoom.textContent = JSON.stringify(gameRoomInfo)
-
-          gameRoomList.appendChild(newGameRoom)
-
-          // 누르면 참가하기 이벤트 리스너 등록
-          newGameRoom.addEventListener('click', function (event) {
-            const roomId = event.target.id
-            const joinTicket = {
-              gameRoomId,
-              password: '',
-            }
-            if (event.target.getAttribute('data-isPasswordRoom') === 'true') {
-              const password = prompt('비밀번호를 입력해주세요')
-              joinTicket.password = password
-            }
-
-            socket.emit('try join game room', joinTicket)
-          })
+          drawGameEnterance(gameRoomId, gameRoomInfo)
         })
 
+        // 어떤 룸의 정보가 바뀜
         socket.on('refresh game room', (roomInfoWithId) => {
           const gameRoomWithIdJson = JSON.parse(roomInfoWithId)
           const { gameRoomId, gameRoomInfo } = gameRoomWithIdJson
@@ -248,12 +271,13 @@
           targetGameRoom.textContent = JSON.stringify(gameRoomInfo)
         })
 
+        // 참가자수가 0이 되어서 룸이 지워짐
         socket.on('remove game room', (roomId) => {
           document.getElementById(roomId).remove()
         })
       }
 
-      joinLobby()
+      accessToLobbySocket()
     </script>
   </body>
 </html>
