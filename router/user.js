@@ -28,6 +28,7 @@ import {
   validateKakaoSignIn,
 } from '@middleware/user'
 import { validatePageNumber } from '@middleware/page'
+import { globalConfig } from 'global'
 
 configDotenv()
 
@@ -83,7 +84,6 @@ userRouter.get(
     if (firstSigninValidation.rows[0].count == 0) {
       console.log('First Login...')
 
-      const defaultNickname = '끝짱'
       const signUpResult = (
         await pgQuery(
           `WITH my_serial AS (
@@ -92,7 +92,7 @@ userRouter.get(
         INSERT INTO kkujjang.user (id, nickname, kakao_id)
         SELECT 
           my_serial.id,
-          '${defaultNickname}' || '#' || CAST(my_serial.id AS VARCHAR),
+          '${globalConfig.DEFAULT_NICKNAME}' || '#' || CAST(my_serial.id AS VARCHAR),
           $1
         FROM my_serial
         WHERE NOT EXISTS (
@@ -479,8 +479,6 @@ userRouter.post(
   async (req, res) => {
     const { username, password, phone } = req.body
 
-    const defaultNickname = '끝짱'
-
     const result = (
       await pgQuery(
         `WITH my_serial AS (
@@ -492,7 +490,7 @@ userRouter.post(
             $1, 
             crypt($2, gen_salt('bf')), 
             $3, 
-            '${defaultNickname}' || '#' || CAST(my_serial.id AS VARCHAR)
+            '${globalConfig.DEFAULT_NICKNAME}' || '#' || CAST(my_serial.id AS VARCHAR)
         FROM my_serial
         WHERE NOT EXISTS (
             SELECT 1
