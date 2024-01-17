@@ -9,6 +9,7 @@ import {
   validateNoticeSearch,
 } from '@middleware/notice'
 import { validatePageNumber } from '@middleware/page'
+import { upload } from '@utility/kkujjang_multer'
 
 configDotenv()
 
@@ -17,15 +18,49 @@ export const noticeRouter = asyncify(express.Router())
 noticeRouter.post(
   '/',
   requireAdminAuthority,
+  upload('notice', {
+    fileNameType: 'timestamp',
+    fileSize: 1024 * 1024 * 10,
+    maxFileCount: 3,
+    allowedExtensions: ['jpg', 'jpeg', 'png'],
+  }),
   validateNotice,
   async (req, res) => {
     const session = res.locals.session
 
     const { title, content } = req.body
 
+    const keySubarray = req.files.reduce((acc, file, index) => {
+      acc.push(`$${index + 4}`)
+      return acc
+    }, [])
+
+    const fileLength = keySubarray.length
+    const fileNumberLimit = 3
+    const fileInsertQuery =
+      fileLength === 0
+        ? 'SELECT 1'
+        : `, values_to_insert AS (
+      SELECT
+        (SELECT COUNT(*) 
+        FROM inserted_notice
+        JOIN kkujjang.notice_file not_file ON not_file.notice_id = inserted_notice.id) as count,
+        (SELECT id FROM inserted_notice) AS notice_id,
+        UNNEST(ARRAY[${keySubarray.join(', ')}]) AS key
+      )
+      INSERT INTO kkujjang.notice_file (notice_id, file_order, key)
+      SELECT notice_id, count + ROW_NUMBER() OVER(), key
+      FROM values_to_insert
+      WHERE count + ${fileLength} <= ${fileNumberLimit}`
+
     await pgQuery(
-      `INSERT INTO kkujjang.notice (title, content, author_id) VALUES ($1, $2, $3);`,
-      [title, content, session.userId],
+      `WITH
+        inserted_notice AS (
+          INSERT INTO kkujjang.notice (title, content, author_id) VALUES ($1, $2, $3)
+          RETURNING author_id, id
+        )
+        ${fileInsertQuery}`,
+      [title, content, session.userId, ...req.files],
     )
 
     res.json({ result: 'success' })
@@ -93,9 +128,13 @@ noticeRouter.get('/:noticeId', validateNoticePathIndex, async (req, res) => {
 
   const result = (
     await pgQuery(
-      `SELECT title, content, created_at, views 
+      `SELECT kkujjang.notice.id, title, content, kkujjang.notice.created_at, views, 
+        ARRAY_AGG(key) AS files
       FROM kkujjang.notice 
-      WHERE id=$1 AND is_deleted=FALSE`,
+        JOIN kkujjang.notice_file file ON file.notice_id = notice.id
+      WHERE kkujjang.notice.id=$1 AND is_deleted=FALSE
+      GROUP BY kkujjang.notice.id
+      LIMIT 1`,
       [noticeId],
     )
   ).rows[0]

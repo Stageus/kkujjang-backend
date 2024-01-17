@@ -1,3 +1,4 @@
+import path from 'path'
 import express from 'express'
 import asyncify from 'express-asyncify'
 import { pgQuery } from '@database/postgres'
@@ -209,4 +210,8 @@ testRouter.post('/regExp', async (req, res) => {
     type: typeof str,
     result: RegExp(regExp).test(str),
   })
+})
+
+testRouter.get('/socket', function (req, res) {
+  res.sendFile(path.join(__dirname, '..', 'public', 'client.html'))
 })
