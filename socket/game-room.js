@@ -139,15 +139,14 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
       }
 
       // 여기서부턴 접속 성공
+      gameRoomNamespace
+        .to(gameRoomId)
+        .emit('add game room member', JSON.stringify(socket.userInfo))
 
       socket.join(gameRoomId)
       clientRoomId[socket.id] = gameRoomId
       gameRooms[gameRoomId].memberCount++
       gameRooms[gameRoomId].members.push(socket.userInfo)
-
-      gameRoomNamespace
-        .to(gameRoomId)
-        .emit('add game room member', JSON.stringify(socket.userInfo))
 
       const gameRoomInfo = gameRooms[gameRoomId]
 

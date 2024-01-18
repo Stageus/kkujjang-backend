@@ -7,17 +7,25 @@
   <body>
     <ul id="messages"></ul>
     <form id="form" action="">
-      <input id="input" autocomplete="off" /><button id="submit">전송</button>
+      <input id="input" autocomplete="off" />
+      <button id="submit">전송</button>
     </form>
     <!-- 방 만들기 버튼 추가 -->
-    <button id="createGameRoomBtn" onclick="createGameRoom()">방 만들기</button>
+    <button id="createGameRoomBtn">방 만들기</button>
 
     <h2>방 목록</h2>
-    <div id="gameRoomList"></div>
+    <div id="gameEnteranceContain"></div>
 
     <div id="gameRoomContain"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/client.js"></script>
+    <script src="/utility/utility/game-room.js"></script>
+    <script src="/utility/utility/lobby.js"></script>
+    <script src="/utility/socket/game-room.js"></script>
+    <script src="/utility/socket/lobby.js"></script>
+    <script>
+      accessToLobbySocket()
+    </script>
   </body>
 </html>
