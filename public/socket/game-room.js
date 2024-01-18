@@ -42,7 +42,7 @@ const tryEditGameRoomSettingEvent = () => {
   const { isValid, gameRoomInfo } = result
   if (isValid === false) return
 
-  socket.emit('try change game room setting', {
+  socket.emit('try edit game room setting', {
     gameRoomInfo,
   })
 }
