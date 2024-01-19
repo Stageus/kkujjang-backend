@@ -27,6 +27,9 @@ const drawGameEnterance = (targetGameRoom, gameRoomInfo) => {
 
   // 게임방 입구 클릭  이벤트 리스너 등록
   targetGameRoom.addEventListener('click', (event) => {
+    if (event.target.classList.contains('click')) {
+      return
+    }
     const targetElement = event.target // 클릭된 요소
     let currentElement = targetElement
 
@@ -52,7 +55,7 @@ const drawGameEnterance = (targetGameRoom, gameRoomInfo) => {
     const gameRoomId = currentElement.id
     const joinTicket = {
       isGameRoomCreate: false,
-      gameRoomInfo: {
+      gameRoomTicket: {
         gameRoomId,
         password: '',
       },
@@ -60,7 +63,7 @@ const drawGameEnterance = (targetGameRoom, gameRoomInfo) => {
 
     if (currentElement.getAttribute('data-isPasswordRoom') === 'true') {
       const password = prompt('비밀번호를 입력해주세요')
-      joinTicket.gameRoomInfo.password = password
+      joinTicket.gameRoomTicket.password = password
     }
 
     // 해당 roomId에 접속을 시도
@@ -68,7 +71,7 @@ const drawGameEnterance = (targetGameRoom, gameRoomInfo) => {
   })
 }
 
-const promptGameRoomInfo = () => {
+const promptGameRoomSetting = () => {
   const title = prompt('방 제목을 입력해주세요')
   const password = prompt('비밀번호는 뭐죠')
   const memberLimit = Number(prompt('인원수 제한은 몇명인가요'))
@@ -88,7 +91,7 @@ const promptGameRoomInfo = () => {
 
   return {
     isValid: true,
-    gameRoomInfo: {
+    gameRoomSetting: {
       title,
       password,
       memberLimit,
@@ -125,8 +128,8 @@ const addGameEnterance = (gameRoomInfoWithId) => {
   )
 }
 
-const refreshGameEnterance = (gameRoomWithIdJson) => {
-  const { gameRoomId, gameRoomInfo } = gameRoomWithIdJson
+const refreshGameEnterance = (gameRoomInfoWithId) => {
+  const { gameRoomId, gameRoomInfo } = gameRoomInfoWithId
 
   const targetGameRoom = document.getElementById(gameRoomId)
   drawGameEnterance(targetGameRoom, gameRoomInfo)

@@ -6,6 +6,7 @@ import {
   addGameRoomMember,
   leaveGameRoom,
   getGameRoomInfo,
+  changeGameRoomSetting,
 } from '@socket/utility/game-room'
 
 const isConnectedToLobby = (socket) => {
@@ -64,6 +65,16 @@ const emitAddGameRoomMember = (gameRoomNamespace, gameRoomId, userInfo) => {
     .emit('add game room member', JSON.stringify(userInfo))
 }
 
+const emitChangeGameRoomSetting = (
+  gameRoomNamespace,
+  gameRoomId,
+  gameRoomInfo,
+) => {
+  gameRoomNamespace
+    .to(gameRoomId)
+    .emit('change game room setting', JSON.stringify(gameRoomInfo))
+}
+
 const emitFailJoinGameRoom = (socket, message) => {
   socket.emit('fail join game room', message)
 }
@@ -78,10 +89,13 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
     }
 
     // 방 만들기 시도 이벤트가 발생
-    socket.on('try create game room', (newGameRoomInfo) => {
+    socket.on('try create game room', (newGameRoomSetting) => {
       // 소켓의 유저 정보를 불러옴
       getUserInfo(socket)
-      const { gameRoomId, gameRoomInfo } = createRoom(socket, newGameRoomInfo)
+      const { gameRoomId, gameRoomInfo } = createRoom(
+        socket,
+        newGameRoomSetting,
+      )
       socket.join(gameRoomId)
       addChatEventLinstener(gameRoomNamespace, gameRoomId, socket)
       emitDrawGameRoom(socket, gameRoomInfo)
@@ -125,7 +139,14 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
     })
 
     // 게임방 설정 바꾸기 시도 이벤트가 발생
-    socket.on('try edit game room setting', () => {})
+    socket.on('try change game room setting', (gameRoomSetting) => {
+      const { gameRoomId, gameRoomInfo } = changeGameRoomSetting(
+        socket,
+        gameRoomSetting,
+      )
+      emitChangeGameRoomSetting(gameRoomNamespace, gameRoomId, gameRoomInfo)
+      emitRefreshGameEnterance(lobbyNamespace, gameRoomId)
+    })
     // 게임 시작 시도 이벤트가 발생
     socket.on('try start game', () => {})
     // 플레이어 레디 상태 바꾸기 이벤트가 발생

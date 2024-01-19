@@ -4,7 +4,7 @@
   list-style-type: none;
   margin: 0;
   padding: 0;
-  width: 95%;
+  width: 1000px;
   height: 150px;
   overflow-x: hidden;
   overflow-y: auto;
@@ -34,7 +34,13 @@
   display: block;
   position: fixed;
   top: 0;
-  width: 600px;
+  width: 1000px;
   height: 500px;
   background: rgb(100, 100, 100);
+}
+.member {
+  display: inline-block;
+  width: 200px;
+  height: 200px;
+  background-color: white;
 }

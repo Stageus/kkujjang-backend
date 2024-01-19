@@ -14,7 +14,6 @@ const addLobbyEventListener = () => {
   })
   // 어떤 게임방의 정보가 바뀌어 게임방 입구도 갱신함
   socket.on('refresh game enterance', (gameRoomInfoWithId) => {
-    console.log('let refresh')
     refreshGameEnterance(JSON.parse(gameRoomInfoWithId))
   })
   // 참가자수가 0이 되어서 게임방 없어져 게임방 입구도 지움
@@ -26,13 +25,13 @@ const addLobbyEventListener = () => {
 
 // 게임방 연결
 const createGameRoom = () => {
-  const result = promptGameRoomInfo()
-  const { isValid, gameRoomInfo } = result
+  const result = promptGameRoomSetting()
+  const { isValid, gameRoomSetting } = result
   if (isValid === false) return
 
   connectToGameRoomSocket({
     isGameRoomCreate: true,
-    gameRoomInfo,
+    gameRoomSetting,
   })
 }
 

@@ -18,7 +18,7 @@ const addGameRoomEventListener = () => {
   })
   // 방 설정이 바뀜
   socket.on('change game room setting', (gameRoomInfo) => {
-    changeRoomSetting(JSON.parse(gameRoomInfo))
+    changeGameRoomSetting(JSON.parse(gameRoomInfo))
   })
   // 게임이 시작됨
   socket.on('start game', (gameRoomInfo) => {
@@ -37,14 +37,12 @@ const addGameRoomEventListener = () => {
 
 // 이벤트 트리거
 // 방 설정을 바꾸기를 시도
-const tryEditGameRoomSettingEvent = () => {
-  const result = promptGameRoomInfo()
-  const { isValid, gameRoomInfo } = result
+const tryChangeGameRoomSettingEvent = () => {
+  const result = promptGameRoomSetting()
+  const { isValid, gameRoomSetting } = result
   if (isValid === false) return
 
-  socket.emit('try edit game room setting', {
-    gameRoomInfo,
-  })
+  socket.emit('try change game room setting', gameRoomSetting)
 }
 // 게임 시작 시도
 const tryStartGameEvent = () => {
@@ -69,13 +67,14 @@ const connectToGameRoomSocket = (connectType) => {
   }
   socket = io('http://localhost:3000/gameRoom')
 
-  const { isGameRoomCreate, gameRoomInfo } = connectType
+  const { isGameRoomCreate, gameRoomSetting, gameRoomTicket } = connectType
 
   const emitMsg =
     isGameRoomCreate === true ? 'try create game room' : 'try join game room'
 
+  const content = isGameRoomCreate === true ? gameRoomSetting : gameRoomTicket
   socket.on('connect', () => {
-    socket.emit(emitMsg, gameRoomInfo)
+    socket.emit(emitMsg, content)
     addChatEventListener()
     addGameRoomEventListener()
   })
