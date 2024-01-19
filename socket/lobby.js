@@ -1,3 +1,4 @@
+import { getUserInfo } from '@socket/utility/common'
 import { gameRooms } from '@socket/utility/game-room'
 
 const isConnectedToGameRoom = (socket) => {
@@ -5,11 +6,13 @@ const isConnectedToGameRoom = (socket) => {
   return gameRoomSocketId !== undefined ? true : false
 }
 
-const emitChat = (lobbyNamespace, message) => {
-  lobbyNamespace.emit('chat', message)
+const addChatEventListener = (lobbyNamespace, socket) => {
+  socket.on('chat', (message) => {
+    lobbyNamespace.emit('chat', `${socket.userInfo.nickname} : ${message}`)
+  })
 }
 
-const emitMessage = (socekt, message) => {
+const emitMessage = (socket, message) => {
   socket.emit('message', message)
 }
 
@@ -25,12 +28,11 @@ export const createLobbySocket = (lobbyNamespace) => {
       socket.disconnect(true)
       return
     }
-    // 연결시 게임방 입구를 그리게 함
+    // 유저 정보를 소켓으로 가져옴
+    getUserInfo(socket)
+    // 게임방 입구를 그리게 함
     emitLoadGameRoom(socket, gameRooms)
-    // 채팅 이벤트가 발생했을때
-    socket.on('chat', (message) => {
-      // 로비에 브로드캐스팅 해준다
-      emitChat(lobbyNamespace, message)
-    })
+    // 채팅 이벤트 리스너 등록
+    addChatEventListener(lobbyNamespace, socket)
   })
 }

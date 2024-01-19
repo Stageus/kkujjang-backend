@@ -56,10 +56,10 @@ const tryChangePlayerReadyStateEvent = () => {
 }
 // 이벤트 트리거 끝
 
-// 로비 연결
+// 게임 나가기
 const leaveGameRoom = () => {
   gameRoomContain.innerHTML = ''
-  connectToLobbySocket()
+  socket.disconnect()
 }
 
 // 게임방 연결

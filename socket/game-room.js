@@ -1,12 +1,12 @@
+import { getUserInfo } from '@socket/utility/common'
+
 import {
-  getUserInfo,
   createRoom,
   validateJoinTicket,
   addGameRoomMember,
   leaveGameRoom,
   getGameRoomInfo,
 } from '@socket/utility/game-room'
-import { disconnect } from 'mongoose'
 
 const isConnectedToLobby = (socket) => {
   const lobbySocketId = socket.client.nsps.get('/lobby')?.id
@@ -14,8 +14,10 @@ const isConnectedToLobby = (socket) => {
 }
 
 const addChatEventLinstener = (gameRoomNamespace, gameRoomId, socket) => {
-  socket.on('chat', (msg) => {
-    gameRoomNamespace.to(gameRoomId).emit('chat', msg)
+  socket.on('chat', (message) => {
+    gameRoomNamespace
+      .to(gameRoomId)
+      .emit('chat', `${socket.userInfo.nickname} : ${message}`)
   })
 
   gameRoomNamespace
@@ -77,11 +79,11 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
 
     // 방 만들기 시도 이벤트가 발생
     socket.on('try create game room', (newGameRoomInfo) => {
-      socket.join(gameRoomId)
       // 소켓의 유저 정보를 불러옴
       getUserInfo(socket)
-      addChatEventLinstener(gameRoomNamespace, gameRoomId, socket)
       const { gameRoomId, gameRoomInfo } = createRoom(socket, newGameRoomInfo)
+      socket.join(gameRoomId)
+      addChatEventLinstener(gameRoomNamespace, gameRoomId, socket)
       emitDrawGameRoom(socket, gameRoomInfo)
       emitNewGameEnterance(
         lobbyNamespace,
@@ -104,7 +106,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
         socket.disconnect(true)
         return
       }
-      // 소켓의 유저 정보를 불러옴
+      // 유저 정보를 소켓으로 가져옴
       getUserInfo(socket)
       // 게임방 정보 JSON에 해당 멤버를 추가
       addGameRoomMember(socket, gameRoomId)
@@ -116,6 +118,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
       socket.join(gameRoomId)
       // 채팅 이벤트 리스너 등록
       addChatEventLinstener(gameRoomNamespace, gameRoomId, socket)
+      // 게임방 정보를 가져옴
       const gameRoomInfo = getGameRoomInfo(gameRoomId)
       // 게임방에 들어온 클라이언트에게 게임방을 그리라고 명령
       emitDrawGameRoom(socket, gameRoomInfo)
