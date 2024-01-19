@@ -1,3 +1,5 @@
+import * as uuid from 'uuid'
+
 const nickname = [
   '감자',
   '다래',
@@ -12,9 +14,12 @@ const nickname = [
 ]
 
 export const getUserInfo = (socket) => {
-  const randomIndex = Math.floor(Math.random() * 10)
-  socket.userInfo = {}
-  socket.userInfo.id = randomIndex
-  socket.userInfo.nickname = nickname[randomIndex]
-  socket.userInfo.level = 1
+  const randomIndex = Math.floor(Math.random() * 8)
+  socket.userInfo = {
+    id: uuid.v4(),
+    nickname: nickname[randomIndex],
+    level: 1,
+    isCaptain: false,
+    isReady: false,
+  }
 }

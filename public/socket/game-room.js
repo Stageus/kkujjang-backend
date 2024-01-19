@@ -13,8 +13,8 @@ const addGameRoomEventListener = () => {
     removeGameRoomMember(userId)
   })
   // 어떤 멤버의 상태가 바뀜
-  socket.on('change member state', (userInfo) => {
-    changeMemberState(JSON.parse(userInfo))
+  socket.on('refresh game room member', (userInfo) => {
+    refreshGameRoomMember(JSON.parse(userInfo))
   })
   // 방 설정이 바뀜
   socket.on('change game room setting', (gameRoomInfo) => {
@@ -27,6 +27,18 @@ const addGameRoomEventListener = () => {
   // 게임방에 접속을 시도했는데 실패함
   socket.on('fail join game room', (msg) => {
     alert(msg)
+  })
+  // 당신이 방장이 됨
+  socket.on('you are captain', () => {
+    addBtn('startBtn')
+    addBtn('changeGameRoomSettingBtn')
+    removeBtn('readyBtn')
+  })
+  // 당신이 참가자가 됨
+  socket.on('you are crew', () => {
+    addBtn('readyBtn')
+    removeBtn('startBtn')
+    removeBtn('changeGameRoomSettingBtn')
   })
   // 게임방과 연결이 끊어짐(새로고침 등)
   socket.on('disconnect', () => {

@@ -4,12 +4,16 @@ export const gameRooms = {}
 export const gameRoomPasswords = {}
 export const clientGameRoomId = {}
 
-export const getUserInfo = (socket) => {
-  const randomIndex = Math.floor(Math.random() * 8)
-  socket.userInfo = {}
-  socket.userInfo.id = randomIndex
-  socket.userInfo.nickname = nickname[randomIndex]
-  socket.userInfo.level = 1
+export const changePlayerReadyState = (socket) => {
+  const curRedayState = socket.userInfo.isReady
+  socket.userInfo.isReady = !curRedayState
+}
+
+export const changeGameRoomUserInfo = (socket, changeFunction) => {
+  const gameRoomIdToChange = clientGameRoomId[socket.id]
+  changeFunction(socket)
+  gameRooms[gameRoomIdToChange].members[socket.userInfo.id] = socket.userInfo
+  return gameRoomIdToChange
 }
 
 export const createRoom = (socket, newGameRoomSetting) => {
@@ -20,7 +24,10 @@ export const createRoom = (socket, newGameRoomSetting) => {
   const isPasswordRoom = password !== '' ? true : false
   gameRoomPasswords[gameRoomId] = password
 
-  const gameRoomInfo = (gameRooms[gameRoomId] = {
+  const memberJson = {}
+  memberJson[socket.userInfo.id] = socket.userInfo
+
+  gameRooms[gameRoomId] = {
     isPasswordRoom,
     isInGame: false,
     title,
@@ -28,8 +35,11 @@ export const createRoom = (socket, newGameRoomSetting) => {
     memberLimit,
     roundCount,
     roundTimeLimit,
-    members: [socket.userInfo],
-  })
+    members: memberJson,
+  }
+
+  const gameRoomInfo = JSON.parse(JSON.stringify(gameRooms[gameRoomId]))
+  gameRoomInfo.members = Object.values(gameRoomInfo.members)
 
   const gameEnteranceInfo = {
     isPasswordRoom,
@@ -83,7 +93,7 @@ export const validateJoinTicket = (joinTicket) => {
 export const addGameRoomMember = (socket, gameRoomId) => {
   clientGameRoomId[socket.id] = gameRoomId
   gameRooms[gameRoomId].memberCount++
-  gameRooms[gameRoomId].members.push(socket.userInfo)
+  gameRooms[gameRoomId].members[socket.userInfo.id] = socket.userInfo
 }
 
 export const leaveGameRoom = (socket) => {
@@ -94,14 +104,11 @@ export const leaveGameRoom = (socket) => {
   if (gameRoomIdToLeave === undefined) return {}
 
   delete clientGameRoomId[socketId]
-  const curRoomMeberCount = --gameRooms[gameRoomIdToLeave].memberCount
-  const curRooMembers = gameRooms[gameRoomIdToLeave].members
 
-  const index = curRooMembers.indexOf(userInfo)
-  if (index > -1) {
-    curRooMembers.splice(index, 1)
-  }
-  gameRooms[gameRoomIdToLeave].members = curRooMembers
+  const gameRoomToLeave = gameRooms[gameRoomIdToLeave]
+  delete gameRoomToLeave.members[socket.userInfo.id]
+
+  const curRoomMeberCount = --gameRoomToLeave.memberCount
 
   if (curRoomMeberCount === 0) {
     delete gameRooms[gameRoomIdToLeave]
@@ -123,19 +130,12 @@ export const changeGameRoomSetting = (socket, gameRoomSetting) => {
   const isPasswordRoom = password !== '' ? true : false
   gameRoomPasswords[gameRoomId] = password
 
-  const curRoomMeberCount = gameRooms[gameRoomId].memberCount
-  const curRooMembers = gameRooms[gameRoomId].members
-
-  const gameRoomInfo = (gameRooms[gameRoomId] = {
-    isPasswordRoom,
-    isInGame: false,
-    title,
-    memberCount: curRoomMeberCount,
-    memberLimit,
-    roundCount,
-    roundTimeLimit,
-    members: curRooMembers,
-  })
+  const gameRoomInfo = gameRooms[gameRoomId]
+  gameRoomInfo.isPasswordRoom = isPasswordRoom
+  gameRoomInfo.title = title
+  gameRoomInfo.memberLimit = memberLimit
+  gameRoomInfo.roundCount = roundCount
+  gameRoomInfo.roundTimeLimit = roundTimeLimit
 
   return {
     gameRoomId,
@@ -143,4 +143,8 @@ export const changeGameRoomSetting = (socket, gameRoomSetting) => {
   }
 }
 
-export const getGameRoomInfo = (gameRoomId) => gameRooms[gameRoomId]
+export const getGameRoomInfo = (gameRoomId) => {
+  const gameRoomInfo = JSON.parse(JSON.stringify(gameRooms[gameRoomId]))
+  gameRoomInfo.members = Object.values(gameRoomInfo.members)
+  return gameRoomInfo
+}
