@@ -64,7 +64,7 @@ const drawGameEnterance = (targetGameRoom, gameRoomInfo) => {
     }
 
     // 해당 roomId에 접속을 시도
-    connectGameRoomSocket(joinTicket)
+    connectToGameRoomSocket(joinTicket)
   })
 }
 
@@ -114,13 +114,15 @@ const drawGameEnteranceList = (gameRooms) => {
   }
 }
 
-const addGameEnterance = (gameRoomInfoWithIdJson) => {
-  const { gameRoomId, gameRoomInfo } = gameRoomInfoWithIdJson
-  const gameRoomList = document.getElementById('gameRoomList')
-  const newGameRoom = document.createElement('div')
-  newGameRoom.id = gameRoomId
-  drawGameEnterance(newGameRoom, gameRoomInfo)
-  gameRoomList.insertBefore(newGameRoom, gameRoomList.firstChild)
+const addGameEnterance = (gameRoomInfoWithId) => {
+  const { gameRoomId, gameRoomInfo } = gameRoomInfoWithId
+  const newGameEnterance = document.createElement('div')
+  newGameEnterance.id = gameRoomId
+  drawGameEnterance(newGameEnterance, gameRoomInfo)
+  gameEnteranceContain.insertBefore(
+    newGameEnterance,
+    gameEnteranceContain.firstChild,
+  )
 }
 
 const refreshGameEnterance = (gameRoomWithIdJson) => {

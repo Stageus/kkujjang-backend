@@ -25,7 +25,7 @@ export const getUserInfo = (socket) => {
   socket.userInfo.level = 1
 }
 
-export const createRoom = (newGameRoomInfo) => {
+export const createRoom = (socket, newGameRoomInfo) => {
   const gameRoomId = uuid.v4()
   const { title, password, memberLimit, roundCount, roundTimeLimit } =
     newGameRoomInfo
@@ -45,7 +45,10 @@ export const createRoom = (newGameRoomInfo) => {
   })
 
   clientRoomId[socket.id] = gameRoomId
-  return gameRoomId
+  return {
+    gameRoomId,
+    gameRoomInfo,
+  }
 }
 
 export const validateJoinTicket = (joinTicket) => {
@@ -54,20 +57,28 @@ export const validateJoinTicket = (joinTicket) => {
     gameRooms[gameRoomId]
 
   if (memberLimit <= memberCount) {
-    socket.emit('fail join game room', '이미 풀방입니다')
-    socket.disconnect(true)
-    return
+    return {
+      isValid: false,
+      message: '이미 풀방입니다',
+    }
   }
   if (isInGame) {
-    socket.emit('fail join game room', '게임중인 방입니다')
-    socket.disconnect(true)
-    return
+    return {
+      isValid: false,
+      message: '게임중인 방입니다',
+    }
   }
 
   if (isPasswordRoom && gameRoomPasswords[gameRoomId] !== password) {
-    socket.emit('fail join game room', '비밀번호가 일치하지 않습니다')
-    socket.disconnect(true)
-    return
+    return {
+      isValid: false,
+      message: '비밀번호가 일치하지 않습니다',
+    }
+  }
+
+  return {
+    isValid: true,
+    gameRoomId,
   }
 }
 
@@ -75,29 +86,35 @@ export const addGameRoomMember = (socket, gameRoomId) => {
   clientRoomId[socket.id] = gameRoomId
   gameRooms[gameRoomId].memberCount++
   gameRooms[gameRoomId].members.push(socket.userInfo)
-
-  const gameRoomInfo = gameRooms[gameRoomId]
 }
 
-export const leaveGameRoom = (socket, gameRoomToLeaveId) => {
+export const leaveGameRoom = (socket) => {
   const socketId = socket.id
   const userInfo = socket.userInfo
 
-  const gameRoomToLeaveId = clientRoomId[socketId]
+  const gameRoomIdToLeave = clientRoomId[socketId]
+  if (gameRoomIdToLeave === undefined) return {}
+
   delete clientRoomId[socketId]
-  const curRoomMeberCount = --gameRooms[gameRoomToLeaveId].memberCount
-  const curRooMembers = gameRooms[gameRoomToLeaveId].members
+  const curRoomMeberCount = --gameRooms[gameRoomIdToLeave].memberCount
+  const curRooMembers = gameRooms[gameRoomIdToLeave].members
 
   const index = curRooMembers.indexOf(userInfo)
   if (index > -1) {
     curRooMembers.splice(index, 1)
   }
-  gameRooms[gameRoomToLeaveId].members = curRooMembers
+  gameRooms[gameRoomIdToLeave].members = curRooMembers
 
   if (curRoomMeberCount === 0) {
-    delete gameRooms[gameRoomToLeaveId]
-    delete gameRoomPasswords[gameRoomToLeaveId]
+    delete gameRooms[gameRoomIdToLeave]
+    delete gameRoomPasswords[gameRoomIdToLeave]
   }
 
-  return curRoomMeberCount
+  return {
+    curRoomMeberCount,
+    gameRoomIdToLeave,
+    userInfo,
+  }
 }
+
+export const getGameRoomInfo = (gameRoomId) => gameRooms[gameRoomId]

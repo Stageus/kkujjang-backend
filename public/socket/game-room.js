@@ -30,7 +30,7 @@ const addGameRoomEventListener = () => {
   })
   // 게임방과 연결이 끊어짐(새로고침 등)
   socket.on('disconnect', () => {
-    accessToLobbySocket()
+    connectToLobbySocket()
   })
 }
 // 이벤트 리스너 끝
@@ -57,19 +57,22 @@ const tryChangePlayerReadyStateEvent = () => {
 // 이벤트 트리거 끝
 
 // 로비 연결
-const connectLobbyEvent = () => {
+const leaveGameRoom = () => {
   gameRoomContain.innerHTML = ''
-  connectLobbySocket()
+  connectToLobbySocket()
 }
 
 // 게임방 연결
-const connectGameRoomSocket = (accessType) => {
+const connectToGameRoomSocket = (connectType) => {
+  if (socket) {
+    socket.disconnect()
+  }
   socket = io('http://localhost:3000/gameRoom')
 
-  const { isGameRoomCreate, gameRoomInfo } = accessType
+  const { isGameRoomCreate, gameRoomInfo } = connectType
 
   const emitMsg =
-    isGameRoomCreate === true ? 'create game room' : 'try join game room'
+    isGameRoomCreate === true ? 'try create game room' : 'try join game room'
 
   socket.on('connect', () => {
     socket.emit(emitMsg, gameRoomInfo)
