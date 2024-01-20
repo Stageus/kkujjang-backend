@@ -10,12 +10,12 @@ const removeBtn = (buttonId) => {
 
 // 들어온 유저 그리기
 const addGameRoomMember = (userInfo) => {
-  const { id, level, nickname, isCaptain, redayState } = userInfo
+  const { id, level, nickname, isCaptain, isReady } = userInfo
   const targetMember = document.createElement('div')
   targetMember.id = `user${id}`
   targetMember.className = 'member'
   const userState =
-    isCaptain === true ? '방장' : redayState === true ? '준비' : '대기'
+    isCaptain === true ? '방장' : isReady === true ? '준비' : '대기'
   targetMember.innerHTML = `${level}레벨 | ${nickname} | ${userState}`
   member.appendChild(targetMember)
 }

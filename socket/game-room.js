@@ -3,6 +3,7 @@ import { getUserInfo } from '@socket/utility/common'
 import {
   createRoom,
   validateJoinTicket,
+  validateToStart,
   addGameRoomMember,
   leaveGameRoom,
   getGameRoomInfo,
@@ -95,6 +96,10 @@ const emitYouAreCrew = (socket) => {
   socket.emit('you are crew')
 }
 
+const emitStartGame = (gameRoomNamespace, gameRoomId) => {
+  gameRoomNamespace.to(gameRoomId).emit('start game')
+}
+
 export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
   gameRoomNamespace.on('connect', (socket) => {
     // 로비 소켓과 연결되어있는지 확인
@@ -176,7 +181,13 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
       emitRefreshGameRoomMember(gameRoomNamespace, gameRoomIdToChange, socket)
     })
     // 게임 시작 시도 이벤트가 발생
-    socket.on('try start game', () => {})
+    socket.on('try start game', () => {
+      const { isValid, message, gameRoomId } = validateToStart(socket)
+      if (isValid === false) {
+        emitFailJoinGameRoom(socket, message)
+      }
+      emitStartGame(gameRoomNamespace, gameRoomId)
+    })
     // 연결이 끊기는 이벤트(새로고침, 창 닫기 등)가 발생
     socket.on('disconnect', () => {
       // 게임방 정보 JSON에서 해당 멤버를 제거

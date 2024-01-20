@@ -148,3 +148,30 @@ export const getGameRoomInfo = (gameRoomId) => {
   gameRoomInfo.members = Object.values(gameRoomInfo.members)
   return gameRoomInfo
 }
+
+export const validateToStart = (socket) => {
+  const gameRoomId = clientGameRoomId[socket.id]
+
+  const gameRoomInfo = getGameRoomInfo(gameRoomId)
+  const members = gameRoomInfo.members
+  if (socket.userInfo.isCaptain === false) {
+    return {
+      isValid: false,
+      message: '방장이 아닙니다',
+    }
+  }
+
+  for (const member of members) {
+    if (member.isCaptain === false && member.isReady === false) {
+      return {
+        isValid: false,
+        message: '준비하지 않은 플레이어가 있습니다',
+      }
+    }
+  }
+
+  return {
+    isValid: true,
+    gameRoomId,
+  }
+}

@@ -22,7 +22,7 @@ const addGameRoomEventListener = () => {
   })
   // 게임이 시작됨
   socket.on('start game', (gameRoomInfo) => {
-    drawInGame(JSON.parse(gameRoomInfo))
+    alert('게임 시작')
   })
   // 게임방에 접속을 시도했는데 실패함
   socket.on('fail join game room', (msg) => {
