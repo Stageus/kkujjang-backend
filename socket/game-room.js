@@ -1,15 +1,16 @@
-import { getUserInfo } from '@socket/utility/common'
-
 import {
   createRoom,
+  getGameRoomId,
   validateJoinTicket,
   validateToStart,
   addGameRoomMember,
   leaveGameRoom,
   getGameRoomInfo,
+  changeCaptain,
   changeGameRoomSetting,
   changePlayerReadyState,
   changeGameRoomUserInfo,
+  getUserInfo,
 } from '@socket/utility/game-room'
 
 const isConnectedToLobby = (socket) => {
@@ -21,12 +22,22 @@ const addChatEventLinstener = (gameRoomNamespace, gameRoomId, socket) => {
   socket.on('chat', (message) => {
     gameRoomNamespace
       .to(gameRoomId)
-      .emit('chat', `${socket.userInfo.nickname} : ${message}`)
+      .emit(
+        'chat',
+        `${
+          getUserInfo(getGameRoomId(socket.id), socket.id).nickname
+        } : ${message}`,
+      )
   })
 
   gameRoomNamespace
     .to(gameRoomId)
-    .emit('chat', `${socket.userInfo.nickname}님이 참가했습니다`)
+    .emit(
+      'chat',
+      `${
+        getUserInfo(getGameRoomId(socket.id), socket.id).nickname
+      }님이 참가했습니다`,
+    )
 }
 
 const emitDrawGameRoom = (socket, gameRoomInfo) => {
@@ -37,10 +48,10 @@ const emitNewGameEnterance = (lobbyNamespace, gameRoomInfoWithId) => {
   lobbyNamespace.emit('new game enterance', gameRoomInfoWithId)
 }
 
-const emitRefreshGameRoomMember = (gameRoomNamespace, gameRoomId, socket) => {
+const emitRefreshGameRoomMember = (gameRoomNamespace, gameRoomId, userInfo) => {
   gameRoomNamespace
     .to(gameRoomId)
-    .emit('refresh game room member', JSON.stringify(socket.userInfo))
+    .emit('refresh game room member', JSON.stringify(userInfo))
 }
 
 const emitRefreshGameEnterance = (lobbyNamespace, gameRoomId) => {
@@ -111,10 +122,6 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
 
     // 방 만들기 시도 이벤트가 발생
     socket.on('try create game room', (newGameRoomSetting) => {
-      // 소켓의 유저 정보를 불러옴
-      getUserInfo(socket)
-      // 방 만들었으니 방장
-      socket.userInfo.isCaptain = true
       const { gameRoomId, gameRoomInfo } = createRoom(
         socket,
         newGameRoomSetting,
@@ -144,12 +151,15 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
         socket.disconnect(true)
         return
       }
-      // 유저 정보를 소켓으로 가져옴
-      getUserInfo(socket)
+
       // 게임방 정보 JSON에 해당 멤버를 추가
       addGameRoomMember(socket, gameRoomId)
       // 기존 멤버들에게는 게임방에 들어온 멈버를 그리라고 명령
-      emitAddGameRoomMember(gameRoomNamespace, gameRoomId, socket.userInfo)
+      emitAddGameRoomMember(
+        gameRoomNamespace,
+        gameRoomId,
+        getUserInfo(gameRoomId, socket.id),
+      )
       // 로비에 게임방 입구 정보를 갱신하라고 명령
       emitRefreshGameEnterance(lobbyNamespace, gameRoomId)
       // 해당 소켓을 gameRoomId에 연결
@@ -165,6 +175,12 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
 
     // 게임방 설정 바꾸기 시도 이벤트가 발생
     socket.on('try change game room setting', (gameRoomSetting) => {
+      if (
+        getUserInfo(getGameRoomId(socket.id), socket.id).isCaptain === false
+      ) {
+        emitFailJoinGameRoom(socket, '방장이 아닙니다')
+        return
+      }
       const { gameRoomId, gameRoomInfo } = changeGameRoomSetting(
         socket,
         gameRoomSetting,
@@ -174,11 +190,20 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
     })
     // 플레이어 레디 상태 바꾸기 이벤트가 발생
     socket.on('try change player ready state', () => {
+      if (getUserInfo(getGameRoomId(socket.id), socket.id).isCaptain === true) {
+        if (isValid === false) {
+          emitFailJoinGameRoom(socket, '방장은 레디할 수 없습니다')
+        }
+      }
       const gameRoomIdToChange = changeGameRoomUserInfo(
         socket,
         changePlayerReadyState,
       )
-      emitRefreshGameRoomMember(gameRoomNamespace, gameRoomIdToChange, socket)
+      emitRefreshGameRoomMember(
+        gameRoomNamespace,
+        gameRoomIdToChange,
+        getUserInfo(getGameRoomId(socket.id), socket.id),
+      )
     })
     // 게임 시작 시도 이벤트가 발생
     socket.on('try start game', () => {
@@ -191,7 +216,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
     // 연결이 끊기는 이벤트(새로고침, 창 닫기 등)가 발생
     socket.on('disconnect', () => {
       // 게임방 정보 JSON에서 해당 멤버를 제거
-      const { curRoomMeberCount, gameRoomIdToLeave, userInfo } =
+      const { curRoomMeberCount, gameRoomIdToLeave, isCaptain } =
         leaveGameRoom(socket)
       // 떠날 방이 없다면 return
       if (gameRoomIdToLeave === undefined) {
@@ -204,13 +229,23 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
       }
       // 방에 아직 사람이 남아있다면
       else {
+        // 방장이였다면 방장을 넘겨준다
+        if (isCaptain === true) {
+          const captainSocketId = changeCaptain(gameRoomIdToLeave)
+          emitYouAreCaptain(gameRoomNamespace.to(captainSocketId))
+          emitRefreshGameRoomMember(
+            gameRoomNamespace,
+            gameRoomIdToLeave,
+            getUserInfo(gameRoomIdToLeave, captainSocketId),
+          )
+        }
         // 로비에 게임방 입구 정보를 갱신하라고 명령
         emitRefreshGameEnterance(lobbyNamespace, gameRoomIdToLeave)
         // 게임방에 나간 멤버를 지우라고 명령
         emitRemoveGameRoomMember(
           gameRoomNamespace,
           gameRoomIdToLeave,
-          userInfo.id,
+          socket.id,
         )
       }
     })

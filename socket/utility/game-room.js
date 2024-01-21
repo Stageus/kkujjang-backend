@@ -1,31 +1,70 @@
+import { Client } from 'pg'
 import * as uuid from 'uuid'
+
+const nickname = [
+  '감자',
+  '다래',
+  '슬기',
+  '머루쉐',
+  '손인욱',
+  '김찬호',
+  '김스테이지어스',
+  '이스테이지어스',
+  '박스테이지어스',
+  '최스테이지어스',
+]
 
 export const gameRooms = {}
 export const gameRoomPasswords = {}
 export const clientGameRoomId = {}
 
+export const getGameRoomId = (socketId) => clientGameRoomId[socketId]
+
+export const getUserInfo = (gameRoomId, socketId) => {
+  const members = gameRooms[gameRoomId].members
+
+  // 이미 유저 정보가 그 게임방에 존재
+  if (members[socketId]) {
+    return members[socketId]
+  }
+
+  // 유저 정보가 그 게임방에 존재하지 않음 : 새로 만들기
+  const randomIndex = Math.floor(Math.random() * 8)
+  const userInfo = (members[socketId] = {
+    id: socketId,
+    nickname: nickname[randomIndex],
+    level: 1,
+    isCaptain: false,
+    isReady: false,
+  })
+
+  return userInfo
+}
+
 export const changePlayerReadyState = (socket) => {
-  const curRedayState = socket.userInfo.isReady
-  socket.userInfo.isReady = !curRedayState
+  const gameRoomId = clientGameRoomId[socket.id]
+  const curRedayState = getUserInfo(gameRoomId, socket.id).isReady
+  getUserInfo(gameRoomId, socket.id).isReady = !curRedayState
 }
 
 export const changeGameRoomUserInfo = (socket, changeFunction) => {
   const gameRoomIdToChange = clientGameRoomId[socket.id]
   changeFunction(socket)
-  gameRooms[gameRoomIdToChange].members[socket.userInfo.id] = socket.userInfo
+  gameRooms[gameRoomIdToChange].members[socket.id] = getUserInfo(
+    gameRoomIdToChange,
+    socket.id,
+  )
   return gameRoomIdToChange
 }
 
 export const createRoom = (socket, newGameRoomSetting) => {
   const gameRoomId = uuid.v4()
+  clientGameRoomId[socket.id] = gameRoomId
+
   const { title, password, memberLimit, roundCount, roundTimeLimit } =
     newGameRoomSetting
 
   const isPasswordRoom = password !== '' ? true : false
-  gameRoomPasswords[gameRoomId] = password
-
-  const memberJson = {}
-  memberJson[socket.userInfo.id] = socket.userInfo
 
   gameRooms[gameRoomId] = {
     isPasswordRoom,
@@ -35,8 +74,15 @@ export const createRoom = (socket, newGameRoomSetting) => {
     memberLimit,
     roundCount,
     roundTimeLimit,
-    members: memberJson,
+    members: {},
   }
+
+  // 유저 정보를 불러옴
+  const userInfo = getUserInfo(gameRoomId, socket.id)
+  // 방 만들었으니 방장
+  userInfo.isCaptain = true
+
+  gameRoomPasswords[gameRoomId] = password
 
   const gameRoomInfo = JSON.parse(JSON.stringify(gameRooms[gameRoomId]))
   gameRoomInfo.members = Object.values(gameRoomInfo.members)
@@ -51,7 +97,6 @@ export const createRoom = (socket, newGameRoomSetting) => {
     roundTimeLimit,
   }
 
-  clientGameRoomId[socket.id] = gameRoomId
   return {
     gameRoomId,
     gameRoomInfo,
@@ -91,14 +136,13 @@ export const validateJoinTicket = (joinTicket) => {
 }
 
 export const addGameRoomMember = (socket, gameRoomId) => {
+  getUserInfo(gameRoomId, socket.id)
   clientGameRoomId[socket.id] = gameRoomId
   gameRooms[gameRoomId].memberCount++
-  gameRooms[gameRoomId].members[socket.userInfo.id] = socket.userInfo
 }
 
 export const leaveGameRoom = (socket) => {
   const socketId = socket.id
-  const userInfo = socket.userInfo
 
   const gameRoomIdToLeave = clientGameRoomId[socketId]
   if (gameRoomIdToLeave === undefined) return {}
@@ -106,7 +150,8 @@ export const leaveGameRoom = (socket) => {
   delete clientGameRoomId[socketId]
 
   const gameRoomToLeave = gameRooms[gameRoomIdToLeave]
-  delete gameRoomToLeave.members[socket.userInfo.id]
+  const isCaptain = gameRoomToLeave.members[socketId].isCaptain
+  delete gameRoomToLeave.members[socketId]
 
   const curRoomMeberCount = --gameRoomToLeave.memberCount
 
@@ -118,7 +163,7 @@ export const leaveGameRoom = (socket) => {
   return {
     curRoomMeberCount,
     gameRoomIdToLeave,
-    userInfo,
+    isCaptain,
   }
 }
 
@@ -151,10 +196,10 @@ export const getGameRoomInfo = (gameRoomId) => {
 
 export const validateToStart = (socket) => {
   const gameRoomId = clientGameRoomId[socket.id]
-
   const gameRoomInfo = getGameRoomInfo(gameRoomId)
+
   const members = gameRoomInfo.members
-  if (socket.userInfo.isCaptain === false) {
+  if (getUserInfo(gameRoomId, socket.id).isCaptain === false) {
     return {
       isValid: false,
       message: '방장이 아닙니다',
@@ -174,4 +219,11 @@ export const validateToStart = (socket) => {
     isValid: true,
     gameRoomId,
   }
+}
+
+export const changeCaptain = (gameRoomId) => {
+  const curMembers = gameRooms[gameRoomId].members
+  const firstKey = Object.keys(curMembers)[0]
+  curMembers[firstKey].isCaptain = true
+  return firstKey
 }

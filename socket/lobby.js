@@ -1,4 +1,4 @@
-import { getUserInfo } from '@socket/utility/common'
+import { getUserInfo } from '@socket/utility/lobby'
 import { gameRooms } from '@socket/utility/game-room'
 
 const isConnectedToGameRoom = (socket) => {

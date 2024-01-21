@@ -28,6 +28,7 @@ const removeGameRoomMember = (userId) => {
 // 참가 유저 상태 바꾸기
 const refreshGameRoomMember = (userInfo) => {
   const { id, level, nickname, isCaptain, isReady } = userInfo
+  console.log(userInfo)
   const userState =
     isCaptain === true ? '방장' : isReady === true ? '준비' : '대기'
   const targetMember = document.getElementById(`user${id}`)

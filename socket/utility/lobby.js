@@ -1,5 +1,3 @@
-import * as uuid from 'uuid'
-
 const nickname = [
   '감자',
   '다래',
@@ -14,9 +12,10 @@ const nickname = [
 ]
 
 export const getUserInfo = (socket) => {
+  // 유저 정보가 그 게임방에 존재하지 않음 : 새로 만들기
   const randomIndex = Math.floor(Math.random() * 8)
   socket.userInfo = {
-    id: uuid.v4(),
+    id: socket.id,
     nickname: nickname[randomIndex],
     level: 1,
     isCaptain: false,
