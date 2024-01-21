@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+  <head>
+    <title>끝말잇기의 짱, 끝짱</title>
+  </head>
+  <body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io('http://localhost:3000/gameRoom')
+      const roomId = 'sample'
+
+      socket.on('game start', (game) => {
+        console.log(`game start: ${JSON.stringify(game)}`)
+        socket.emit('round start', roomId)
+      })
+
+      socket.on('round start', (roundWord) => {
+        console.log(`round start: ${roundWord}`)
+        socket.emit('turn start', roomId)
+      })
+
+      socket.on('turn start', (turnObj) => {
+        console.log(`turn start: ${JSON.stringify(turnObj)}`)
+
+        if (turnObj.currentTurn === 0)
+          setTimeout(
+            () => socket.emit('chat', { roomId, message: '단어' }),
+            1000,
+          )
+      })
+
+      socket.on('round end', (roundObj) => {
+        console.log(`round end: ${JSON.stringify(roundObj)}`)
+        socket.emit('round start', roomId)
+      })
+
+      socket.on('timer', (timeObj) => {
+        console.log(`timer: ${JSON.stringify(timeObj)}`)
+      })
+
+      socket.on('error', (msg) => {
+        console.log(`error: ${msg}`)
+      })
+
+      socket.on('chat', (msg) => {
+        console.log(`chat: ${JSON.stringify(msg)}`)
+      })
+
+      socket.on('say word', (res) => {
+        console.log(`say word: ${JSON.stringify(res)}`)
+        socket.emit('turn start', roomId)
+      })
+
+      socket.on('game end', (res) => {
+        console.log(`game end, ranking: ${JSON.stringify(res)}`)
+      })
+
+      socket.emit('game start', roomId)
+    </script>
+  </body>
+</html>

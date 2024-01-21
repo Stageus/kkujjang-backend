@@ -1,63 +1,279 @@
-import * as uuid from 'uuid'
+import { getSession } from '@/utility/session'
+import * as kkujjang from '@game/core'
 
-const roomMember = {}
-export const rooms = []
+const shuffleArray = (array) => {
+  const newArray = [...array]
+
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const temp = newArray[i]
+    newArray[i] = newArray[j]
+    newArray[j] = temp
+  }
+
+  return newArray
+}
+
+const rooms = {
+  sample: {
+    state: 'preparing',
+    users: [
+      {
+        userId: 1,
+        isLeader: true,
+        isReady: false,
+        sessionId: 'test1',
+      },
+      {
+        userId: 2,
+        isLeader: false,
+        isReady: true,
+        sessionId: 'test2',
+      },
+      {
+        userId: 3,
+        isLeader: false,
+        isReady: true,
+        sessionId: 'test3',
+      },
+      {
+        userId: 4,
+        isLeader: false,
+        isReady: true,
+        sessionId: 'test4',
+      },
+    ],
+    isSecure: true,
+    config: {
+      maxRound: 3,
+      maxUserCount: 4,
+      roundTimeLimit: 5 * 1000,
+      password: 'password',
+    },
+    game: {
+      usersRow: [
+        {
+          userId: 1,
+          score: 0,
+        },
+      ],
+      wordStartsWith: '단',
+      currentRound: 0,
+      currentTurn: 0,
+      roundTimeLeft: 0,
+      roundWord: '',
+      timer: {
+        startTime: 0,
+        interval: null,
+      },
+    },
+  },
+}
+
+const initializeGame = (roomId) => {
+  const room = rooms[roomId]
+
+  room.state = 'playing'
+  room.game = {
+    /*shuffleArray(room.users).map((user) => ({
+      userId: user.userId,
+      score: 0,
+    }))*/
+    usersRow: [
+      {
+        userId: 1,
+        score: 0,
+      },
+      {
+        userId: 2,
+        score: 0,
+      },
+      {
+        userId: 3,
+        score: 0,
+      },
+      {
+        userId: 4,
+        score: 0,
+      },
+    ],
+    currentRound: 0,
+    currentTurn: 0,
+    roundWord: '라운드단어',
+  }
+
+  return room.game
+}
+
+const initializeRound = (roomId) => {
+  const room = rooms[roomId]
+  const game = room.game
+
+  game.currentRound =
+    game.currentRound === undefined ? 0 : game.currentRound + 1
+  game.currentTurn = 0
+  game.roundTimeLeft = room.config.roundTimeLimit
+  game.wordStartsWith = '단'
+}
+
+const timer = (gameRoomNamespace, roomId) => () => {
+  const room = rooms[roomId]
+
+  const timeElapsed = Date.now() - room.game.timer.startTime
+  const roundTimeLeft = room.config.roundTimeLimit - timeElapsed
+  const personalTimeLeft = Math.floor(roundTimeLeft / 10)
+
+  room.game.roundTimeLeft = roundTimeLeft
+  gameRoomNamespace
+    .to(roomId)
+    .emit('timer', { roundTimeLeft, personalTimeLeft })
+
+  if (roundTimeLeft <= 0 && personalTimeLeft <= 0) {
+    clearInterval(room.game.timer.interval)
+    gameRoomNamespace.to(roomId).emit('round end', {
+      defeatedUserTurn: room.game.currentTurn,
+      scoreDelta: 0, // TODO: replace score delta formula
+    })
+  }
+}
 
 export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
   gameRoomNamespace.on('connection', (socket) => {
-    // 방 만들기 이벤트리스너 등록
-    socket.on('create game room', () => {
-      const roomId = uuid.v4()
-      roomMember[roomId] = 1
+    socket.prependAny(() => {
+      console.log(socket.handshake.headers.cookie)
 
-      const roomInfo = JSON.stringify({
-        id: roomId,
-        title: '아무나 환영',
+      const cookieList = String(socket.handshake.headers.cookie).split(';')
+
+      console.log(JSON.stringify(cookieList))
+
+      socket.handshake.headers.cookies = {}
+      cookieList.forEach((cookieText) => {
+        const cookieData = cookieText.split('=')
+        socket.handshake.headers.cookies[cookieData[0]] = cookieData[1]
       })
-
-      rooms.push(roomInfo)
-
-      lobbyNamespace.emit('new game room', roomInfo)
-      socket.join(roomId)
-      socket.on('chat', (msg) => {
-        gameRoomNamespace.to(roomId).emit('chat', msg)
-      })
-
-      gameRoomNamespace.to(roomId).emit('chat', '누군가가 참가했습니다')
     })
 
-    // 방 참가하기 이벤트리스너 등록
-    socket.on('join game room', (roomId) => {
-      socket.join(roomId)
-      roomMember[roomId]++
-      socket.on('chat', (msg) => {
-        gameRoomNamespace.to(roomId).emit('chat', msg)
-      })
-      gameRoomNamespace.to(roomId).emit('chat', '누군가가 참가했습니다')
+    //test
+    socket.join('sample')
+
+    socket.on('game start', (roomId) => {
+      console.log(`game start ${roomId}`)
+      const room = rooms[roomId]
+
+      if (!room || room.state !== 'preparing') {
+        gameRoomNamespace.to(roomId).emit('error', '잘못된 요청입니다.')
+        return
+      }
+
+      const game = initializeGame(roomId)
+      gameRoomNamespace.emit('game start', game)
     })
 
-    // 방 나가기 이벤트리스너 등록
-    socket.on('leave game room', () => {
-      for (const roomId of socket.rooms) {
-        if (roomId === socket.id) {
-          continue
-        }
-        const curRoomMeber = --roomMember[roomId]
+    socket.on('round start', (roomId) => {
+      console.log(`round start ${roomId}`)
+      const room = rooms[roomId]
 
-        if (curRoomMeber === 0) {
-          lobbyNamespace.emit('remove game room', roomId)
+      if (!room) {
+        gameRoomNamespace.to(roomId).emit('error', '잘못된 요청입니다.')
+        return
+      }
 
-          let index = 0
-          for (const roomInfo of rooms) {
-            if (roomId === JSON.parse(roomInfo).id) {
-              break
-            }
-            index++
-          }
-          if (index > -1) {
-            rooms.splice(index, 1)
-          }
+      initializeRound(roomId)
+
+      // 마지막 라운드
+      if (room.game.currentRound >= room.config.maxRound) {
+        gameRoomNamespace.to(roomId).emit('game end', {
+          // TODO: sort
+          ranking: room.game.usersRow,
+        })
+        return
+      }
+
+      gameRoomNamespace.to(roomId).emit('round start', {
+        roundWord: room.game.roundWord,
+        currentRound: room.game.currentRound,
+      })
+    })
+
+    socket.on('turn start', async (roomId) => {
+      console.log(`turn start ${roomId}`)
+      const room = rooms[roomId]
+
+      if (!room) {
+        gameRoomNamespace.to(roomId).emit('error', '잘못된 요청입니다.')
+        return
+      }
+
+      console.log(`cookie ${JSON.stringify(socket.handshake.headers.cookie)}`)
+
+      const { sessionId } = socket.handshake.headers.cookies
+      const userId = (await getSession(sessionId))?.userId
+      const userIdCurrentTurn = room.game.usersRow[room.game.currentTurn].userId
+
+      // if (Number(userId) !== Number(userIdCurrentTurn)) {
+      //   return
+      // }
+
+      room.game.timer = {
+        startTime: Date.now(),
+        interval: setInterval(timer(gameRoomNamespace, roomId), 100),
+      }
+
+      gameRoomNamespace.to(roomId).emit('turn start', {
+        currentTurn: room.game.currentTurn,
+        wordStartsWith: room.game.wordStartsWith,
+      })
+    })
+
+    socket.on('chat', async ({ roomId, message }) => {
+      const room = rooms[roomId]
+
+      if (!room) {
+        gameRoomNamespace.to(roomId).emit('error', '잘못된 요청입니다.')
+        return
+      }
+
+      const sessionId = socket.handshake.headers.cookies.sessionId ?? null
+      const userId = (await getSession(sessionId))?.userId
+
+      if (!userId) {
+        gameRoomNamespace.to(roomId).emit('error', '잘못된 요청입니다.')
+        return
+      }
+
+      console.log(
+        JSON.stringify({
+          message,
+          userId,
+          userIdTurn: room.game.usersRow[room.game.currentTurn].userId,
+        }),
+      )
+
+      if (
+        Number(userId) ===
+          Number(room.game.usersRow[room.game.currentTurn].userId) &&
+        message?.charAt(0) === room.game.wordStartsWith
+      ) {
+        // TODO: 단어 체크 로직 적용
+        const isValidWord = true
+
+        if (isValidWord) {
+          clearInterval(room.game.timer.interval)
+
+          room.game.currentTurn =
+            (room.game.currentTurn + 1) % room.users.length
+
+          gameRoomNamespace
+            .to(roomId)
+            // TODO: 점수 공식
+            .emit('say word', { userId, word: message, scoreDelta: 0 })
+        } else {
+          gameRoomNamespace
+            .to(roomId)
+            .emit('say word wrong', { userId, word: message })
         }
+      } else {
+        gameRoomNamespace.to(roomId).emit('chat', { userId, message })
       }
     })
   })
