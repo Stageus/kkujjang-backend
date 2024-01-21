@@ -1,5 +1,5 @@
-import { Client } from 'pg'
 import * as uuid from 'uuid'
+import * as validation from '@utility/validation'
 
 const nickname = [
   '감자',
@@ -64,6 +64,41 @@ export const createRoom = (socket, newGameRoomSetting) => {
   const { title, password, memberLimit, roundCount, roundTimeLimit } =
     newGameRoomSetting
 
+  validation.check(
+    title,
+    validation.isExist(),
+    validation.checkLength(1, 20),
+    validation.checkRegExp(),
+  )
+  validation.check(
+    password,
+    validation.isExist(),
+    validation.checkLength(1, 30),
+    validation.checkRegExp(),
+  )
+  validation.check(
+    memberLimit,
+    validation.isExist(),
+    validation.checkParsedNumberInRange(2, 8),
+  )
+  validation.check(
+    roundCount,
+    validation.isExist(),
+    validation.checkParsedNumberInRange(1, 8),
+  )
+  if (
+    Number(roundTimeLimit) === 150 ||
+    Number(roundTimeLimit) === 120 ||
+    Number(roundTimeLimit) === 90 ||
+    Number(roundTimeLimit) === 60
+  ) {
+    throw {
+      statusCode: 400,
+      message:
+        'roundTimeLimist는 150또는 120또는 90또는 60의 값을 가진 정수여야합니다',
+    }
+  }
+
   const isPasswordRoom = password !== '' ? true : false
 
   gameRooms[gameRoomId] = {
@@ -106,6 +141,14 @@ export const createRoom = (socket, newGameRoomSetting) => {
 
 export const validateJoinTicket = (joinTicket) => {
   const { gameRoomId, password } = joinTicket
+
+  validation.check(gameRoomId, validation.isExist(), validation.checkRegExp())
+  validation.check(
+    password,
+    validation.isExist(),
+    validation.checkLength(1, 30),
+  )
+
   const { isPasswordRoom, isInGame, memberCount, memberLimit } =
     gameRooms[gameRoomId]
 
@@ -171,6 +214,41 @@ export const changeGameRoomSetting = (socket, gameRoomSetting) => {
   const gameRoomId = clientGameRoomId[socket.id]
   const { title, password, memberLimit, roundCount, roundTimeLimit } =
     gameRoomSetting
+
+  validation.check(
+    title,
+    validation.isExist(),
+    validation.checkLength(1, 20),
+    validation.checkRegExp(),
+  )
+  validation.check(
+    password,
+    validation.isExist(),
+    validation.checkLength(1, 30),
+    validation.checkRegExp(),
+  )
+  validation.check(
+    memberLimit,
+    validation.isExist(),
+    validation.checkParsedNumberInRange(2, 8),
+  )
+  validation.check(
+    roundCount,
+    validation.isExist(),
+    validation.checkParsedNumberInRange(1, 8),
+  )
+  if (
+    Number(roundTimeLimit) === 150 ||
+    Number(roundTimeLimit) === 120 ||
+    Number(roundTimeLimit) === 90 ||
+    Number(roundTimeLimit) === 60
+  ) {
+    throw {
+      statusCode: 400,
+      message:
+        'roundTimeLimist는 150또는 120또는 90또는 60의 값을 가진 정수여야합니다',
+    }
+  }
 
   const isPasswordRoom = password !== '' ? true : false
   gameRoomPasswords[gameRoomId] = password

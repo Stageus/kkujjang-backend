@@ -15,12 +15,14 @@ const drawGameEnterance = (targetGameRoom, gameRoomInfo) => {
   targetGameRoom.setAttribute('data-isInGame', isInGame.toString())
   targetGameRoom.setAttribute('data-isPasswordRoom', isPasswordRoom.toString())
 
-  targetGameRoom.innerHTML = `
-    <div>${title}</div>
-    <div>${roundCount}라운드 | ${roundTimeLimit}초 | ${memberCount}/${memberLimit} | ${
-      isPasswordRoom ? '비밀방' : '열린방'
-    }</div>
-  `
+  const titleContain = document.createElement('div')
+  titleContain.textContent = title
+  const infoContain = document.createElement('div')
+  infoContain.textContent = `${roundCount}라운드 | ${roundTimeLimit}초 | ${memberCount}/${memberLimit} | 
+  ${isPasswordRoom ? '비밀방' : '열린방'}`
+
+  targetGameRoom.appendChild(titleContain)
+  targetGameRoom.appendChild(infoContain)
 
   targetGameRoom.style.backgroundColor = 'gray'
   targetGameRoom.style.width = '500px'

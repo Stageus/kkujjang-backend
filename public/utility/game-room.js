@@ -60,10 +60,12 @@ const drawGameRoom = (gameRoomInfo) => {
           <button id="readyBtn" onclick="tryChangePlayerReadyStateEvent()">준비</button>
           <button onclick="leaveGameRoom()">나가기</button>
           <span id = "gameRoomSettingContain">${memberLimit}명 | ${roundCount}라운드 | ${roundTimeLimit}초 |</span>
-          <h2 id = "gameRoomTitle">${title}</h2>
+          <h2 id = "gameRoomTitle"></h2>
           <div id="member">
           </div>
         </div>`
+
+  document.getElementById('gameRoomTitle').textContent = title
 
   // 게임방에 있던 멤버들 그리기
   const roomMembers = members

@@ -20,6 +20,7 @@ const isConnectedToLobby = (socket) => {
 
 const addChatEventLinstener = (gameRoomNamespace, gameRoomId, socket) => {
   socket.on('chat', (message) => {
+    validateChatMessage(message)
     gameRoomNamespace
       .to(gameRoomId)
       .emit(

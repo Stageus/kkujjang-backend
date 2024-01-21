@@ -8,6 +8,7 @@ const isConnectedToGameRoom = (socket) => {
 
 const addChatEventListener = (lobbyNamespace, socket) => {
   socket.on('chat', (message) => {
+    validateChatMessage(message)
     lobbyNamespace.emit('chat', `${socket.userInfo.nickname} : ${message}`)
   })
 }
