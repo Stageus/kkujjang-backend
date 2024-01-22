@@ -67,6 +67,7 @@ const rooms = {
         startTime: 0,
         interval: null,
       },
+      usedWords: {},
     },
   },
 }
@@ -114,6 +115,7 @@ const initializeRound = (roomId) => {
   game.currentTurnAccumulative = 1
   game.roundTimeLeft = room.config.roundTimeLimit
   game.wordStartsWith = room.game.roundWord[room.game.currentRound]
+  game.usedWords = {}
 }
 
 const applyScore = (roomId, scoreDelta) => {
@@ -262,15 +264,15 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
           Number(room.game.usersRow[room.game.currentTurn].userId) &&
         message?.charAt(0) === room.game.wordStartsWith
       ) {
-        // TODO: 단어 체크 로직 적용
-        const isValidWord = true
+        const definition = await kkujjang.getDefinition(message)
 
-        if (isValidWord) {
+        if (definition !== null && !room.game.usedWords[message]) {
           clearInterval(room.game.timer.interval)
 
           room.game.currentTurn =
             (room.game.currentTurn + 1) % room.users.length
           room.game.currentTurnAccumulative += 1
+          room.game.usedWords[message] = true
 
           const scoreDelta = applyScore(
             roomId,
