@@ -60,6 +60,7 @@ const rooms = {
       wordStartsWith: '단',
       currentRound: 0,
       currentTurn: 0,
+      currentTurnAccumulative: 1,
       roundTimeLeft: 0,
       roundWord: '',
       timer: {
@@ -97,8 +98,6 @@ const initializeGame = (roomId) => {
         score: 0,
       },
     ],
-    currentRound: 0,
-    currentTurn: 0,
     roundWord: '라운드단어',
   }
 
@@ -112,6 +111,7 @@ const initializeRound = (roomId) => {
   game.currentRound =
     game.currentRound === undefined ? 0 : game.currentRound + 1
   game.currentTurn = 0
+  game.currentTurnAccumulative = 1
   game.roundTimeLeft = room.config.roundTimeLimit
   game.wordStartsWith = '단'
 }
@@ -258,6 +258,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
 
           room.game.currentTurn =
             (room.game.currentTurn + 1) % room.users.length
+          room.game.currentTurnAccumulative += 1
 
           gameRoomNamespace
             .to(roomId)
