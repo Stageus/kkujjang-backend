@@ -14,7 +14,7 @@ const shuffleArray = (array) => {
   return newArray
 }
 
-const rooms = {
+export const rooms = {
   sample: {
     state: 'preparing',
     users: [
