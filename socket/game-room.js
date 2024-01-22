@@ -266,7 +266,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
       ) {
         const definition = await kkujjang.getDefinition(message)
 
-        if (definition !== null && !room.game.usedWords[message]) {
+        if (definition !== null && room.game.usedWords[message] !== true) {
           clearInterval(room.game.timer.interval)
 
           room.game.currentTurn =
