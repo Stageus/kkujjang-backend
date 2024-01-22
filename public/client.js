@@ -9,11 +9,6 @@ createGameRoomBtn.addEventListener('click', () => {
   createGameRoom()
 })
 
-document.body.addEventListener('click', () => {
-  const bgm = document.getElementById('bgm')
-  bgm.play()
-})
-
 let socket
 
 // 로비 소켓, 룸 소켓 공용 채팅 이벤트 리스너
