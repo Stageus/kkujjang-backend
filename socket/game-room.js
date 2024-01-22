@@ -147,7 +147,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
     // 방 만들기 시도 이벤트가 발생
     socket.on('try create game room', (newGameRoomSetting) => {
       const { isValid, message } = checkGameRoonSetting(newGameRoomSetting)
-      if (isValid == false) {
+      if (isValid === false) {
         emitFailMessage(socket, message)
         return
       }
@@ -207,7 +207,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
     // 게임방 설정 바꾸기 시도 이벤트가 발생
     socket.on('try change game room setting', (gameRoomSetting) => {
       const { isValid, message } = checkGameRoonSetting(gameRoomSetting)
-      if (isValid == false) {
+      if (isValid === false) {
         emitFailMessage(socket, message)
         return
       }
@@ -228,10 +228,8 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
     // 플레이어 레디 상태 바꾸기 이벤트가 발생
     socket.on('try change player ready state', () => {
       if (getUserInfo(getGameRoomId(socket.id), socket.id).isCaptain === true) {
-        if (isValid === false) {
-          emitFailMessage(socket, '방장은 레디할 수 없습니다')
-          return
-        }
+        emitFailMessage(socket, '방장은 레디할 수 없습니다')
+        return
       }
       const gameRoomIdToChange = changeGameRoomUserInfo(
         socket,
