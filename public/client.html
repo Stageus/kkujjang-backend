@@ -8,18 +8,33 @@
     <audio id="bgm" loop>
       <source src="/source/background_sound.mp3" type="audio/mpeg" />
     </audio>
-    <ul id="messages"></ul>
-    <form id="form" action="">
-      <input id="input" autocomplete="off" />
-      <button id="submit">전송</button>
-    </form>
-    <!-- 방 만들기 버튼 추가 -->
-    <button id="createGameRoomBtn">방 만들기</button>
 
-    <h2>방 목록</h2>
-    <div id="gameEnteranceContain"></div>
+    <div id="left">
+      <div id="ranking"></div>
+      <div id="myInfo">
+        <div id="myCharacter"></div>
+        <div id="nicknameAndLevel">
+          <div id="myNickname"></div>
+          <div id="myLevel"></div>
+        </div>
+      </div>
+    </div>
+    <div id="right">
+      <!-- 방 만들기 버튼 추가 -->
+      <div id="lobbyTopContain">
+        <span class="lobbyTop">방 목록</span>
+        <span id="createGameRoomBtn" class="lobbyTop">방 만들기</span>
+      </div>
+      <div id="gameEnteranceContain"></div>
 
-    <div id="gameRoomContain"></div>
+      <div id="gameRoomContain"></div>
+
+      <ul id="messages"></ul>
+      <form id="form" action="">
+        <input id="input" autocomplete="off" />
+        <button id="submit">전송</button>
+      </form>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="/client.js"></script>

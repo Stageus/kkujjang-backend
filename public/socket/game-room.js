@@ -24,8 +24,8 @@ const addGameRoomEventListener = () => {
   socket.on('start game', (gameRoomInfo) => {
     alert('게임 시작')
   })
-  // 게임방에 접속을 시도했는데 실패함
-  socket.on('fail join game room', (msg) => {
+  // 실패하는 상황 발생 시 메시지 수신
+  socket.on('fail message', (msg) => {
     alert(msg)
   })
   // 당신이 방장이 됨
