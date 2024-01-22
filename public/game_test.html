@@ -15,7 +15,7 @@
       })
 
       socket.on('round start', (roundWord) => {
-        console.log(`round start: ${roundWord}`)
+        console.log(`round start: ${JSON.stringify(roundWord)}`)
         socket.emit('turn start', roomId)
       })
 
@@ -53,6 +53,7 @@
 
       socket.on('game end', (res) => {
         console.log(`game end, ranking: ${JSON.stringify(res)}`)
+        socket.disconnect()
       })
 
       socket.emit('game start', roomId)

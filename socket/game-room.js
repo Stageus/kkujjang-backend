@@ -71,7 +71,7 @@ const rooms = {
   },
 }
 
-const initializeGame = (roomId) => {
+const initializeGame = async (roomId) => {
   const room = rooms[roomId]
 
   room.state = 'playing'
@@ -98,7 +98,7 @@ const initializeGame = (roomId) => {
         score: 0,
       },
     ],
-    roundWord: '라운드단어',
+    roundWord: await kkujjang.getRoundWord(room.config.maxRound),
   }
 
   return room.game
@@ -113,7 +113,15 @@ const initializeRound = (roomId) => {
   game.currentTurn = 0
   game.currentTurnAccumulative = 1
   game.roundTimeLeft = room.config.roundTimeLimit
-  game.wordStartsWith = '단'
+  game.wordStartsWith = room.game.roundWord[room.game.currentRound]
+}
+
+const applyScore = (roomId, scoreDelta) => {
+  const room = rooms[roomId]
+
+  room.game.usersRow[room.game.currentTurn].score += scoreDelta
+  if (room.game.usersRow[room.game.currentTurn].score < 0)
+    room.game.usersRow[room.game.currentTurn].score = 0
 }
 
 const timer = (gameRoomNamespace, roomId) => () => {
@@ -130,9 +138,13 @@ const timer = (gameRoomNamespace, roomId) => () => {
 
   if (roundTimeLeft <= 0 && personalTimeLeft <= 0) {
     clearInterval(room.game.timer.interval)
+
+    const scoreDelta = -kkujjang.getFailureScore()
+    applyScore(roomId, scoreDelta)
+
     gameRoomNamespace.to(roomId).emit('round end', {
       defeatedUserTurn: room.game.currentTurn,
-      scoreDelta: 0, // TODO: replace score delta formula
+      scoreDelta,
     })
   }
 }
@@ -152,7 +164,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
     //test
     socket.join('sample')
 
-    socket.on('game start', (roomId) => {
+    socket.on('game start', async (roomId) => {
       console.log(`game start ${roomId}`)
       const room = rooms[roomId]
 
@@ -161,7 +173,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
         return
       }
 
-      const game = initializeGame(roomId)
+      const game = await initializeGame(roomId)
       gameRoomNamespace.emit('game start', game)
     })
 
@@ -260,10 +272,24 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
             (room.game.currentTurn + 1) % room.users.length
           room.game.currentTurnAccumulative += 1
 
+          const scoreDelta = applyScore(
+            roomId,
+            kkujjang.getSuccessScore(
+              message.length,
+              room.config.roundTimeLimit,
+              room.game.roundTimeLeft,
+              room.game.currentTurnAccumulative,
+            ),
+          )
+
           gameRoomNamespace
             .to(roomId)
             // TODO: 점수 공식
-            .emit('say word', { userId, word: message, scoreDelta: 0 })
+            .emit('say word', {
+              userId,
+              word: message,
+              scoreDelta,
+            })
         } else {
           gameRoomNamespace
             .to(roomId)
