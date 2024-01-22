@@ -44,6 +44,11 @@ const isConnectedToLobby = (socket) => {
 }
 
 // ========== 게임방 ========== //
+// 내 정보 그리라고 명령
+const emitDrawUserInfo = (socket, userInfo) => {
+  socket.emit('draw my info', JSON.stringify(userInfo))
+}
+
 // 채팅 이벤트리스너 등록
 const addChatEventLinstener = (gameRoomNamespace, gameRoomId, socket) => {
   socket.on('chat', (message) => {
@@ -137,6 +142,8 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
       return
     }
 
+    // 유저 정보를 그리게 함
+
     // 방 만들기 시도 이벤트가 발생
     socket.on('try create game room', (newGameRoomSetting) => {
       const { isValid, message } = checkGameRoonSetting(newGameRoomSetting)
@@ -149,6 +156,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
         newGameRoomSetting,
       )
       socket.join(gameRoomId)
+      emitDrawUserInfo(socket, getUserInfo(gameRoomId, socket.id))
       addChatEventLinstener(gameRoomNamespace, gameRoomId, socket)
       emitDrawGameRoom(socket, gameRoomInfo)
       emitYouAreCaptain(socket)
@@ -186,6 +194,7 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
       emitRefreshGameEnterance(lobbyNamespace, gameRoomId)
       // 해당 소켓을 gameRoomId에 연결
       socket.join(gameRoomId)
+      emitDrawUserInfo(socket, getUserInfo(gameRoomId, socket.id))
       // 채팅 이벤트 리스너 등록
       addChatEventLinstener(gameRoomNamespace, gameRoomId, socket)
       // 게임방 정보를 가져옴

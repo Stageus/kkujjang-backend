@@ -5,9 +5,9 @@ const nickname = [
   '감자',
   '다래',
   '슬기',
-  '머루쉐',
-  '손인욱',
-  '김찬호',
+  '레몬',
+  '보리',
+  '망고',
   '김스테이지어스',
   '이스테이지어스',
   '박스테이지어스',
@@ -237,13 +237,18 @@ export const changeGameRoomSetting = (socket, gameRoomSetting) => {
   const { title, password, memberLimit, roundCount, roundTimeLimit } =
     gameRoomSetting
 
+  const validatedLimit = Math.max(
+    Number(memberLimit),
+    gameRooms[gameRoomId].memberCount,
+  )
+
   const isPasswordRoom = password !== '' ? true : false
   gameRoomPasswords[gameRoomId] = password
 
   const gameRoomInfo = gameRooms[gameRoomId]
   gameRoomInfo.isPasswordRoom = isPasswordRoom
   gameRoomInfo.title = title
-  gameRoomInfo.memberLimit = memberLimit
+  gameRoomInfo.memberLimit = validatedLimit
   gameRoomInfo.roundCount = roundCount
   gameRoomInfo.roundTimeLimit = roundTimeLimit
 
@@ -268,6 +273,13 @@ export const validateToStart = (socket) => {
     return {
       isValid: false,
       message: '방장이 아닙니다',
+    }
+  }
+
+  if (members.length <= 1) {
+    return {
+      isValid: false,
+      message: '혼자서는 게임을 시작할 수 없습니다',
     }
   }
 

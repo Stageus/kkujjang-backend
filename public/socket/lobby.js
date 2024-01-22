@@ -6,7 +6,7 @@ const addLobbyEventListener = () => {
   })
   // 로비 최초 접속시 내 정보를 그림
   socket.on('draw my info', (userInfo) => {
-    drawMyInfo(JSON.parse(userInfo))
+    drawMyInfoInLobby(JSON.parse(userInfo))
   })
   // 로비 최초 접속시 게임방 입구들을 그림
   socket.on('draw game enterance list', (gameRooms) => {

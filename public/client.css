@@ -3,10 +3,18 @@ html {
 }
 
 body {
+  margin: 0;
   display: flex;
   width: fit-content;
   margin-left: auto;
   margin-right: auto;
+}
+
+#bgm {
+  position: fixed;
+  width: 100px;
+  height: 50px;
+  left: 0;
 }
 
 #messages {
@@ -23,13 +31,16 @@ body {
   overflow-x: hidden;
   overflow-y: auto;
 }
+
 #messages li {
   padding: 5px 10px;
 }
+
 #form {
   display: flex;
   width: fit-content;
 }
+
 #input {
   width: 900px;
   height: 38px;
@@ -38,6 +49,7 @@ body {
   border-top: none;
   padding: 10px;
 }
+
 #submit {
   width: 100px;
   height: 38px;
@@ -46,23 +58,29 @@ body {
   border-bottom: 2px solid black;
   background: rgb(238, 238, 238);
 }
-#gameRoom {
-  display: block;
+
+#gameRoomContain {
   position: fixed;
   top: 0;
-  width: 1000px;
-  height: 500px;
-  background: rgb(100, 100, 100);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: black;
 }
-.member {
-  display: inline-block;
-  width: 200px;
-  height: 200px;
-  background-color: white;
+
+#gameRoom {
+  display: block;
+  width: 1200px;
+  height: 520px;
+  background: rgb(243, 243, 243);
+  border: 2px solid black;
+  border-left: none;
+  box-sizing: border-box;
 }
+
 #lobbyTopContain {
   display: flex;
 }
+
 #gameEnteranceContain {
   border: 2px solid black;
   box-sizing: border-box;
@@ -71,7 +89,7 @@ body {
   background-color: rgb(118, 157, 197);
 }
 
-.lobbyTop {
+.topBtn {
   border: 2px solid black;
   border-bottom: none;
   box-sizing: border-box;
@@ -174,4 +192,57 @@ body {
   font-size: 12px;
   padding-top: 30px;
   padding-left: 10px;
+}
+
+#gameRoomBtnContain {
+  background-color: black;
+}
+
+#waitRoomText {
+  border-left: none;
+  background: rgb(243, 243, 243);
+}
+
+#changeGameRoomSettingBtn {
+  background-color: rgb(217, 217, 217);
+}
+
+#startBtn {
+  background-color: rgb(255, 198, 127);
+}
+
+#titleAndSetting {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-bottom: 10px;
+}
+
+#member {
+  display: flex;
+}
+
+.member {
+  display: inline-flex;
+  width: 264px;
+  height: 200px;
+  background-color: white;
+  margin-left: 20px;
+  background-color: rgb(217, 217, 217);
+}
+
+.characterAndUserInfo {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 200px;
+}
+
+.userState {
+  font-size: 20px;
+  font-weight: bold;
+  display: inline-block;
 }

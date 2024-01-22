@@ -1,6 +1,10 @@
 // 이벤트 리스너
 const addGameRoomEventListener = () => {
-  // 입장시 서버가 준 정보를 바탕으로 게임방을 그림
+  // 게임방 접속시 내 정보를 그림
+  socket.on('draw my info', (userInfo) => {
+    drawMyInfoInGameRoom(JSON.parse(userInfo))
+  })
+  // 게임방 접속시 서버가 준 정보를 바탕으로 게임방을 그림
   socket.on('draw game room', (gameRoomInfo) => {
     drawGameRoom(JSON.parse(gameRoomInfo))
   })

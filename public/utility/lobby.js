@@ -187,7 +187,7 @@ const refreshGameEnterance = (gameRoomInfoWithId) => {
   drawGameEnterance(targetGameRoom, gameRoomInfo)
 }
 
-const drawMyInfo = (userInfo) => {
+const drawMyInfoInLobby = (userInfo) => {
   document.getElementById('myCharacter').innerHTML = `
     <svg
       width="95"
