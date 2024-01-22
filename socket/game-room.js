@@ -140,11 +140,7 @@ const timer = (gameRoomNamespace, roomId) => () => {
 export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
   gameRoomNamespace.on('connection', (socket) => {
     socket.prependAny(() => {
-      console.log(socket.handshake.headers.cookie)
-
       const cookieList = String(socket.handshake.headers.cookie).split(';')
-
-      console.log(JSON.stringify(cookieList))
 
       socket.handshake.headers.cookies = {}
       cookieList.forEach((cookieText) => {
@@ -182,10 +178,12 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
 
       // 마지막 라운드
       if (room.game.currentRound >= room.config.maxRound) {
+        console.log(`game end ${roomId}`)
         gameRoomNamespace.to(roomId).emit('game end', {
           // TODO: sort
           ranking: room.game.usersRow,
         })
+        room.state = 'preparing'
         return
       }
 
@@ -203,8 +201,6 @@ export const createGameRoomSocket = (gameRoomNamespace, lobbyNamespace) => {
         gameRoomNamespace.to(roomId).emit('error', '잘못된 요청입니다.')
         return
       }
-
-      console.log(`cookie ${JSON.stringify(socket.handshake.headers.cookie)}`)
 
       const { sessionId } = socket.handshake.headers.cookies
       const userId = (await getSession(sessionId))?.userId
