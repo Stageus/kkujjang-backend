@@ -170,6 +170,43 @@ export class GameManager {
   }
 
   /**
+   * @param {number} userId
+   * @returns {Promise<string | null>} 시작할 수 없을 경우 `null` 반환, 시작 시 방 ID 반환
+   */
+  async startGame(userId) {
+    return this.#getRoomByUserId(userId).startGame(userId)
+  }
+
+  /**
+   * @param {number} userId
+   */
+  startRound(userId) {
+    return this.#getRoomByUserId(userId).startRound(userId)
+  }
+
+  /**
+   * @param {number} userId
+   * @returns {string | null} 사용자가 로비에 있다면 `null` 반환
+   */
+  getRoomIdByUserId(userId) {
+    return this.#getRoomByUserId(userId)?.id ?? null
+  }
+
+  /**
+   * @param {number} userId
+   * @returns {{
+   *   usersSequence: {
+   *     userId: number
+   *     score: number
+   *   }[];
+   *   roundWord: string
+   * } | null}
+   */
+  getCurrentGameInfo(userId) {
+    return this.#getRoomByUserId(userId).currentGameInfo
+  }
+
+  /**
    * @param {string} roomId
    * @returns {Room | null} 존재하지 않는 방일 경우 `null` 반환
    */
@@ -185,14 +222,6 @@ export class GameManager {
    */
   #getRoomByUserId(userId) {
     return this.#getRoom(this.#users[userId]?.roomId)
-  }
-
-  /**
-   * @param {number} userId
-   * @returns {string | null} 사용자가 로비에 있다면 `null` 반환
-   */
-  getRoomIdByUserId(userId) {
-    return this.#getRoomByUserId(userId)?.id ?? null
   }
 }
 

@@ -40,6 +40,11 @@ export class Game {
   roundWord
 
   /**
+   * @type {'game ready' | 'round ready' | 'turn proceeding' | 'end'}
+   */
+  gameState
+
+  /**
    * @type {{
    *   startTime: number;
    *   interval: NodeJS.Timeout | null;
@@ -134,6 +139,8 @@ export class Game {
     this.#maxRound = maxRound
     this.roundWord = await this.#createRoundWord()
     this.#timer.roundTimeLimit = roundTimeLimit
+
+    this.gameState = 'game ready'
   }
 
   initializeNewRound() {
@@ -143,12 +150,16 @@ export class Game {
     this.#timer.roundTimeLeft = this.#timer.roundTimeLimit
     this.wordStartsWith = this.roundWord[this.currentRound]
     this.#usedWords = {}
+
+    this.gameState = 'round ready'
   }
 
   /**
    * @param {() => void} onTurnEnd
    */
   startNewTurn(onTurnEnd) {
+    this.gameState = 'turn proceeding'
+
     this.#timer.startTime = Date.now()
     this.#timer.callback = onTurnEnd
     this.#timer.interval = setInterval(this.#createTimerFunction(this), 100)
@@ -183,6 +194,7 @@ export class Game {
     const scoreDelta = +this.#getSuccessScore(word.length)
     this.#applyScore(scoreDelta)
 
+    this.gameState = 'round ready'
     onValid(this.currentTurn, scoreDelta)
   }
 

@@ -160,15 +160,19 @@ export class Room {
   }
 
   /**
-   * @returns {string | null} 시작할 수 없을 경우 `null` 반환, 시작 시 방 ID 반환
+   * @param {number} occurerUserId
+   * @returns {Promise<string | null>} 방장이 아니거나 시작할 수 없을 경우 `null` 반환, 시작 시 방 ID 반환
    */
-  startGame() {
-    if (this.cannotStartGame()) {
+  async startGame(occurerUserId) {
+    if (
+      this.#userlist[this.#roomOwnerUserIndex].userId !== occurerUserId ||
+      this.cannotStartGame()
+    ) {
       return null
     }
 
     this.gameStatus = new Game()
-    this.gameStatus.initializeGame(
+    await this.gameStatus.initializeGame(
       this.#userlist.map(({ userId }) => userId),
       this.#maxRound,
       this.#roundTimeLimit,
@@ -176,6 +180,36 @@ export class Room {
 
     return this.#id
   }
+
+  /**
+   * @param {number} occurerUserId
+   * @returns {{
+   *   roomId: string,
+   *   currentRound: number,
+   *   currentTurn: number,
+   *   turnElapsed: number,
+   * }}
+   */
+  startRound(occurerUserId) {
+    if (
+      this.#userlist[this.#roomOwnerUserIndex].userId !== occurerUserId ||
+      this.#gameStatus.gameState !== 'game ready'
+    ) {
+      return null
+    }
+
+    this.#gameStatus.initializeNewRound()
+    return {
+      roomId: this.#id,
+      ...this.#gameStatus.roundInfo,
+    }
+  }
+
+  /**
+   *
+   * @param {*} occurerUserId
+   */
+  startTurn(occurerUserId) {}
 
   /**
    * @returns {{
@@ -267,5 +301,18 @@ export class Room {
     })
 
     return changedIndex
+  }
+
+  /**
+   * @returns {{
+   *   usersSequence: {
+   *     userId: number
+   *     score: number
+   *   }[];
+   *   roundWord: string
+   * } | null}
+   */
+  get currentGameInfo() {
+    return this.gameStatus?.gameInfo ?? null
   }
 }

@@ -119,10 +119,24 @@ export const setupKkujjangWebSocket = (io) => {
     })
 
     socket.on('start game', async () => {
-      const userId = await fetchUserId()
-
-      // TODO
+      await startGame(
+        await fetchUserId(),
+        (roomId, gameInfo) => {
+          io.to(roomId).emit('complete start game', gameInfo)
+        },
+        (errorMessage) => {
+          emitError(errorMessage)
+        },
+      )
     })
+
+    socket.on('round start', async () => {})
+
+    socket.on('turn start', async () => {})
+
+    socket.on('round end', async () => {})
+
+    socket.on('chat', async () => {})
   })
 }
 
@@ -227,4 +241,43 @@ const switchReadyState = (userId, state, onSuccess, onError) => {
   const changedIndex = GameManager.instance.switchReadyState(userId, state)
   const roomId = GameManager.instance.getRoomIdByUserId(userId)
   onSuccess(roomId, changedIndex)
+}
+
+/**
+ * @param {*} userId
+ * @param {(roomId: string, gameInfo: {
+ *   usersSequence: {
+ *     userId: number;
+ *     score: number;
+ *   }[];
+ *   roundWord: string
+ * }) => void} onSuccess
+ * @param {(message: string) => void} onError
+ */
+const startGame = async (userId, onSuccess, onError) => {
+  const roomId = await GameManager.instance.startGame(userId)
+  const gameInfo = GameManager.instance.getCurrentGameInfo(userId)
+
+  if (roomId !== null) {
+    onSuccess(roomId, gameInfo)
+  } else {
+    onError(errorMessage.unableToStart)
+  }
+}
+
+/**
+ * @param {number} userId
+ * //TODO
+ * @param {()} onSuccess
+ * @param {()} onError
+ */
+const startRound = (userId, onSuccess, onError) => {
+  const roundInfo = GameManager.instance.startRound(userId)
+
+  if (roundInfo !== null) {
+    const { roomId, ...info } = roundInfo
+    onSuccess(roundInfo.roomId, { info })
+  } else {
+    onError(errorMessage.invalidRequest)
+  }
 }
