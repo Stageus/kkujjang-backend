@@ -10,7 +10,8 @@ import { userRouter } from '@router/user'
 import { noticeRouter } from '@router/notice'
 import { reportRouter } from '@router/report'
 import { inquiryRouter } from '@router/inquiry'
-import { setSocket } from '@socket/kkujjang'
+import { setupKkujjangWebSocket } from '@socket/kkujjang'
+import fs from 'fs'
 
 configDotenv()
 
@@ -18,7 +19,7 @@ const app = asyncify(express())
 const server = http.createServer(app)
 
 const io = new Server(server)
-setSocket(io)
+setupKkujjangWebSocket(io)
 
 const sslOptions =
   process.env.NODE_ENV === 'production'
@@ -59,7 +60,7 @@ app.use(async (err, req, res, next) => {
 })
 
 if (sslOptions) {
-  https.createServer(sslOptions, server).listen(process.env.HTTPS_PORT, () => {
+  https.createServer(sslOptions, app).listen(process.env.HTTPS_PORT, () => {
     console.log(`Server is listening on port ${process.env.HTTPS_PORT}`)
   })
 } else {
