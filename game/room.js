@@ -229,4 +229,34 @@ export class Room {
       isReady: false,
     }))
   }
+
+  /**
+   * @param {number} userId
+   * @param {boolean} state
+   * @returns {number} 준비 여부 변경 적용된 사용자의 인덱스 반환
+   */
+  switchReadyState(userId, state) {
+    /**
+     * @type {number}
+     */
+    let changedIndex = null
+
+    this.#userlist = this.#userlist.map((user, index) => {
+      if (user.userId === userId) {
+        changedIndex = index
+
+        return {
+          userId: user.userId,
+          isReady: state,
+        }
+      } else {
+        return {
+          userId,
+          isReady: user.isReady,
+        }
+      }
+    })
+
+    return changedIndex
+  }
 }

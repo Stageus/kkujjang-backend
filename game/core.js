@@ -161,6 +161,15 @@ export class GameManager {
   }
 
   /**
+   * @param {number} userId
+   * @param {boolean} state
+   * @return {number} 준비 여부 변경 적용된 사용자의 인덱스 반환
+   */
+  switchReadyState(userId, state) {
+    return this.#getRoomByUserId(userId).switchReadyState(userId, state)
+  }
+
+  /**
    * @param {string} roomId
    * @returns {Room | null} 존재하지 않는 방일 경우 `null` 반환
    */
@@ -176,6 +185,14 @@ export class GameManager {
    */
   #getRoomByUserId(userId) {
     return this.#getRoom(this.#users[userId]?.roomId)
+  }
+
+  /**
+   * @param {number} userId
+   * @returns {string | null} 사용자가 로비에 있다면 `null` 반환
+   */
+  getRoomIdByUserId(userId) {
+    return this.#getRoomByUserId(userId)?.id ?? null
   }
 }
 

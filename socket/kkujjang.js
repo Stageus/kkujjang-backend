@@ -86,7 +86,7 @@ export const setupKkujjangWebSocket = (io) => {
           socket.emit('complete leave room')
         },
         (roomId, newRoomOwnerIndex) => {
-          io.to(roomId).emit('change room owner')
+          io.to(roomId).emit('change room owner', newRoomOwnerIndex)
         },
       )
     })
@@ -102,6 +102,20 @@ export const setupKkujjangWebSocket = (io) => {
         },
       )
       socket.emit('disconnected')
+    })
+
+    socket.on('switch ready state', async (state) => {
+      const userId = await fetchUserId()
+      switchReadyState(
+        userId,
+        state,
+        (roomId, index) => {
+          io.to(roomId).emit('complete switch ready state', { index, state })
+        },
+        (errorMessage) => {
+          emitError(errorMessage)
+        },
+      )
     })
   })
 }
@@ -170,7 +184,7 @@ const joinRoom = (
  *
  * @param {number} userId
  * @param {(roomId: string) => void} onSuccess
- * @param {(roomId: string) => void} onRoomOwnerChange
+ * @param {(roomId: string, newRoomOwnerIndex: number) => void} onRoomOwnerChange
  */
 const leaveRoom = (userId, onSuccess, onRoomOwnerChange) => {
   const roomId = GameManager.instance.leaveRoom(userId, onRoomOwnerChange)
@@ -191,4 +205,20 @@ const quit = (userId, notifyUserQuit, onRoomOwnerChange) => {
   if (roomId !== null) {
     notifyUserQuit(roomId, userId)
   }
+}
+
+/**
+ * @param {number} userId
+ * @param {boolean} state
+ * @param {(roomId: string, index: number) => void} onSuccess
+ * @param {(message: string) => void} onError
+ */
+const switchReadyState = (userId, state, onSuccess, onError) => {
+  if (typeof state !== 'boolean') {
+    onError(errorMessage.invalidRequest)
+  }
+
+  const changedIndex = GameManager.instance.switchReadyState(userId, state)
+  const roomId = GameManager.instance.getRoomIdByUserId(userId)
+  onSuccess(roomId, changedIndex)
 }
