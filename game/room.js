@@ -151,7 +151,7 @@ export class Room {
   /**
    * @returns {boolean}
    */
-  canStartGame() {
+  cannotStartGame() {
     return (
       this.#userlist.filter(
         (user, index) => !user.isReady && index !== this.#roomOwnerUserIndex,
@@ -159,13 +159,22 @@ export class Room {
     )
   }
 
+  /**
+   * @returns {string | null} 시작할 수 없을 경우 `null` 반환, 시작 시 방 ID 반환
+   */
   startGame() {
-    if (this.canStartGame()) {
+    if (this.cannotStartGame()) {
       return null
     }
 
-    this.gameStatus = new Game(this.#userlist.map(({ userId }) => userId))
-    //TODO
+    this.gameStatus = new Game()
+    this.gameStatus.initializeGame(
+      this.#userlist.map(({ userId }) => userId),
+      this.#maxRound,
+      this.#roundTimeLimit,
+    )
+
+    return this.#id
   }
 
   /**

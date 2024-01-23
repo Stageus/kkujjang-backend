@@ -117,6 +117,12 @@ export const setupKkujjangWebSocket = (io) => {
         },
       )
     })
+
+    socket.on('start game', async () => {
+      const userId = await fetchUserId()
+
+      // TODO
+    })
   })
 }
 
