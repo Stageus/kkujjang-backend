@@ -4,7 +4,7 @@
     <title>끝말잇기의 짱, 끝짱</title>
   </head>
   <body>
-    <button id="disconnect"></button>
+    <button id="disconnect" onclick="socket.disconnect()"></button>
     <script src="/socket.io/socket.io.js"></script>
     <script>
       /**
@@ -57,43 +57,37 @@
 
       socket.on('complete join room', (res) => {
         socket.emit('load room')
+        socket.emit('switch ready state', true)
       })
 
-      socket.on('change room owner', (res) => {
-        socket.emit('load room')
-      })
-
-      socket.on('error', (err) => {
-        console.log(`error: ${JSON.stringify(err)}`)
+      socket.on('complete switch ready state', (res) => {
+        console.log(`complete switch ready state: ${JSON.stringify(res)}`)
+        socket.emit('start game')
       })
 
       socket.on('complete start game', (game) => {
         console.log(`game start: ${JSON.stringify(game)}`)
-        socket.emit('round start', roomId)
+        socket.emit('round start')
       })
 
-      socket.on('round start', (roundWord) => {
+      socket.on('complete start round', (roundWord) => {
         console.log(`round start: ${JSON.stringify(roundWord)}`)
-        socket.emit('turn start', roomId)
+        socket.emit('turn start')
       })
 
-      socket.on('turn start', (turnObj) => {
+      socket.on('complete start turn', (turnObj) => {
         console.log(`turn start: ${JSON.stringify(turnObj)}`)
 
-        if (turnObj.currentTurn === 0)
-          setTimeout(
-            () => socket.emit('chat', { roomId, message: '단어' }),
-            1000,
-          )
+        setTimeout(() => socket.emit('chat', '단어'), 1000)
       })
 
-      socket.on('round end', (roundObj) => {
+      socket.on('complete round end', (roundObj) => {
         console.log(`round end: ${JSON.stringify(roundObj)}`)
-        socket.emit('round start', roomId)
+        socket.emit('round start')
       })
 
       socket.on('timer', (timeObj) => {
-        //console.log(`timer: ${JSON.stringify(timeObj)}`)
+        console.log(`timer: ${JSON.stringify(timeObj)}`)
       })
 
       socket.on('error', (msg) => {
@@ -106,7 +100,7 @@
 
       socket.on('say word', (res) => {
         console.log(`say word: ${JSON.stringify(res)}`)
-        socket.emit('turn start', roomId)
+        socket.emit('turn start')
       })
 
       socket.on('game end', (res) => {
@@ -114,14 +108,18 @@
         socket.disconnect()
       })
 
-      socket.emit('game start', roomId)
+      socket.on('change room owner', (res) => {
+        socket.emit('load room')
+      })
+
+      socket.on('error', (err) => {
+        console.log(`error: ${JSON.stringify(err)}`)
+      })
+
+      socket.emit('game start')
 
       socket.emit('load room list')
       socket.emit('create room', roomConfig)
-
-      document.getElementById('disconnect').addEventListener('click', () => {
-        socket.disconnect()
-      })
     </script>
   </body>
 </html>

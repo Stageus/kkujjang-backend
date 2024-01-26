@@ -60,22 +60,33 @@ export const setupKkujjangWebSocket = (io) => {
       )
     })
 
-    socket.on('join room', async (authorization) => {
-      joinRoom(
-        {
-          ...authorization,
-          userId: await fetchUserId(),
-        },
-        {
-          onSuccess: (roomId, userId) => {
-            io.to(roomId).emit('some user join room', userId)
-            socket.join(roomId)
-            socket.emit('complete join room', userId)
+    socket.on(
+      'join room',
+      async (
+        /**
+         * @type {{
+         *   roomId: string;
+         *   password?: string;
+         * }}
+         */
+        authorization,
+      ) => {
+        joinRoom(
+          {
+            ...authorization,
+            userId: await fetchUserId(),
           },
-          onError: (message) => emitError(message),
-        },
-      )
-    })
+          {
+            onSuccess: (roomId, userId) => {
+              io.to(roomId).emit('some user join room', userId)
+              socket.join(roomId)
+              socket.emit('complete join room', userId)
+            },
+            onError: (message) => emitError(message),
+          },
+        )
+      },
+    )
 
     socket.on('leave room', async () => {
       leaveRoom(
@@ -254,7 +265,7 @@ const switchReadyState = (userId, state, onSuccess, onError) => {
 }
 
 /**
- * @param {*} userId
+ * @param {number} userId
  * @param {(roomId: string, gameInfo: {
  *   usersSequence: {
  *     userId: number;

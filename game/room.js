@@ -174,8 +174,8 @@ export class Room {
       return null
     }
 
-    this.gameStatus = new Game()
-    await this.gameStatus.initializeGame(
+    this.#gameStatus = new Game()
+    await this.#gameStatus.initializeGame(
       this.#userlist.map(({ userId }) => userId),
       this.#maxRound,
       this.#roundTimeLimit,
@@ -324,6 +324,6 @@ export class Room {
    * } | null}
    */
   get currentGameInfo() {
-    return this.gameStatus?.gameInfo ?? null
+    return this.#gameStatus?.gameInfo ?? null
   }
 }
