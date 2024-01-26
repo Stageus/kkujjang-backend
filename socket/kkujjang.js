@@ -130,7 +130,17 @@ export const setupKkujjangWebSocket = (io) => {
       )
     })
 
-    socket.on('round start', async () => {})
+    socket.on('round start', async () => {
+      startRound(
+        await fetchUserId(),
+        (roomId, roundInfo) => {
+          io.to(roomId).emit('complete round start', roundInfo)
+        },
+        (errorMessage) => {
+          emitError(errorMessage)
+        },
+      )
+    })
 
     socket.on('turn start', async () => {})
 
@@ -140,6 +150,7 @@ export const setupKkujjangWebSocket = (io) => {
   })
 }
 
+// TODO: 로직 파일 분리
 /**
  * @param {{
  *   roomOwnerUserId: number;
@@ -201,7 +212,6 @@ const joinRoom = (
 }
 
 /**
- *
  * @param {number} userId
  * @param {(roomId: string) => void} onSuccess
  * @param {(roomId: string, newRoomOwnerIndex: number) => void} onRoomOwnerChange
@@ -267,17 +277,26 @@ const startGame = async (userId, onSuccess, onError) => {
 
 /**
  * @param {number} userId
- * //TODO
- * @param {()} onSuccess
- * @param {()} onError
+ * @param {(roomId: string, roundInfo: {
+ *   currentRound: number;
+ *   currentTurn: number;
+ *   turnElapsed: number;
+ * }) => void} onSuccess
+ * @param {(message: string) => void} onError
  */
 const startRound = (userId, onSuccess, onError) => {
   const roundInfo = GameManager.instance.startRound(userId)
 
   if (roundInfo !== null) {
     const { roomId, ...info } = roundInfo
-    onSuccess(roundInfo.roomId, { info })
+    onSuccess(roundInfo.roomId, info)
   } else {
     onError(errorMessage.invalidRequest)
   }
+}
+
+const startTurn = (userId, onTurnEnd, onSuccess) => {
+  const startTurnResult = GameManager.instance.startTurn(userId, onTurnEnd)
+
+  onSuccess()
 }

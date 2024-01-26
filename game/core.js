@@ -186,6 +186,14 @@ export class GameManager {
 
   /**
    * @param {number} userId
+   * @param {(roomId: string) => void} onTurnEnd
+   */
+  startTurn(userId, onTurnEnd) {
+    return this.#getRoomByUserId(userId).startTurn(userId, (roomId) => {})
+  }
+
+  /**
+   * @param {number} userId
    * @returns {string | null} 사용자가 로비에 있다면 `null` 반환
    */
   getRoomIdByUserId(userId) {

@@ -1,5 +1,8 @@
 import * as uuid from 'uuid'
 import { Game } from './game'
+import { configDotenv } from 'dotenv'
+
+configDotenv()
 
 export class Room {
   /**
@@ -206,10 +209,18 @@ export class Room {
   }
 
   /**
-   *
-   * @param {*} occurerUserId
+   * @param {number} occurerUserId
+   * @param {(roomId: string) => void} onTurnEnd
    */
-  startTurn(occurerUserId) {}
+  startTurn(occurerUserId, onTurnEnd) {
+    if (!this.#gameStatus.isTurnOf(occurerUserId)) {
+      return null
+    }
+
+    return this.#gameStatus.startNewTurn(() => {
+      onTurnEnd(this.#id)
+    })
+  }
 
   /**
    * @returns {{

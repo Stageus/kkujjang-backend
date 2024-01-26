@@ -155,6 +155,14 @@ export class Game {
   }
 
   /**
+   * @param {number} userId
+   * @returns {boolean}
+   */
+  isTurnOf(userId) {
+    return this.#usersSequence[this.currentTurn].userId === userId
+  }
+
+  /**
    * @param {() => void} onTurnEnd
    */
   startNewTurn(onTurnEnd) {
@@ -166,6 +174,8 @@ export class Game {
 
     this.currentTurn = (this.currentTurn + 1) % this.#usersSequence.length
     this.turnElapsed += 1
+
+    this.gameState = 'turn proceeding'
   }
 
   /**
