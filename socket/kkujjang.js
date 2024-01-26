@@ -89,17 +89,16 @@ export const setupKkujjangWebSocket = (io) => {
     )
 
     socket.on('leave room', async () => {
-      leaveRoom(
-        await fetchUserId(),
-        (roomId) => {
+      leaveRoom(await fetchUserId(), {
+        onSuccess: (roomId) => {
           socket.leave(roomId)
           io.to(roomId).emit('some user leave room')
           socket.emit('complete leave room')
         },
-        (roomId, newRoomOwnerIndex) => {
+        onRoomOwnerChange: (roomId, newRoomOwnerIndex) => {
           io.to(roomId).emit('change room owner', newRoomOwnerIndex)
         },
-      )
+      })
     })
 
     socket.on('disconnect', async () => {
@@ -117,40 +116,36 @@ export const setupKkujjangWebSocket = (io) => {
 
     socket.on('switch ready state', async (state) => {
       const userId = await fetchUserId()
-      switchReadyState(
-        userId,
-        state,
-        (roomId, index) => {
+      switchReadyState(userId, state, {
+        onSuccess: (roomId, index) => {
           io.to(roomId).emit('complete switch ready state', { index, state })
         },
-        (errorMessage) => {
+        onError: (errorMessage) => {
           emitError(errorMessage)
         },
-      )
+      })
     })
 
     socket.on('start game', async () => {
-      await startGame(
-        await fetchUserId(),
-        (roomId, gameInfo) => {
+      await startGame(await fetchUserId(), {
+        onSuccess: (roomId, gameInfo) => {
           io.to(roomId).emit('complete start game', gameInfo)
         },
-        (errorMessage) => {
+        onError: (errorMessage) => {
           emitError(errorMessage)
         },
-      )
+      })
     })
 
     socket.on('round start', async () => {
-      startRound(
-        await fetchUserId(),
-        (roomId, roundInfo) => {
+      startRound(await fetchUserId(), {
+        onSuccess: (roomId, roundInfo) => {
           io.to(roomId).emit('complete round start', roundInfo)
         },
-        (errorMessage) => {
+        onError: (errorMessage) => {
           emitError(errorMessage)
         },
-      )
+      })
     })
 
     socket.on('turn start', async () => {})
@@ -208,7 +203,7 @@ const createRoom = (roomConfig, { onSuccess, onError }) => {
  * @param {{
  *   onSuccess: (roomId: string, userid: number) => void;
  *   onError: (message: string) => void;
- * }} callbacks
+ * }} callback
  */
 const joinRoom = (
   { roomId, userId, password = null },
@@ -224,10 +219,12 @@ const joinRoom = (
 
 /**
  * @param {number} userId
- * @param {(roomId: string) => void} onSuccess
- * @param {(roomId: string, newRoomOwnerIndex: number) => void} onRoomOwnerChange
+ * @param {{
+ *    onSuccess: (roomId: string) => void;
+ *   onRoomOwnerChange:(roomId: string, newRoomOwnerIndex: number) => void
+ * }} callback
  */
-const leaveRoom = (userId, onSuccess, onRoomOwnerChange) => {
+const leaveRoom = (userId, { onSuccess, onRoomOwnerChange }) => {
   const roomId = GameManager.instance.leaveRoom(userId, onRoomOwnerChange)
 
   if (roomId !== null) {
@@ -251,10 +248,12 @@ const quit = (userId, notifyUserQuit, onRoomOwnerChange) => {
 /**
  * @param {number} userId
  * @param {boolean} state
- * @param {(roomId: string, index: number) => void} onSuccess
- * @param {(message: string) => void} onError
+ * @param {{
+ *   onSuccess: (roomId: string, index: number) => void;
+ *   onError: (message: string) => void;
+ * }} callback
  */
-const switchReadyState = (userId, state, onSuccess, onError) => {
+const switchReadyState = (userId, state, { onSuccess, onError }) => {
   if (typeof state !== 'boolean') {
     onError(errorMessage.invalidRequest)
   }
@@ -266,16 +265,18 @@ const switchReadyState = (userId, state, onSuccess, onError) => {
 
 /**
  * @param {number} userId
- * @param {(roomId: string, gameInfo: {
- *   usersSequence: {
- *     userId: number;
- *     score: number;
- *   }[];
- *   roundWord: string
- * }) => void} onSuccess
- * @param {(message: string) => void} onError
+ * @param {{
+ *   onSuccess: (roomId: string, gameInfo: {
+ *     usersSequence: {
+ *       userId: number;
+ *       score: number;
+ *     }[];
+ *     roundWord: string
+ *   }) => void;
+ *   onError: (message: string) => void;
+ * }} callback
  */
-const startGame = async (userId, onSuccess, onError) => {
+const startGame = async (userId, { onSuccess, onError }) => {
   const roomId = await GameManager.instance.startGame(userId)
   const gameInfo = GameManager.instance.getCurrentGameInfo(userId)
 
@@ -288,14 +289,19 @@ const startGame = async (userId, onSuccess, onError) => {
 
 /**
  * @param {number} userId
- * @param {(roomId: string, roundInfo: {
- *   currentRound: number;
- *   currentTurn: number;
- *   turnElapsed: number;
- * }) => void} onSuccess
- * @param {(message: string) => void} onError
+ * @param {{
+ *   onSuccess: (
+ *     roomId: string,
+ *     roundInfo: {
+ *       currentRound: number;
+ *       currentTurn: number;
+ *       turnElapsed: number;
+ *     }
+ *   ) => void;
+ *   onError: (message: string) => void;
+ * }} callback
  */
-const startRound = (userId, onSuccess, onError) => {
+const startRound = (userId, { onSuccess, onError }) => {
   const roundInfo = GameManager.instance.startRound(userId)
 
   if (roundInfo !== null) {
