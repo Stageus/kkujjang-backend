@@ -2,6 +2,10 @@ import { configDotenv } from 'dotenv'
 
 configDotenv()
 
+/**
+ * @param {string} searchKeyword
+ * @returns {Promise<string | null>}
+ */
 export const searchDefinition = async (searchKeyword) => {
   const url = `https://stdict.korean.go.kr/api/search.do?${new URLSearchParams({
     key: process.env.STDICT_KOREAN_API_KEY,
@@ -21,6 +25,12 @@ export const searchDefinition = async (searchKeyword) => {
   return result ?? null
 }
 
+/**
+ * @param {string} searchKeyword
+ * @param {number} wordLengthMin
+ * @param {number} wordLengthMax
+ * @returns {Promise<string | null>}
+ */
 export const searchWordsStartWith = async (
   searchKeyword,
   wordLengthMin = 1,
@@ -33,8 +43,8 @@ export const searchWordsStartWith = async (
     advanced: 'y',
     method: 'start',
     type1: 'word',
-    letter_s: wordLengthMin,
-    letter_e: wordLengthMax,
+    letter_s: wordLengthMin.toString(),
+    letter_e: wordLengthMax.toString(),
     // 접사, 동사, 형용사, 보조 동사, 보조 형용사, 어미 외 모두 가능
     pos: '1,2,3,4,7,8,9,10,11',
   }).toString()}`

@@ -7,6 +7,8 @@
     <button id="disconnect" onclick="socket.disconnect()"></button>
     <script src="/socket.io/socket.io.js"></script>
     <script>
+      let gameEnded = false
+
       /**
        * @param {{
        *   roomOwnerUserId: number;
@@ -23,7 +25,7 @@
         password: '1234',
         maxUserCount: 4,
         maxRound: 3,
-        roundTimeLimit: 5,
+        roundTimeLimit: 60 * 1000,
       }
 
       const socket = io('http://localhost:3000')
@@ -62,27 +64,27 @@
 
       socket.on('complete switch ready state', (res) => {
         console.log(`complete switch ready state: ${JSON.stringify(res)}`)
-        socket.emit('start game')
+        socket.emit('game start')
       })
 
-      socket.on('complete start game', (game) => {
+      socket.on('complete game start', (game) => {
         console.log(`game start: ${JSON.stringify(game)}`)
         socket.emit('round start')
       })
 
-      socket.on('complete start round', (roundWord) => {
+      socket.on('complete round start', (roundWord) => {
         console.log(`round start: ${JSON.stringify(roundWord)}`)
         socket.emit('turn start')
       })
 
-      socket.on('complete start turn', (turnObj) => {
+      socket.on('complete turn start', (turnObj) => {
         console.log(`turn start: ${JSON.stringify(turnObj)}`)
 
         setTimeout(() => socket.emit('chat', '단어'), 1000)
       })
 
-      socket.on('complete round end', (roundObj) => {
-        console.log(`round end: ${JSON.stringify(roundObj)}`)
+      socket.on('round end', () => {
+        console.log(`round end`)
         socket.emit('round start')
       })
 
@@ -105,6 +107,7 @@
 
       socket.on('game end', (res) => {
         console.log(`game end, ranking: ${JSON.stringify(res)}`)
+        gameEnded = true
         socket.disconnect()
       })
 

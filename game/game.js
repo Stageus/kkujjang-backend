@@ -1,5 +1,6 @@
-import * as dictionary from '@utility/stdict-korean'
 import { gameConfig } from './config'
+import { shuffleArrayByFisherYates } from './algorithm'
+import * as dictionary from './dictionary'
 
 export class Game {
   /**
@@ -18,7 +19,7 @@ export class Game {
   /**
    * @type {number | null}
    */
-  currentRound = null
+  currentRound = 0
 
   /**
    * @type {number}
@@ -28,7 +29,7 @@ export class Game {
   /**
    * @type {number | null}
    */
-  currentTurn = null
+  currentTurnUserIndex = null
 
   /**
    * @type {number}
@@ -43,24 +44,28 @@ export class Game {
   /**
    * @type {'game ready' | 'round ready' | 'turn ready' | 'turn proceeding' | 'end'}
    */
-  gameState
+  state
 
   /**
    * @type {{
    *   startTime: number;
    *   intervalTimeout: NodeJS.Timeout | null;
-   *   interval: number;
    *   onTurnEnd: () => void;
    *   onTimerTick: () => void;
    *   onRoundEnd: () => void;
    *   onGameEnd: () => void;
    *   roundTimeLeft: number;
-   *   roundTimeLimit: number;
    *   personalTimeLeft: number;
-   *   personalTimeLimit: number;
    * }}
    */
-  timer = null
+  #timer = null
+
+  get timeStatusForTimer() {
+    return {
+      roundTimeLeft: this.#timer.roundTimeLeft,
+      personalTimeLeft: this.#timer.personalTimeLeft,
+    }
+  }
 
   /**
    * @type {{
@@ -68,6 +73,23 @@ export class Game {
    * }}
    */
   usedWords = {}
+
+  /**
+   * @type {string}
+   */
+  lastWord
+
+  get status() {
+    return {
+      usersSequence: this.usersSequence,
+      wordStartsWith: this.wordStartsWith,
+      currentRound: this.currentRound,
+      maxRound: this.maxRound,
+      currentTurnUserIndex: this.currentTurnUserIndex,
+      turnElapsed: this.turnElapsed,
+      roundWord: this.roundWord,
+    }
+  }
 
   /**
    * @returns {{
@@ -82,21 +104,6 @@ export class Game {
     return {
       usersSequence: this.usersSequence,
       roundWord: this.roundWord,
-    }
-  }
-
-  /**
-   * @returns {{
-   * currentRound: number,
-   * currentTurn: number,
-   * turnElapsed: number,
-   * }}
-   */
-  get roundInfo() {
-    return {
-      currentRound: this.currentRound,
-      currentTurn: this.currentTurn,
-      turnElapsed: this.turnElapsed,
     }
   }
 
@@ -126,123 +133,156 @@ export class Game {
   }
 
   /**
-   * @param {number[]} userIdList
-   * @param {number} maxRound
-   * @param {number} roundTimeLimit
-   */
-  async initializeGame(userIdList, maxRound, roundTimeLimit) {
-    this.usersSequence = this.#shuffleArray(
-      userIdList.map((userId) => ({
-        userId,
-        score: 0,
-      })),
-    )
-    this.maxRound = maxRound
-    this.roundWord = await this.#createRoundWord()
-    this.timer.roundTimeLimit = roundTimeLimit
-
-    this.gameState = 'game ready'
-  }
-
-  initializeNewRound() {
-    this.currentRound = this.currentRound === null ? 0 : this.currentRound + 1
-    this.currentTurn = 0
-    this.turnElapsed = 1
-    this.timer.roundTimeLeft = this.timer.roundTimeLimit
-    this.wordStartsWith = this.roundWord[this.currentRound]
-    this.usedWords = {}
-
-    this.gameState = 'round ready'
-  }
-
-  /**
    * @param {number} userId
    * @returns {boolean}
    */
   isTurnOf(userId) {
-    return this.usersSequence[this.currentTurn].userId === userId
+    return this.usersSequence[this.currentTurnUserIndex].userId === userId
   }
 
   /**
-   * @param {() => void} onTurnEnd
-   * @param {() => void} onTimerTick
-   * @param {() => void} onRoundEnd
-   * @param {() => void} onGameEnd
-   * @returns {{
-   *   wordStartsWith: string;
-   *   currentTurn: number;
-   * }}
+   * @param {{
+   *   onTimerTick: () => void;
+   *   onTurnEnd: () => void;
+   *   onRoundEnd: () => void;
+   *   onGameEnd: () => void;
+   * }} callbacks
    */
-  startNewTurn(onTimerTick, onTurnEnd, onRoundEnd, onGameEnd) {
-    this.gameState = 'turn proceeding'
+  #initializeTimer({ onTimerTick, onTurnEnd, onRoundEnd, onGameEnd }) {
+    this.#timer = {
+      onTimerTick,
+      onTurnEnd,
+      onRoundEnd,
+      onGameEnd,
+      startTime: -1,
+      intervalTimeout: null,
+      roundTimeLeft: undefined,
+      personalTimeLeft: undefined,
+    }
+  }
 
-    this.timer.startTime = Date.now()
+  /**
+   * @param {number} roundTimeLimit
+   * @param {{
+   *   onTimerTick: () => void;
+   *   onTurnEnd: () => void;
+   *   onRoundEnd: () => void;
+   *   onGameEnd: () => void;
+   * }} callbacks
+   */
+  startTimer(roundTimeLimit, callbacks) {
+    this.#initializeTimer(callbacks)
 
-    this.timer.onTurnEnd = onTurnEnd
-    this.timer.onTimerTick = onTimerTick
-    this.timer.onRoundEnd = onRoundEnd
-    this.timer.onGameEnd = onGameEnd
+    this.#timer.startTime = Date.now()
+    this.#timer.roundTimeLeft =
+      this.#timer.roundTimeLeft === undefined
+        ? roundTimeLimit
+        : this.#timer.roundTimeLeft
+    this.#timer.personalTimeLeft = roundTimeLimit / 10
 
-    this.timer.intervalTimeout = setInterval(
-      this.#createTimerFunction(this),
+    this.#timer.intervalTimeout = setInterval(
+      this.#createOnTimerTick(this),
       gameConfig.timerInterval,
     )
+  }
 
-    this.gameState = 'turn proceeding'
-
-    return {
-      wordStartsWith: this.wordStartsWith,
-      currentTurn: this.currentTurn,
-    }
+  #stopTimer() {
+    clearInterval(this.#timer.intervalTimeout)
   }
 
   /**
    * @param {Game} game
    * @returns {() => void}
    */
-  #createTimerFunction(game) {
+  #createOnTimerTick(game) {
     return () => {
-      const timeElapsed = Date.now() - game.timer.startTime
-      game.timer.roundTimeLeft -= timeElapsed
-      game.timer.personalTimeLeft -= timeElapsed
-
-      if (game.timer.roundTimeLeft <= 0 || game.timer.personalTimeLeft <= 0) {
-        game.#stopTimer()
-        game.#finishRound()
+      if (game.state !== 'turn proceeding') {
         return
       }
 
-      game.timer.onTimerTick()
+      const timeElapsed = Date.now() - game.#timer.startTime
+      game.#timer.roundTimeLeft -= timeElapsed
+      game.#timer.personalTimeLeft -= timeElapsed
+      game.#timer.onTimerTick()
+
+      if (game.#timer.roundTimeLeft <= 0 || game.#timer.personalTimeLeft <= 0) {
+        game.#stopTimer()
+        game.#finishRound()
+        game.#addScore(gameConfig.failureScoreDelta)
+        return
+      }
     }
   }
 
-  #endTurn() {
-    this.currentTurn = (this.currentTurn + 1) % this.usersSequence.length
+  /**
+   * @param {number[]} userIdList
+   * @param {number} maxRound
+   */
+  async initializeGame(userIdList, maxRound) {
+    this.usersSequence = shuffleArrayByFisherYates(
+      userIdList.map((userId) => ({
+        userId,
+        score: 0,
+      })),
+    )
+
+    this.maxRound = maxRound
+    this.roundWord = await this.#createRoundWord(maxRound)
+    this.state = 'game ready'
+  }
+
+  initializeRound() {
+    this.currentTurnUserIndex = 0
+    this.turnElapsed = 1
+    this.wordStartsWith = this.roundWord[this.currentRound]
+    this.usedWords = {}
+
+    this.state = 'round ready'
+  }
+
+  initializeTurn() {
+    this.state = 'turn proceeding'
+  }
+
+  #finishTurn() {
+    this.currentTurnUserIndex =
+      (this.currentTurnUserIndex + 1) % this.usersSequence.length
     this.turnElapsed += 1
-    this.gameState = 'turn ready'
+    this.state = 'turn ready'
+
+    this.#timer.onTurnEnd()
   }
 
   #finishRound() {
     this.currentRound += 1
-    this.timer.onRoundEnd()
-    this.timer = null
-    this.gameState = 'round ready'
+    this.#timer.onRoundEnd()
+
+    this.state = 'game ready'
 
     if (this.currentRound >= this.maxRound) {
       this.#finishGame()
+      return
     }
+
+    this.#timer = null
   }
 
   #finishGame() {
-    this.gameState = 'end'
-    this.timer.onGameEnd()
+    this.state = 'end'
+
+    this.#timer.onGameEnd()
+    clearInterval(this.#timer.intervalTimeout)
+
+    this.#timer = null
+    this.state = 'round ready'
   }
 
   /**
    * @param {string} word
+   * @param {number} personalTimeLimit
    * @param {(userIndex: number, scoreDelta: number) => void} onValid
    */
-  async checkIsValidWord(word, onValid) {
+  async checkIsValidWord(word, personalTimeLimit, onValid) {
     const definition = await dictionary.searchDefinition(word)
     if (definition === null || this.usedWords[word] === true) {
       return null
@@ -251,62 +291,43 @@ export class Game {
     this.#stopTimer()
     this.usedWords[word] = true
 
-    const scoreDelta = +this.#getSuccessScore(word.length)
-    this.#applyScore(scoreDelta)
+    const scoreDelta = this.#getSuccessScore(word.length, personalTimeLimit)
+    this.#addScore(scoreDelta)
 
-    this.gameState = 'round ready'
-    onValid(this.currentTurn, scoreDelta)
+    this.state = 'round ready'
+    onValid(this.currentTurnUserIndex, scoreDelta)
   }
 
   /**
    * @param {number} scoreDelta
    */
-  #applyScore(scoreDelta) {
-    this.usersSequence[this.currentTurn].score += scoreDelta
+  #addScore(scoreDelta) {
+    this.usersSequence[this.currentTurnUserIndex].score += scoreDelta
 
-    if (this.usersSequence[this.currentTurn].score < 0) {
-      this.usersSequence[this.currentTurn].score = 0
+    if (this.usersSequence[this.currentTurnUserIndex].score < 0) {
+      this.usersSequence[this.currentTurnUserIndex].score = 0
     }
   }
 
   /**
    * @param {number} wordLength
+   * @param {number} personalTimeLimit
    */
-  #getSuccessScore(wordLength) {
+  #getSuccessScore(wordLength, personalTimeLimit) {
     return Math.ceil(
       2 *
         (Math.pow(5 + 7 * wordLength, 0.74) + 0.88 * this.turnElapsed) *
         (1 -
-          (this.timer.roundTimeLimit - this.timer.roundTimeLeft) /
-            (2 * this.timer.roundTimeLimit)),
+          (personalTimeLimit - this.#timer.personalTimeLeft) /
+            (2 * personalTimeLimit)),
     )
   }
 
-  #getFailureScore() {
-    return 200
-  }
-
-  #stopTimer() {
-    clearInterval(this.timer.intervalTimeout)
-  }
-
   /**
-   * @param {*[]} array
+   * @param {number} maxRound
+   * @returns {Promise<string | null>}
    */
-  #shuffleArray(array) {
-    const newArray = [...array]
-
-    for (let i = newArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      const temp = newArray[i]
-      newArray[i] = newArray[j]
-      newArray[j] = temp
-    }
-
-    return newArray
-  }
-
-  async #createRoundWord() {
+  async #createRoundWord(maxRound) {
     const starterCandidates = [
       '가',
       '나',
@@ -324,14 +345,19 @@ export class Game {
       '하',
     ]
 
-    const words = await dictionary.searchWordsStartWith(
-      starterCandidates[
-        Math.floor(Math.random() * (starterCandidates.length - 1))
-      ],
-      this.maxRound,
-      this.maxRound,
-    )
+    try {
+      const words = await dictionary.searchWordsStartWith(
+        starterCandidates[
+          Math.floor(Math.random() * (starterCandidates.length - 1))
+        ],
+        maxRound,
+        maxRound,
+      )
 
-    return words[Math.floor(Math.random() * (words.length - 1))]
+      return words[Math.floor(Math.random() * (words.length - 1))]
+    } catch (err) {
+      console.log(err)
+      return null
+    }
   }
 }
