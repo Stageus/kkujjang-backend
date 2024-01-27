@@ -186,10 +186,19 @@ export class GameManager {
 
   /**
    * @param {number} userId
+   * @param {(roomId: string) => void} onTimerTick
    * @param {(roomId: string) => void} onTurnEnd
+   * @param {(roomId: string) => void} onRoundEnd
+   * @param {(roomId: string) => void} onGameEnd
    */
-  startTurn(userId, onTurnEnd) {
-    return this.#getRoomByUserId(userId).startTurn(userId, (roomId) => {})
+  startTurn(userId, onTimerTick, onTurnEnd, onRoundEnd, onGameEnd) {
+    return this.#getRoomByUserId(userId).startTurn(
+      userId,
+      onTimerTick,
+      onTurnEnd,
+      onRoundEnd,
+      onGameEnd,
+    )
   }
 
   /**

@@ -312,8 +312,37 @@ const startRound = (userId, { onSuccess, onError }) => {
   }
 }
 
-const startTurn = (userId, onTurnEnd, onSuccess) => {
-  const startTurnResult = GameManager.instance.startTurn(userId, onTurnEnd)
+/**
+ * @param {number} userId
+ * @param {{
+ *   onTurnEnd: (roomId: string) => void;
+ *   onRoundEnd: (roomId: string) => void;
+ *   onGameEnd: (roomId: string) => void;
+ *   onTimerTick: (roomId: string) => void;
+ *   onSuccess: (result: {
+ *     roomId: string;
+ *     currentTurn: number;
+ *     wordStartsWith: string;
+ *   }) => void;
+ *   onError: (message: string) => void;
+ * }} callback
+ */
+const startTurn = (
+  userId,
+  { onTurnEnd, onTimerTick, onRoundEnd, onGameEnd, onSuccess, onError },
+) => {
+  const startTurnResult = GameManager.instance.startTurn(
+    userId,
+    onTimerTick,
+    onTurnEnd,
+    onRoundEnd,
+    onGameEnd,
+  )
 
-  onSuccess()
+  if (startTurnResult === null) {
+    onError(errorMessage.invalidRequest)
+    return
+  }
+
+  onSuccess(startTurnResult)
 }

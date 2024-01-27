@@ -1,4 +1,5 @@
 import * as dictionary from '@utility/stdict-korean'
+import { gameConfig } from './config'
 
 export class Game {
   /**
@@ -7,7 +8,7 @@ export class Game {
    *   score: number;
    * }[]}
    */
-  #usersSequence = []
+  usersSequence = []
 
   /**
    * @type {string}
@@ -22,7 +23,7 @@ export class Game {
   /**
    * @type {number}
    */
-  #maxRound
+  maxRound
 
   /**
    * @type {number | null}
@@ -40,33 +41,33 @@ export class Game {
   roundWord
 
   /**
-   * @type {'game ready' | 'round ready' | 'turn proceeding' | 'end'}
+   * @type {'game ready' | 'round ready' | 'turn ready' | 'turn proceeding' | 'end'}
    */
   gameState
 
   /**
    * @type {{
    *   startTime: number;
-   *   interval: NodeJS.Timeout | null;
-   *   callback: () => void
+   *   intervalTimeout: NodeJS.Timeout | null;
+   *   interval: number;
+   *   onTurnEnd: () => void;
+   *   onTimerTick: () => void;
+   *   onRoundEnd: () => void;
+   *   onGameEnd: () => void;
    *   roundTimeLeft: number;
    *   roundTimeLimit: number;
+   *   personalTimeLeft: number;
+   *   personalTimeLimit: number;
    * }}
    */
-  #timer = {
-    startTime: 0,
-    interval: null,
-    callback: () => {},
-    roundTimeLeft: 0,
-    roundTimeLimit: 0,
-  }
+  timer = null
 
   /**
    * @type {{
    *   [word: string]: true
    * }}
    */
-  #usedWords = {}
+  usedWords = {}
 
   /**
    * @returns {{
@@ -79,7 +80,7 @@ export class Game {
    */
   get gameInfo() {
     return {
-      usersSequence: this.#usersSequence,
+      usersSequence: this.usersSequence,
       roundWord: this.roundWord,
     }
   }
@@ -106,7 +107,7 @@ export class Game {
    * }[]}
    */
   get ranking() {
-    const usersSequenceClone = [...this.#usersSequence]
+    const usersSequenceClone = [...this.usersSequence]
     usersSequenceClone.sort((user1, user2) => {
       // 점수 높은 순으로 정렬
       return user2.score - user1.score
@@ -119,7 +120,7 @@ export class Game {
    * @param {number} userId
    */
   delUser(userId) {
-    this.#usersSequence = this.#usersSequence.filter(
+    this.usersSequence = this.usersSequence.filter(
       (user) => user.userId !== userId,
     )
   }
@@ -130,15 +131,15 @@ export class Game {
    * @param {number} roundTimeLimit
    */
   async initializeGame(userIdList, maxRound, roundTimeLimit) {
-    this.#usersSequence = this.#shuffleArray(
+    this.usersSequence = this.#shuffleArray(
       userIdList.map((userId) => ({
         userId,
         score: 0,
       })),
     )
-    this.#maxRound = maxRound
+    this.maxRound = maxRound
     this.roundWord = await this.#createRoundWord()
-    this.#timer.roundTimeLimit = roundTimeLimit
+    this.timer.roundTimeLimit = roundTimeLimit
 
     this.gameState = 'game ready'
   }
@@ -147,9 +148,9 @@ export class Game {
     this.currentRound = this.currentRound === null ? 0 : this.currentRound + 1
     this.currentTurn = 0
     this.turnElapsed = 1
-    this.#timer.roundTimeLeft = this.#timer.roundTimeLimit
+    this.timer.roundTimeLeft = this.timer.roundTimeLimit
     this.wordStartsWith = this.roundWord[this.currentRound]
-    this.#usedWords = {}
+    this.usedWords = {}
 
     this.gameState = 'round ready'
   }
@@ -159,23 +160,40 @@ export class Game {
    * @returns {boolean}
    */
   isTurnOf(userId) {
-    return this.#usersSequence[this.currentTurn].userId === userId
+    return this.usersSequence[this.currentTurn].userId === userId
   }
 
   /**
    * @param {() => void} onTurnEnd
+   * @param {() => void} onTimerTick
+   * @param {() => void} onRoundEnd
+   * @param {() => void} onGameEnd
+   * @returns {{
+   *   wordStartsWith: string;
+   *   currentTurn: number;
+   * }}
    */
-  startNewTurn(onTurnEnd) {
+  startNewTurn(onTimerTick, onTurnEnd, onRoundEnd, onGameEnd) {
     this.gameState = 'turn proceeding'
 
-    this.#timer.startTime = Date.now()
-    this.#timer.callback = onTurnEnd
-    this.#timer.interval = setInterval(this.#createTimerFunction(this), 100)
+    this.timer.startTime = Date.now()
 
-    this.currentTurn = (this.currentTurn + 1) % this.#usersSequence.length
-    this.turnElapsed += 1
+    this.timer.onTurnEnd = onTurnEnd
+    this.timer.onTimerTick = onTimerTick
+    this.timer.onRoundEnd = onRoundEnd
+    this.timer.onGameEnd = onGameEnd
+
+    this.timer.intervalTimeout = setInterval(
+      this.#createTimerFunction(this),
+      gameConfig.timerInterval,
+    )
 
     this.gameState = 'turn proceeding'
+
+    return {
+      wordStartsWith: this.wordStartsWith,
+      currentTurn: this.currentTurn,
+    }
   }
 
   /**
@@ -184,8 +202,40 @@ export class Game {
    */
   #createTimerFunction(game) {
     return () => {
-      game.#timer.callback()
+      const timeElapsed = Date.now() - game.timer.startTime
+      game.timer.roundTimeLeft -= timeElapsed
+      game.timer.personalTimeLeft -= timeElapsed
+
+      if (game.timer.roundTimeLeft <= 0 || game.timer.personalTimeLeft <= 0) {
+        game.#stopTimer()
+        game.#finishRound()
+        return
+      }
+
+      game.timer.onTimerTick()
     }
+  }
+
+  #endTurn() {
+    this.currentTurn = (this.currentTurn + 1) % this.usersSequence.length
+    this.turnElapsed += 1
+    this.gameState = 'turn ready'
+  }
+
+  #finishRound() {
+    this.currentRound += 1
+    this.timer.onRoundEnd()
+    this.timer = null
+    this.gameState = 'round ready'
+
+    if (this.currentRound >= this.maxRound) {
+      this.#finishGame()
+    }
+  }
+
+  #finishGame() {
+    this.gameState = 'end'
+    this.timer.onGameEnd()
   }
 
   /**
@@ -194,12 +244,12 @@ export class Game {
    */
   async checkIsValidWord(word, onValid) {
     const definition = await dictionary.searchDefinition(word)
-    if (definition === null || this.#usedWords[word] === true) {
+    if (definition === null || this.usedWords[word] === true) {
       return null
     }
 
     this.#stopTimer()
-    this.#usedWords[word] = true
+    this.usedWords[word] = true
 
     const scoreDelta = +this.#getSuccessScore(word.length)
     this.#applyScore(scoreDelta)
@@ -212,10 +262,10 @@ export class Game {
    * @param {number} scoreDelta
    */
   #applyScore(scoreDelta) {
-    this.#usersSequence[this.currentTurn].score += scoreDelta
+    this.usersSequence[this.currentTurn].score += scoreDelta
 
-    if (this.#usersSequence[this.currentTurn].score < 0) {
-      this.#usersSequence[this.currentTurn].score = 0
+    if (this.usersSequence[this.currentTurn].score < 0) {
+      this.usersSequence[this.currentTurn].score = 0
     }
   }
 
@@ -227,8 +277,8 @@ export class Game {
       2 *
         (Math.pow(5 + 7 * wordLength, 0.74) + 0.88 * this.turnElapsed) *
         (1 -
-          (this.#timer.roundTimeLimit - this.#timer.roundTimeLeft) /
-            (2 * this.#timer.roundTimeLimit)),
+          (this.timer.roundTimeLimit - this.timer.roundTimeLeft) /
+            (2 * this.timer.roundTimeLimit)),
     )
   }
 
@@ -237,7 +287,7 @@ export class Game {
   }
 
   #stopTimer() {
-    clearInterval(this.#timer.interval)
+    clearInterval(this.timer.intervalTimeout)
   }
 
   /**
@@ -278,8 +328,8 @@ export class Game {
       starterCandidates[
         Math.floor(Math.random() * (starterCandidates.length - 1))
       ],
-      this.#maxRound,
-      this.#maxRound,
+      this.maxRound,
+      this.maxRound,
     )
 
     return words[Math.floor(Math.random() * (words.length - 1))]

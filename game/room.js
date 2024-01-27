@@ -211,15 +211,31 @@ export class Room {
   /**
    * @param {number} occurerUserId
    * @param {(roomId: string) => void} onTurnEnd
+   * @param {(roomId: string) => void} onRoundEnd
+   * @param {(roomId: string) => void} onGameEnd
+   * @param {(roomId: string) => void} onTimerTick
+   * @returns {{
+   *   wordStartsWith: string;
+   *   currentTurn: number;
+   *   roomId: string;
+   * } | null}
    */
-  startTurn(occurerUserId, onTurnEnd) {
+  startTurn(occurerUserId, onTurnEnd, onRoundEnd, onGameEnd, onTimerTick) {
     if (!this.#gameStatus.isTurnOf(occurerUserId)) {
       return null
     }
 
-    return this.#gameStatus.startNewTurn(() => {
-      onTurnEnd(this.#id)
-    })
+    const startTurnResult = this.#gameStatus.startNewTurn(
+      () => onTimerTick(this.#id),
+      () => onTurnEnd(this.#id),
+      () => onRoundEnd(this.#id),
+      () => onGameEnd(this.#id),
+    )
+
+    return {
+      ...startTurnResult,
+      roomId: this.#id,
+    }
   }
 
   /**
