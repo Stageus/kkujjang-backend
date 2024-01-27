@@ -171,8 +171,8 @@ export const setupKkujjangWebSocket = (io) => {
         onTurnEnd: (roomId) => {
           io.to(roomId).emit('turn end')
         },
-        onRoundEnd: (roomId) => {
-          io.to(roomId).emit('round end')
+        onRoundEnd: (roomId, roundResult) => {
+          io.to(roomId).emit('round end', roundResult)
         },
         onGameEnd: (roomId, ranking) => {
           io.to(roomId).emit('game end', ranking)
@@ -373,7 +373,10 @@ const startRound = (userId, { onComplete, onError }) => {
  *     personalTimeLeft: number;
  *   }) => void;
  *   onTurnEnd: (roomId: string) => void;
- *   onRoundEnd: (roomId: string) => void;
+ *   onRoundEnd: (roomId: string, roundResult: {
+ *     defeatedUserIndex: number;
+ *     scoreDelta: number;
+ *   }) => void;
  *   onGameEnd: (roomId: string, ranking: {
  *     userId: number;
  *     score: number;

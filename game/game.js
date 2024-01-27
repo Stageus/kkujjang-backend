@@ -52,7 +52,10 @@ export class Game {
    *   intervalTimeout: NodeJS.Timeout | null;
    *   onTurnEnd: () => void;
    *   onTimerTick: () => void;
-   *   onRoundEnd: () => void;
+   *   onRoundEnd: (roundResult: {
+   *     defeatedUserIndex: number;
+   *     scoreDelta: number;
+   *   }) => void;
    *   onGameEnd: () => void;
    *   roundTimeLeft: number;
    *   personalTimeLeft: number;
@@ -144,7 +147,10 @@ export class Game {
    * @param {{
    *   onTimerTick: () => void;
    *   onTurnEnd: () => void;
-   *   onRoundEnd: () => void;
+   *   onRoundEnd: (roundResult: {
+   *     defeatedUserIndex: number;
+   *     scoreDelta: number;
+   *   }) => void;
    *   onGameEnd: () => void;
    * }} callbacks
    */
@@ -166,7 +172,10 @@ export class Game {
    * @param {{
    *   onTimerTick: () => void;
    *   onTurnEnd: () => void;
-   *   onRoundEnd: () => void;
+   *   onRoundEnd: (roundResult: {
+   *     defeatedUserIndex: number;
+   *     scoreDelta: number;
+   *   }) => void;
    *   onGameEnd: () => void;
    * }} callbacks
    */
@@ -208,7 +217,6 @@ export class Game {
       if (game.#timer.roundTimeLeft <= 0 || game.#timer.personalTimeLeft <= 0) {
         game.#stopTimer()
         game.#finishRound()
-        game.#addScore(gameConfig.failureScoreDelta)
         return
       }
     }
@@ -255,7 +263,13 @@ export class Game {
 
   #finishRound() {
     this.currentRound += 1
-    this.#timer.onRoundEnd()
+
+    const scoreDelta = gameConfig.failureScoreDelta
+    this.#addScore(scoreDelta)
+    this.#timer.onRoundEnd({
+      defeatedUserIndex: this.currentTurnUserIndex,
+      scoreDelta,
+    })
 
     this.state = 'game ready'
 

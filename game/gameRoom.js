@@ -241,7 +241,10 @@ export class GameRoom {
    *     personalTimeLeft: number;
    *   }) => void
    *   onTurnEnd: (roomId: string) => void
-   *   onRoundEnd: (roomId: string) => void
+   *   onRoundEnd: (roomId: string, roundResult: {
+   *     defeatedUserIndex: number;
+   *     scoreDelta: number;
+   *   }) => void
    *   onGameEnd: (roomId: string, ranking: {
    *     userId: number;
    *     score: number;
@@ -256,7 +259,13 @@ export class GameRoom {
     this.#game.startTimer(this.#roundTimeLimit, {
       onTimerTick: () => onTimerTick(this.#id, this.#game.timeStatusForTimer),
       onTurnEnd: () => onTurnEnd(this.#id),
-      onRoundEnd: () => onRoundEnd(this.#id),
+      /**
+       * @param {{
+       *   defeatedUserIndex: number;
+       *   scoreDelta: number;
+       * }} roundResult
+       */
+      onRoundEnd: (roundResult) => onRoundEnd(this.#id, roundResult),
       onGameEnd: () => onGameEnd(this.#id, this.#game.ranking),
     })
 
