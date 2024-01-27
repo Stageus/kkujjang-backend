@@ -54,7 +54,7 @@ export const setupKkujjangWebSocket = (io) => {
           ...roomConfig,
         },
         {
-          onSuccess: (roomId) => {
+          onComplete: (roomId) => {
             socket.join(roomId)
             socket.emit('complete create room')
           },
@@ -80,7 +80,7 @@ export const setupKkujjangWebSocket = (io) => {
             userId: await fetchUserId(),
           },
           {
-            onSuccess: (roomId, userId) => {
+            onComplete: (roomId, userId) => {
               io.to(roomId).emit('some user join room', userId)
               socket.leave('LOBBY')
               socket.join(roomId)
@@ -94,7 +94,7 @@ export const setupKkujjangWebSocket = (io) => {
 
     socket.on('leave room', async () => {
       leaveRoom(await fetchUserId(), {
-        onSuccess: (roomId, roomStatus) => {
+        onComplete: (roomId, roomStatus) => {
           socket.leave(roomId)
           io.to(roomId).emit('some user leave room', roomStatus)
           socket.emit('complete leave room', roomStatus)
@@ -126,7 +126,7 @@ export const setupKkujjangWebSocket = (io) => {
     socket.on('switch ready state', async (state) => {
       const userId = await fetchUserId()
       switchReadyState(userId, state, {
-        onSuccess: (roomId, index) => {
+        onComplete: (roomId, index) => {
           io.to(roomId).emit('complete switch ready state', { index, state })
         },
         onError: (message) => {
@@ -137,7 +137,7 @@ export const setupKkujjangWebSocket = (io) => {
 
     socket.on('game start', async () => {
       await startGame(await fetchUserId(), {
-        onSuccess: (roomId, gameStatus) => {
+        onComplete: (roomId, gameStatus) => {
           io.to(roomId).emit('complete game start', gameStatus)
         },
         onError: (message) => {
@@ -148,7 +148,7 @@ export const setupKkujjangWebSocket = (io) => {
 
     socket.on('round start', async () => {
       startRound(await fetchUserId(), {
-        onSuccess: (roomId, gameStatus) => {
+        onComplete: (roomId, gameStatus) => {
           io.to(roomId).emit('complete round start', gameStatus)
         },
         onError: (message) => {
@@ -159,7 +159,7 @@ export const setupKkujjangWebSocket = (io) => {
 
     socket.on('turn start', async () => {
       startTurn(await fetchUserId(), {
-        onSuccess: (roomId, gameStatus) => {
+        onComplete: (roomId, gameStatus) => {
           io.to(roomId).emit('complete turn start', gameStatus)
         },
         onError: (message) => {
@@ -195,11 +195,11 @@ export const setupKkujjangWebSocket = (io) => {
  *   roundTimeLimit: number;
  * }} roomConfig
  * @param {{
- *   onSuccess: (roomId: string, roomStatus: *) => void;
+ *   onComplete: (roomId: string, roomStatus: *) => void;
  *   onError: (message: string) => void;
  * }} callbacks
  */
-const createRoom = (roomConfig, { onSuccess, onError }) => {
+const createRoom = (roomConfig, { onComplete, onError }) => {
   const userId = roomConfig.roomOwnerUserId
 
   if (userId === null) {
@@ -218,7 +218,7 @@ const createRoom = (roomConfig, { onSuccess, onError }) => {
       ...roomConfig,
     })
 
-    onSuccess(roomId)
+    onComplete(roomId)
   } catch (e) {
     onError(errorMessage.invalidRequest)
   }
@@ -231,19 +231,19 @@ const createRoom = (roomConfig, { onSuccess, onError }) => {
  *   password?: string;
  * }} authorization
  * @param {{
- *   onSuccess: (roomId: string, roomStatus: *) => void;
+ *   onComplete: (roomId: string, roomStatus: *) => void;
  *   onError: (message: string) => void;
  * }} callbacks
  */
 const joinRoom = (
   { roomId, userId, password = null },
-  { onSuccess, onError },
+  { onComplete, onError },
 ) => {
   try {
     Lobby.instance.tryJoiningRoom(roomId, userId, password)
     const gameRoom = Lobby.instance.getRoom(roomId)
 
-    onSuccess(gameRoom.id, gameRoom.fullInfo)
+    onComplete(gameRoom.id, gameRoom.fullInfo)
   } catch (e) {
     onError(e.error)
   }
@@ -252,12 +252,12 @@ const joinRoom = (
 /**
  * @param {number} userId
  * @param {{
- *   onSuccess: (roomId: string, roomStatus: *) => void;
+ *   onComplete: (roomId: string, roomStatus: *) => void;
  *   onError: (message: string) => void;
  *   onRoomOwnerChange:(roomId: string, roomStatus: *) => void;
  * }} callbacks
  */
-const leaveRoom = (userId, { onSuccess, onError, onRoomOwnerChange }) => {
+const leaveRoom = (userId, { onComplete, onError, onRoomOwnerChange }) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
   if (gameRoom === null) {
@@ -267,7 +267,7 @@ const leaveRoom = (userId, { onSuccess, onError, onRoomOwnerChange }) => {
 
   Lobby.instance.leaveRoom(userId, onRoomOwnerChange)
 
-  onSuccess(
+  onComplete(
     gameRoom.id,
     gameRoom.state === 'destroyed' ? undefined : gameRoom.fullInfo,
   )
@@ -297,11 +297,11 @@ const quit = (userId, { notifyUserQuit, onRoomOwnerChange, onError }) => {
  * @param {number} userId
  * @param {boolean} state
  * @param {{
- *   onSuccess: (roomId: string, gameStatus: *) => void;
+ *   onComplete: (roomId: string, gameStatus: *) => void;
  *   onError: (message: string) => void;
  * }} callbacks
  */
-const switchReadyState = (userId, state, { onSuccess, onError }) => {
+const switchReadyState = (userId, state, { onComplete, onError }) => {
   if (typeof state !== 'boolean') {
     onError(errorMessage.invalidRequest)
     return
@@ -315,17 +315,17 @@ const switchReadyState = (userId, state, { onSuccess, onError }) => {
   }
 
   gameRoom.switchReadyState(userId, state)
-  onSuccess(gameRoom.id, gameRoom.fullInfo)
+  onComplete(gameRoom.id, gameRoom.fullInfo)
 }
 
 /**
  * @param {number} userId
  * @param {{
- *   onSuccess: (roomId: string, gameStatus: *) => void;
+ *   onComplete: (roomId: string, gameStatus: *) => void;
  *   onError: (message: string) => void;
  * }} callbacks
  */
-const startGame = async (userId, { onSuccess, onError }) => {
+const startGame = async (userId, { onComplete, onError }) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
   if (gameRoom === null || gameRoom.state !== 'preparing') {
@@ -340,20 +340,20 @@ const startGame = async (userId, { onSuccess, onError }) => {
     return
   }
 
-  onSuccess(gameRoom.id, gameRoom.currentGameStatus)
+  onComplete(gameRoom.id, gameRoom.currentGameStatus)
 }
 
 /**
  * @param {number} userId
  * @param {{
- *   onSuccess: (
+ *   onComplete: (
  *     roomId: string,
  *     gameStatus: *
  *   ) => void;
  *   onError: (message: string) => void;
  * }} callbacks
  */
-const startRound = (userId, { onSuccess, onError }) => {
+const startRound = (userId, { onComplete, onError }) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
   if (gameRoom === null || gameRoom.state !== 'playing') {
@@ -362,7 +362,7 @@ const startRound = (userId, { onSuccess, onError }) => {
   }
 
   gameRoom.startRound(userId)
-  onSuccess(gameRoom.id, gameRoom.currentGameStatus)
+  onComplete(gameRoom.id, gameRoom.currentGameStatus)
 }
 
 /**
@@ -378,13 +378,13 @@ const startRound = (userId, { onSuccess, onError }) => {
  *     userId: number;
  *     score: number;
  *   }[]) => void;
- *   onSuccess: (roomId: string, gameStatus: *) => void;
+ *   onComplete: (roomId: string, gameStatus: *) => void;
  *   onError: (message: string) => void;
  * }} callbacks
  */
 const startTurn = (
   userId,
-  { onTurnEnd, onTimerTick, onRoundEnd, onGameEnd, onSuccess, onError },
+  { onTurnEnd, onTimerTick, onRoundEnd, onGameEnd, onComplete, onError },
 ) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
@@ -394,5 +394,5 @@ const startTurn = (
   }
 
   gameRoom.startTurn(userId, { onTimerTick, onTurnEnd, onRoundEnd, onGameEnd })
-  onSuccess(gameRoom.id, gameRoom.currentGameStatus)
+  onComplete(gameRoom.id, gameRoom.currentGameStatus)
 }
