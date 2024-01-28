@@ -22,15 +22,13 @@ export const setRankingUpdateSchedule = () => {
       const rankingData = (
         await pgQuery(
           `SELECT 
-          CAST(RANK() OVER (
-            ORDER BY level DESC, exp DESC
-          ) AS INT) AS rank, 
-          id, 
-          level, 
-          nickname 
-        FROM kkujjang.user
-        ORDER BY level DESC, exp DESC, id ASC
-        LIMIT 100`,
+            CAST(RANK() OVER (ORDER BY level DESC, exp DESC) AS INT) AS rank, 
+            id, 
+            level, 
+            nickname 
+          FROM kkujjang.user
+          ORDER BY level DESC, exp DESC, id ASC
+          LIMIT 100`,
         )
       ).rows
 
