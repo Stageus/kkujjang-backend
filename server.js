@@ -12,6 +12,7 @@ import { reportRouter } from '@router/report'
 import { inquiryRouter } from '@router/inquiry'
 import { setupKkujjangWebSocket } from '@socket/kkujjang'
 import fs from 'fs'
+import { rankingRouter } from '@router/ranking'
 
 configDotenv()
 
@@ -39,6 +40,7 @@ app.use('/user', userRouter)
 app.use('/notice', noticeRouter)
 app.use('/report', reportRouter)
 app.use('/inquiry', inquiryRouter)
+app.use('/ranking', rankingRouter)
 
 app.use(async (err, req, res, next) => {
   const { statusCode = 500, message = 'undefined error', messages = [] } = err
