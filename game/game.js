@@ -39,7 +39,7 @@ export class Game {
   /**
    * @type {string}
    */
-  roundWord
+  roundWord = null
 
   /**
    * @type {'game ready' | 'round ready' | 'turn ready' | 'turn proceeding' | 'end'}
@@ -58,14 +58,21 @@ export class Game {
    *   }) => void;
    *   onGameEnd: () => void;
    *   roundTimeLeft: number;
+   *   currentPersonalTimeLimit: number;
    *   personalTimeLeft: number;
    * }}
    */
   #timer = null
 
+  /**
+   * @type {number | null}
+   */
+  lastDefeatedUserIndex = null
+
   get timeStatusForTimer() {
     return {
       roundTimeLeft: this.#timer.roundTimeLeft,
+      personalTimeLimit: this.#timer.currentPersonalTimeLimit,
       personalTimeLeft: this.#timer.personalTimeLeft,
     }
   }
@@ -89,6 +96,7 @@ export class Game {
       currentRound: this.currentRound,
       maxRound: this.maxRound,
       currentTurnUserIndex: this.currentTurnUserIndex,
+      currentTurnUserId: this.usersSequence[this.currentTurnUserIndex]?.userId,
       turnElapsed: this.turnElapsed,
       roundWord: this.roundWord,
     }
@@ -144,30 +152,6 @@ export class Game {
   }
 
   /**
-   * @param {{
-   *   onTimerTick: () => void;
-   *   onTurnEnd: () => void;
-   *   onRoundEnd: (roundResult: {
-   *     defeatedUserIndex: number;
-   *     scoreDelta: number;
-   *   }) => void;
-   *   onGameEnd: () => void;
-   * }} callbacks
-   */
-  #initializeTimer({ onTimerTick, onTurnEnd, onRoundEnd, onGameEnd }) {
-    this.#timer = {
-      onTimerTick,
-      onTurnEnd,
-      onRoundEnd,
-      onGameEnd,
-      startTime: -1,
-      intervalTimeout: null,
-      roundTimeLeft: undefined,
-      personalTimeLeft: undefined,
-    }
-  }
-
-  /**
    * @param {number} roundTimeLimit
    * @param {{
    *   onTimerTick: () => void;
@@ -179,15 +163,46 @@ export class Game {
    *   onGameEnd: () => void;
    * }} callbacks
    */
-  startTimer(roundTimeLimit, callbacks) {
-    this.#initializeTimer(callbacks)
+  startTimer(
+    roundTimeLimit,
+    { onTimerTick, onTurnEnd, onRoundEnd, onGameEnd },
+  ) {
+    this.#timer = {
+      onTimerTick,
+      onTurnEnd,
+      onRoundEnd,
+      onGameEnd,
+      startTime: Date.now(),
+      intervalTimeout: null,
+      roundTimeLeft:
+        this.#timer?.roundTimeLeft === undefined
+          ? roundTimeLimit
+          : this.#timer.roundTimeLeft,
+      personalTimeLeft: undefined,
+      currentPersonalTimeLimit: undefined,
+    }
 
-    this.#timer.startTime = Date.now()
-    this.#timer.roundTimeLeft =
-      this.#timer.roundTimeLeft === undefined
-        ? roundTimeLimit
-        : this.#timer.roundTimeLeft
     this.#timer.personalTimeLeft = roundTimeLimit / 10
+    this.#timer.currentPersonalTimeLimit = roundTimeLimit / 10
+
+    this.#timer.intervalTimeout = setInterval(
+      this.#createOnTimerTick(this),
+      gameConfig.timerInterval,
+    )
+  }
+
+  #resumeTimer() {
+    this.#timer = {
+      onTimerTick: this.#timer.onTimerTick,
+      onTurnEnd: this.#timer.onTurnEnd,
+      onRoundEnd: this.#timer.onRoundEnd,
+      onGameEnd: this.#timer.onGameEnd,
+      startTime: Date.now(),
+      intervalTimeout: null,
+      roundTimeLeft: this.#timer.roundTimeLeft,
+      personalTimeLeft: this.#timer.personalTimeLeft,
+      currentPersonalTimeLimit: this.#timer.currentPersonalTimeLimit,
+    }
 
     this.#timer.intervalTimeout = setInterval(
       this.#createOnTimerTick(this),
@@ -213,6 +228,8 @@ export class Game {
       game.#timer.roundTimeLeft -= timeElapsed
       game.#timer.personalTimeLeft -= timeElapsed
       game.#timer.onTimerTick()
+
+      game.#timer.startTime = Date.now()
 
       if (game.#timer.roundTimeLeft <= 0 || game.#timer.personalTimeLeft <= 0) {
         game.#stopTimer()
@@ -240,7 +257,10 @@ export class Game {
   }
 
   initializeRound() {
-    this.currentTurnUserIndex = 0
+    this.currentTurnUserIndex =
+      this.lastDefeatedUserIndex === null ? 0 : this.lastDefeatedUserIndex
+
+    console.log(`this round starts from ${this.currentTurnUserIndex}th user`)
     this.turnElapsed = 1
     this.wordStartsWith = this.roundWord[this.currentRound]
     this.usedWords = {}
@@ -253,10 +273,11 @@ export class Game {
   }
 
   #finishTurn() {
+    this.#stopTimer()
     this.currentTurnUserIndex =
       (this.currentTurnUserIndex + 1) % this.usersSequence.length
     this.turnElapsed += 1
-    this.state = 'turn ready'
+    this.state = 'round ready'
 
     this.#timer.onTurnEnd()
   }
@@ -270,6 +291,7 @@ export class Game {
       defeatedUserIndex: this.currentTurnUserIndex,
       scoreDelta,
     })
+    this.lastDefeatedUserIndex = this.currentTurnUserIndex
 
     this.state = 'game ready'
 
@@ -288,28 +310,30 @@ export class Game {
     clearInterval(this.#timer.intervalTimeout)
 
     this.#timer = null
-    this.state = 'round ready'
   }
 
   /**
    * @param {string} word
-   * @param {number} personalTimeLimit
-   * @param {(userIndex: number, scoreDelta: number) => void} onValid
+   * @returns {Promise<number | null>}
    */
-  async checkIsValidWord(word, personalTimeLimit, onValid) {
+  async checkIsValidWord(word) {
+    this.#stopTimer()
     const definition = await dictionary.searchDefinition(word)
+    this.#resumeTimer()
+
     if (definition === null || this.usedWords[word] === true) {
       return null
     }
 
-    this.#stopTimer()
     this.usedWords[word] = true
 
-    const scoreDelta = this.#getSuccessScore(word.length, personalTimeLimit)
+    const scoreDelta = this.#getSuccessScore(word.length)
     this.#addScore(scoreDelta)
 
-    this.state = 'round ready'
-    onValid(this.currentTurnUserIndex, scoreDelta)
+    this.#finishTurn()
+    this.wordStartsWith = word.charAt(word.length - 1)
+
+    return scoreDelta
   }
 
   /**
@@ -325,15 +349,15 @@ export class Game {
 
   /**
    * @param {number} wordLength
-   * @param {number} personalTimeLimit
    */
-  #getSuccessScore(wordLength, personalTimeLimit) {
+  #getSuccessScore(wordLength) {
     return Math.ceil(
       2 *
         (Math.pow(5 + 7 * wordLength, 0.74) + 0.88 * this.turnElapsed) *
         (1 -
-          (personalTimeLimit - this.#timer.personalTimeLeft) /
-            (2 * personalTimeLimit)),
+          (this.#timer.currentPersonalTimeLimit -
+            this.#timer.personalTimeLeft) /
+            (2 * this.#timer.currentPersonalTimeLimit)),
     )
   }
 
@@ -367,6 +391,8 @@ export class Game {
         maxRound,
         maxRound,
       )
+
+      console.log(`round word list is ${JSON.stringify(words)}`)
 
       return words[Math.floor(Math.random() * (words.length - 1))]
     } catch (err) {

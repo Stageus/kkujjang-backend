@@ -8,6 +8,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
       let gameEnded = false
+      let roundword = ''
 
       /**
        * @param {{
@@ -68,28 +69,34 @@
       })
 
       socket.on('complete game start', (game) => {
-        console.log(`game start: ${JSON.stringify(game)}`)
+        console.log(`${Date.now()} game start: ${JSON.stringify(game)}`)
+        roundword = game?.roundWord
         socket.emit('round start')
       })
 
       socket.on('complete round start', (roundWord) => {
-        console.log(`round start: ${JSON.stringify(roundWord)}`)
+        console.log(`${Date.now()} round start: ${JSON.stringify(roundWord)}`)
         socket.emit('turn start')
       })
 
       socket.on('complete turn start', (turnObj) => {
-        console.log(`turn start: ${JSON.stringify(turnObj)}`)
+        console.log(`${Date.now()} turn start: ${JSON.stringify(turnObj)}`)
 
-        setTimeout(() => socket.emit('chat', '단어'), 1000)
+        console.log(`${Date.now()} ...`)
+
+        setTimeout(() => {
+          socket.emit('chat', roundword + 'dddd')
+          console.log(`${Date.now()} send chat ${roundword}`)
+        }, 500)
       })
 
       socket.on('round end', () => {
-        console.log(`round end`)
+        console.log(`${Date.now()} round end`)
         socket.emit('round start')
       })
 
       socket.on('timer', (timeObj) => {
-        console.log(`timer: ${JSON.stringify(timeObj)}`)
+        console.log(`${Date.now()} timer: ${JSON.stringify(timeObj)}`)
       })
 
       socket.on('error', (msg) => {
@@ -97,16 +104,20 @@
       })
 
       socket.on('chat', (msg) => {
-        console.log(`chat: ${JSON.stringify(msg)}`)
+        console.log(`${Date.now()} chat: ${JSON.stringify(msg)}`)
       })
 
-      socket.on('say word', (res) => {
-        console.log(`say word: ${JSON.stringify(res)}`)
+      socket.on('say word succeed', (res) => {
+        console.log(`${Date.now()} say word: ${JSON.stringify(res)}`)
         socket.emit('turn start')
       })
 
+      socket.on('say word fail', (res) => {
+        console.log(`${Date.now()} say word fail: ${JSON.stringify(res)}`)
+      })
+
       socket.on('game end', (res) => {
-        console.log(`game end, ranking: ${JSON.stringify(res)}`)
+        console.log(`${Date.now()} game end, ranking: ${JSON.stringify(res)}`)
         gameEnded = true
         socket.disconnect()
       })
@@ -118,8 +129,6 @@
       socket.on('error', (err) => {
         console.log(`error: ${JSON.stringify(err)}`)
       })
-
-      socket.emit('game start')
 
       socket.emit('load room list')
       socket.emit('create room', roomConfig)

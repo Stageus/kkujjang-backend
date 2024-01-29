@@ -180,7 +180,26 @@ export const setupKkujjangWebSocket = (io) => {
       })
     })
 
-    socket.on('chat', async () => {})
+    socket.on('chat', async (message) => {
+      await chat(await fetchUserId(), message, {
+        onOrdinaryChat: (roomId) => {
+          io.to(roomId).emit('chat', message)
+        },
+        onValidWord: (roomId, word, userIndex, scoreDelta) => {
+          io.to(roomId).emit('say word succeed', {
+            word,
+            userIndex,
+            scoreDelta,
+          })
+        },
+        onInvalidWord: (roomId, word) => {
+          io.to(roomId).emit('say word fail', word)
+        },
+        onError: (message) => {
+          emitError(message)
+        },
+      })
+    })
   })
 }
 
@@ -333,9 +352,9 @@ const startGame = async (userId, { onComplete, onError }) => {
     return
   }
 
-  await gameRoom.startGame(userId)
+  const gameStartResult = await gameRoom.startGame(userId)
 
-  if (gameRoom.currentGameStatus === null) {
+  if (gameStartResult === null) {
     onError(JSON.stringify(gameRoom.fullInfo))
     return
   }
@@ -361,7 +380,12 @@ const startRound = (userId, { onComplete, onError }) => {
     return
   }
 
-  gameRoom.startRound(userId)
+  const startRoundResult = gameRoom.startRound(userId)
+
+  if (startRoundResult === null) {
+    return
+  }
+
   onComplete(gameRoom.id, gameRoom.currentGameStatus)
 }
 
@@ -396,6 +420,70 @@ const startTurn = (
     return
   }
 
-  gameRoom.startTurn(userId, { onTimerTick, onTurnEnd, onRoundEnd, onGameEnd })
+  const startTurnResult = gameRoom.startTurn(userId, {
+    onTimerTick,
+    onTurnEnd,
+    onRoundEnd,
+    onGameEnd,
+  })
+
+  if (startTurnResult === null) {
+    return
+  }
+
   onComplete(gameRoom.id, gameRoom.currentGameStatus)
+}
+
+/**
+ * @param {number} userId
+ * @param {string} message
+ * @param {{
+ *   onOrdinaryChat: (roomId: string, message: string) => void
+ *   onValidWord: (roomId: string, word: string, userIndex: number, scoreDelta: number) => void
+ *   onInvalidWord: (roomId: string, word: string) => void
+ *   onError: (message: string) => void
+ * }} callbacks
+ * @returns
+ */
+const chat = async (
+  userId,
+  message,
+  { onOrdinaryChat, onValidWord, onInvalidWord, onError },
+) => {
+  const gameRoom = Lobby.instance.getRoomByUserId(userId)
+
+  if (gameRoom === null) {
+    onError(errorMessage.invalidRequest)
+    return
+  }
+
+  if (gameRoom.state !== 'playing') {
+    onOrdinaryChat(gameRoom.id, message)
+    return
+  }
+
+  console.log(
+    JSON.stringify({
+      userId,
+      message,
+    }),
+  )
+
+  const { currentTurnUserIndex, currentTurnUserId, wordStartsWith } =
+    gameRoom.currentGameStatus
+  if (userId !== currentTurnUserId || message.charAt(0) !== wordStartsWith) {
+    onOrdinaryChat(gameRoom.id, message)
+    return
+  }
+
+  const scoreDelta = await gameRoom.sayWord(message)
+
+  if (scoreDelta === null) {
+    console.log('invalid word')
+    onInvalidWord(gameRoom.id, message)
+    return
+  }
+
+  console.log('valid word')
+  onValidWord(gameRoom.id, message, currentTurnUserIndex, scoreDelta)
 }

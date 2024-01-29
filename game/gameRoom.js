@@ -134,7 +134,7 @@ export class GameRoom {
 
   /**
    * @param {number} occurerUserId
-   * @returns {Promise<string | null>} 방장이 아니거나 시작할 수 없을 경우 `null` 반환, 시작 시 방 ID 반환
+   * @returns {Promise<boolean | null>} 방장이 아니거나 시작할 수 없을 경우 `null` 반환, 시작 시 방 ID 반환
    */
   async startGame(occurerUserId) {
     if (
@@ -151,7 +151,7 @@ export class GameRoom {
       this.#maxRound,
     )
 
-    return this.#id
+    return true
   }
 
   /**
@@ -232,6 +232,8 @@ export class GameRoom {
     }
 
     this.#game.initializeRound()
+
+    return true
   }
 
   /**
@@ -253,7 +255,10 @@ export class GameRoom {
    * }} callbacks
    */
   startTurn(occurerUserId, { onTurnEnd, onRoundEnd, onGameEnd, onTimerTick }) {
-    if (!this.#game.isTurnOf(occurerUserId)) {
+    if (
+      !this.#game.isTurnOf(occurerUserId) ||
+      this.#game.state !== 'round ready'
+    ) {
       return null
     }
 
@@ -271,6 +276,8 @@ export class GameRoom {
     })
 
     this.#game.initializeTurn()
+
+    return true
   }
 
   /**
@@ -323,5 +330,14 @@ export class GameRoom {
     }
 
     return this.#game.status
+  }
+
+  /**
+   * @param {string | null} word
+   */
+  async sayWord(word) {
+    if (this.#game.state !== 'turn proceeding') return null
+
+    return await this.#game.checkIsValidWord(word)
   }
 }
