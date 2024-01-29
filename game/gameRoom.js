@@ -29,7 +29,7 @@ export class GameRoom {
   /**
    * @type {'preparing' | 'playing' | 'destroyed'}
    */
-  state = 'preparing'
+  state
 
   /**
    * @type {boolean}
@@ -97,6 +97,7 @@ export class GameRoom {
     this.#roomOwnerUserIndex = 0
     this.#maxRound = maxRound
     this.#roundTimeLimit = roundTimeLimit
+    this.state = 'preparing'
 
     if (password) {
       this.#password = password
