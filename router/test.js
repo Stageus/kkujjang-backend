@@ -170,7 +170,7 @@ testRouter.get('/user/session/:userId', async (req, res) => {
   res
     .setHeader(
       'Set-Cookie',
-      `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=300`,
+      `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=7200`,
     )
     .json({
       result: 'success',
@@ -214,4 +214,8 @@ testRouter.post('/regExp', async (req, res) => {
 
 testRouter.get('/socket', function (req, res) {
   res.sendFile(path.join(__dirname, '..', 'public', 'client.html'))
+})
+
+testRouter.get('/game', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'game_test.html'))
 })
