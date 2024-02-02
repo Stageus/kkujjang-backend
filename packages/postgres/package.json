@@ -1,0 +1,29 @@
+{
+  "name": "postgres",
+  "version": "0.0.0",
+  "description": "> TODO: description",
+  "author": "Godbell <12191579@inha.edu>",
+  "homepage": "https://github.com/Godbell/kkujjang-backend#readme",
+  "license": "ISC",
+  "main": "lib/postgres.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "lib"
+  ],
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Godbell/kkujjang-backend.git"
+  },
+  "scripts": {
+    "start": "node ./lib/postgres.js"
+  },
+  "bugs": {
+    "url": "https://github.com/Godbell/kkujjang-backend/issues"
+  },
+  "dependencies": {
+    "pg": "8.11.3"
+  }
+}
