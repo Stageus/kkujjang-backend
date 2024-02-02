@@ -1,0 +1,26 @@
+{
+  "name": "mongodb",
+  "version": "0.0.0",
+  "description": "> TODO: description",
+  "author": "Godbell <12191579@inha.edu>",
+  "homepage": "https://github.com/Godbell/kkujjang-backend#readme",
+  "license": "ISC",
+  "main": "lib/mongodb.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Godbell/kkujjang-backend.git"
+  },
+  "scripts": {
+    "start": "node ./lib/mongodb.js"
+  },
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Godbell/kkujjang-backend/issues"
+  }
+}
