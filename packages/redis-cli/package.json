@@ -1,0 +1,29 @@
+{
+  "name": "redis",
+  "version": "1.0.0",
+  "description": "> TODO: description",
+  "author": "Godbell & GulSauce",
+  "homepage": "https://github.com/Godbell/kkujjang-backend#readme",
+  "license": "ISC",
+  "main": "lib/redis.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Godbell/kkujjang-backend.git"
+  },
+  "scripts": {
+    "test": "node ./__tests__/redis.test.js"
+  },
+  "bugs": {
+    "url": "https://github.com/Godbell/kkujjang-backend/issues"
+  },
+  "type": "module",
+  "dependencies": {
+    "redis": "4.6.11"
+  }
+}
