@@ -129,7 +129,7 @@ export const validateAuthCodeCheck = (req, res, next) => {
 }
 
 export const validateCheckAccountExistForPasswordReset = (req, res, next) => {
-  const { username, password, phone } = req.body
+  const { username, phone } = req.body
 
   validation.check(
     username,
@@ -152,7 +152,7 @@ export const validatePasswordReset = (req, res, next) => {
   const { password, newPassword } = req.body
 
   validation.check(
-    newPassword,
+    password,
     'password',
     validation.checkExist(),
     validation.checkRegExp(/^(?=.*[a-zA-Z])(?=.*\d)[\x00-\x7F]{7,30}$/),
