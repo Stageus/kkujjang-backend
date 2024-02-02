@@ -149,18 +149,18 @@ export const validateCheckAccountExistForPasswordReset = (req, res, next) => {
 }
 
 export const validatePasswordReset = (req, res, next) => {
-  const { password, newPassword } = req.body
+  const { newPassword, newPasswordAgain } = req.body
 
   validation.check(
-    password,
-    'password',
+    newPassword,
+    'newPassword',
     validation.checkExist(),
     validation.checkRegExp(/^(?=.*[a-zA-Z])(?=.*\d)[\x00-\x7F]{7,30}$/),
   )
 
   validation.check(
-    newPassword,
-    'newPassword',
+    newPasswordAgain,
+    'newPasswordAgaind',
     validation.checkExist(),
     validation.checkRegExp(/^(?=.*[a-zA-Z])(?=.*\d)[\x00-\x7F]{7,30}$/),
   )

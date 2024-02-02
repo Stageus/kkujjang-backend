@@ -391,7 +391,7 @@ userRouter.put(
     if (newPassword !== newPasswordAgain) {
       throw {
         statusCode: 400,
-        message: '비밀번호와 비밀번호 재확인 문자열이 일치하지 않습니다.',
+        message: '비밀번호와 비밀번호 재입력 문자열이 일치하지 않습니다.',
       }
     }
 
