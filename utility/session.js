@@ -18,6 +18,15 @@ export const getSession = async (id) => {
   return session
 }
 
+export const getSessionByPasswordChangeAuthId = async (
+  passwordChangeAuthId,
+) => {
+  const session =
+    (await redisClient.hGetAll(`passwordChange-${passwordChangeAuthId}`)) ?? {}
+
+  return session
+}
+
 const getSessionByUserId = async (userId) => {
   if (!userId) {
     return null
@@ -47,11 +56,32 @@ export const createSession = async (userData) => {
   return sessionId
 }
 
+export const createPassWordChangeSession = async (userData) => {
+  const { username, phone } = userData
+  const sessionId = uuid.v4()
+
+  await redisClient.hSet(`passwordChange-${sessionId}`, {
+    username,
+    phone,
+  })
+
+  await redisClient.expire(
+    `passwordChange-${sessionId}`,
+    process.env.PASSWORDCHANGE_SESSION_EXPIRES_IN,
+  )
+
+  return sessionId
+}
+
 export const destorySession = async (sessionId) => {
   const { userId } = await getSession(sessionId)
 
   await redisClient.del([`session-${sessionId}`])
   await redisClient.del([`session:${userId}`])
+}
+
+export const destoryPasswordChangeSession = async (passwordChangeAuthId) => {
+  await redisClient.del([`passwordChange-${passwordChangeAuthId}`])
 }
 
 export const isSignedIn = async (userId) => {

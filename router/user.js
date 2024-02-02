@@ -3,7 +3,14 @@ import { pgQuery } from '@database/postgres'
 import express from 'express'
 import asyncify from 'express-asyncify'
 import * as kakao from '@utility/kakao'
-import { getSession, createSession, destorySession } from '@utility/session'
+import {
+  getSession,
+  createSession,
+  destorySession,
+  getSessionByPasswordChangeAuthId,
+  createPassWordChangeSession,
+  destoryPasswordChangeSession,
+} from '@utility/session'
 import { isSignedIn } from '@utility/session'
 import {
   createSmsAuthSession,
@@ -26,6 +33,7 @@ import {
   validateUserSearch,
   validateUsername,
   validateKakaoSignIn,
+  validateCheckAccountExistForPasswordReset,
 } from '@middleware/user'
 import { validatePageNumber } from '@middleware/page'
 import { globalConfig } from '@/global'
@@ -178,10 +186,6 @@ userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
   const { smsAuthId } = req.cookies
   const { authNumber, phoneNumber } = req.body
 
-  const result = {
-    result: 'success',
-  }
-
   const isValid = await isValidSmsAuthorization(
     authNumber,
     phoneNumber,
@@ -195,7 +199,9 @@ userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
     }
   }
 
-  res.json(result)
+  res.json({
+    result: 'success',
+  })
 })
 
 // 로그아웃
@@ -315,14 +321,79 @@ userRouter.get(
   },
 )
 
-// 비밀번호 재설정
+// 비밀번호 재설정 시 계정 존재 검증
 userRouter.post(
   '/find/pw',
   allowGuestOnly,
   requireSmsAuth,
+  validateCheckAccountExistForPasswordReset,
+  async (req, res) => {
+    const { username, phone } = req.body
+
+    const result = (
+      await pgQuery(
+        `SELECT 
+        FROM kkujjang.user 
+        WHERE username = $1 AND phone = $2 AND is_deleted = FALSE`,
+        [username, phone],
+      )
+    ).rows
+
+    if (result.length === 0) {
+      throw {
+        statusCode: 400,
+        message: '해당하는 계정 정보가 존재하지 않습니다.',
+      }
+    }
+
+    const sessionId = await createPassWordChangeSession({
+      username,
+      phone,
+    })
+
+    res
+      .setHeader(
+        'Set-Cookie',
+        `passwordChangeAuthId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=300`,
+      )
+      .json({
+        result: 'success',
+      })
+  },
+)
+
+// 비밀번호 재설정
+userRouter.put(
+  '/find/pw',
+  allowGuestOnly,
   validatePasswordReset,
   async (req, res) => {
-    const { username, newPassword, phone } = req.body
+    const { passwordChangeAuthId } = req.cookies
+    if (passwordChangeAuthId === undefined) {
+      throw {
+        statusCode: 400,
+        message: 'passwordChangeAuthId 쿠키가 존재하지 않거나 만료되었습니다',
+      }
+    }
+
+    const { username, phone } =
+      await getSessionByPasswordChangeAuthId(passwordChangeAuthId)
+
+    if (username === undefined || phone === undefined) {
+      throw {
+        statusCode: 400,
+        message: '잘못된 세션 접근입니다',
+      }
+    }
+
+    const { newPassword, newPasswordAgain } = req.body
+
+    if (newPassword !== newPasswordAgain) {
+      throw {
+        statusCode: 400,
+        message: '비밀번호와 비밀번호 재확인 문자열이 일치하지 않습니다.',
+      }
+    }
 
     const result = (
       await pgQuery(
@@ -343,6 +414,13 @@ userRouter.post(
         [username, phone, newPassword],
       )
     ).rows
+
+    await destoryPasswordChangeSession(passwordChangeAuthId)
+
+    res.setHeader(
+      'Set-Cookie',
+      `passwordChangeAuthId=${passwordChangeAuthId}; Path=/; Secure; HttpOnly; Max-Age=0`,
+    )
 
     if (result.length === 0) {
       throw {

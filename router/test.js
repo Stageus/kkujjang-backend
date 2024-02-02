@@ -213,7 +213,7 @@ testRouter.post('/regExp', async (req, res) => {
 })
 
 testRouter.get('/socket', function (req, res) {
-  res.sendFile(path.join(__dirname, '..', 'public', 'client.html'))
+  res.sendFile(path.join(__dirname, '..', 'public', 'socket_test.html'))
 })
 
 testRouter.get('/game', (req, res) => {

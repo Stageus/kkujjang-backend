@@ -10,9 +10,9 @@ import { userRouter } from '@router/user'
 import { noticeRouter } from '@router/notice'
 import { reportRouter } from '@router/report'
 import { inquiryRouter } from '@router/inquiry'
+import { rankingRouter } from '@router/ranking'
 import { setupKkujjangWebSocket } from '@socket/kkujjang'
 import fs from 'fs'
-import { rankingRouter } from '@router/ranking'
 
 configDotenv()
 
