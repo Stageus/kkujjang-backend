@@ -1,7 +1,7 @@
 {
   "name": "mongodb",
-  "version": "0.0.0",
-  "description": "> TODO: description",
+  "version": "1.0.0",
+  "description": "mongodb query manager",
   "author": "Godbell & GulSauce",
   "homepage": "https://github.com/Stageus/kkujjang-backend#readme",
   "license": "ISC",
