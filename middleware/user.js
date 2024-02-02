@@ -128,15 +128,28 @@ export const validateAuthCodeCheck = (req, res, next) => {
   next()
 }
 
-export const validatePasswordReset = (req, res, next) => {
-  const { username, newPassword, phone } = req.body
+export const validateCheckAccountExistForPasswordReset = (req, res, next) => {
+  const { username, phone } = req.body
 
   validation.check(
     username,
     'username',
     validation.checkExist(),
+    validation.checkLength(7, 30),
     validation.checkRegExp(/^[a-z0-9]{7,30}$/),
   )
+  validation.check(
+    phone,
+    'phone',
+    validation.checkExist(),
+    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
+  )
+
+  next()
+}
+
+export const validatePasswordReset = (req, res, next) => {
+  const { newPassword, newPasswordAgain } = req.body
 
   validation.check(
     newPassword,
@@ -146,10 +159,10 @@ export const validatePasswordReset = (req, res, next) => {
   )
 
   validation.check(
-    phone,
-    'phone',
+    newPasswordAgain,
+    'newPasswordAgaind',
     validation.checkExist(),
-    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
+    validation.checkRegExp(/^(?=.*[a-zA-Z])(?=.*\d)[\x00-\x7F]{7,30}$/),
   )
 
   next()
