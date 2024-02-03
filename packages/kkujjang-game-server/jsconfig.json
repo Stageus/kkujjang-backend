@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "CommonJS",
+    "baseUrl": "./",
+    "paths": {
+      "#game/*": ["src/game/*"],
+      "#socket/*": ["src/socket/*"],
+      "#utility/*": ["src/utility/*"]
+    },
+    "checkJs": true
+  },
+  "exclude": ["node_modules"]
+}
