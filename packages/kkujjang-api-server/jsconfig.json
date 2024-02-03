@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "CommonJS",
+    "baseUrl": "./",
+    "paths": {
+      "#root/*": ["./*"],
+      "#src/*": ["./src/*"],
+      "#router/*": ["./src/router/*"],
+      "#utility/*": ["./src/utility/*"],
+      "#model/*": ["./src/model/*"],
+      "#middleware/*": ["./src/middleware/*"]
+    },
+    "checkJs": true
+  },
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "mongo-pool",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index"
+  },
+  "author": "Godbell & GulSauce",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "mongodb": "6.3.0",
+    "mongoose": "8.0.3"
+  }
+}

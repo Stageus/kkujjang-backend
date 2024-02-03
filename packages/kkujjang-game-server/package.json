@@ -1,0 +1,23 @@
+{
+  "name": "kkujjang-game-server",
+  "version": "1.0.0",
+  "description": "kkujjang web game socket server",
+  "author": "Godbell & GulSauce",
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index"
+  },
+  "dependencies": {
+    "cookie-parser": "1.4.6",
+    "express": "4.18.2",
+    "socket.io": "4.7.4",
+    "kkujjang-session": "*"
+  },
+  "type": "module",
+  "imports": {
+    "#socket/*": "./src/socket/*.js",
+    "#game/*": "./src/game/*.js",
+    "#utility/*": "./src/utility/*.js"
+  }
+}
