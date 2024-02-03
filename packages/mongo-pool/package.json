@@ -1,28 +1,14 @@
 {
   "name": "mongo-pool",
   "version": "1.0.0",
-  "description": "mongodb query manager",
-  "author": "Godbell & GulSauce",
-  "homepage": "https://github.com/Stageus/kkujjang-backend#readme",
-  "license": "ISC",
-  "main": "lib/mongo-pool.js",
-  "directories": {
-    "lib": "lib"
-  },
-  "files": [
-    "lib"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Stageus/kkujjang-backend.git"
-  },
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "start": "node ./lib/mongo-pool.js"
+    "start": "node index"
   },
+  "author": "Godbell & GulSauce",
+  "license": "MIT",
   "type": "module",
-  "bugs": {
-    "url": "https://github.com/Stageus/kkujjang-backend/issues"
-  },
   "dependencies": {
     "mongodb": "6.3.0",
     "mongoose": "8.0.3"
