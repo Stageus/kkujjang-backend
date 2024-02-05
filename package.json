@@ -4,40 +4,25 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "npx babel-node server.js",
-    "monitor": "nodemon --watch '**.*' --exec npm start"
+    "start:game-server": "npx nx start --scope=kkujjang-game-server",
+    "start:api-server": "npx nx start --scope=kkujjang-api-server"
   },
   "author": "Godbell & GulSauce",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.470.0",
-    "@aws-sdk/credential-provider-env": "3.468.0",
-    "@aws-sdk/lib-storage": "3.485.0",
-    "busboy": "1.6.0",
-    "cookie-parser": "1.4.6",
     "dotenv": "16.3.1",
-    "express": "4.18.2",
-    "express-asyncify": "2.1.2",
-    "mongodb": "6.3.0",
-    "mongoose": "8.0.3",
-    "node-schedule": "2.1.1",
-    "passport": "0.7.0",
-    "passport-kakao": "1.0.1",
-    "pg": "8.11.3",
-    "redis": "4.6.11",
-    "socket.io": "4.7.4",
     "uuid": "9.0.1"
   },
   "devDependencies": {
-    "@babel/cli": "7.23.4",
-    "@babel/core": "7.23.5",
-    "@babel/node": "7.22.19",
-    "@babel/preset-env": "7.23.5",
-    "babel-plugin-module-resolver": "5.0.0",
     "eslint": "8.55.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-config-prettier": "9.1.0",
     "eslint-plugin-import": "2.29.0",
+    "nx": "17.3.1",
     "prettier": "3.1.1"
-  }
+  },
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ]
 }
