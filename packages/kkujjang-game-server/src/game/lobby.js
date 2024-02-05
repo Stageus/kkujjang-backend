@@ -1,7 +1,10 @@
 // @ts-check
 
-import { GameRoom } from '#game/gameRoom'
-import { User } from '#game/user'
+import { GameRoom } from './gameRoom'
+import { User } from './user'
+
+let curRoomNumber = 100
+const isRoomNumberExist = []
 
 export class Lobby {
   /**
@@ -43,8 +46,7 @@ export class Lobby {
    * @returns {GameRoom | null} 존재하지 않는 방일 경우 `null` 반환
    */
   getRoom(roomId) {
-    if (!roomId) return null
-
+    if (!roomId) return null``
     return this.#gameRooms[roomId] ?? null
   }
 
@@ -102,6 +104,24 @@ export class Lobby {
       maxRound,
       roundTimeLimit,
     })
+
+    let is1000RoomExist = false
+    while (isRoomNumberExist[curRoomNumber]) {
+      curRoomNumber++
+      if (1000 <= curRoomNumber && is1000RoomExist === false) {
+        curRoomNumber = 100
+        is1000RoomExist = true
+      }
+      if (1000 <= curRoomNumber && is1000RoomExist === true) {
+        throw {
+          error: '이미 1천개의 방이 존재해서 방을 만들 수 없습니다',
+        }
+      }
+    }
+
+    isRoomNumberExist[curRoomNumber] = true
+    room.setRoomNumber(curRoomNumber)
+
     this.#gameRooms[room.id] = room
     this.#users[roomOwnerUserId].roomId = room.id
 
@@ -162,6 +182,8 @@ export class Lobby {
    */
   destroyRoom(roomId) {
     this.#gameRooms[roomId].state = 'destroyed'
+    const curRoomNumber = this.#gameRooms[roomId].roomNumber
+    isRoomNumberExist[curRoomNumber] = false
     delete this.#gameRooms[roomId]
   }
 

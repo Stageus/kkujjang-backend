@@ -4,8 +4,9 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start:game-server": "npx nx start --scope=kkujjang-game-server",
-    "start:api-server": "npx nx start --scope=kkujjang-api-server"
+    "start:game-server": "npx nx start kkujjang-game-server",
+    "start:api-server": "npx nx start kkujjang-api-server",
+    "start": "npx nx  run-many --target=start"
   },
   "author": "Godbell & GulSauce",
   "license": "MIT",

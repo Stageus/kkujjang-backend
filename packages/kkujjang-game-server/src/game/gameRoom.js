@@ -1,10 +1,19 @@
 import * as uuid from 'uuid'
 import { configDotenv } from 'dotenv'
-import { Game } from '#game/game'
+import { Game } from './game'
 
 configDotenv()
 
 export class GameRoom {
+  /**
+   * @type {number}
+   */
+  #roomNumber
+
+  get roomNumber() {
+    return this.#roomNumber
+  }
+
   /**
    * @type {string}
    */
@@ -109,6 +118,7 @@ export class GameRoom {
 
   get info() {
     return {
+      roomNumber: this.roomNumber,
       id: this.id,
       title: this.#title,
       state: this.state,
@@ -126,6 +136,14 @@ export class GameRoom {
       roundTimeLimit: this.#roundTimeLimit,
       roomOwnerUserId: this.#userlist[this.#roomOwnerUserIndex].userId,
     }
+  }
+
+  /**/
+  /* 로비 */
+  /**/
+
+  setRoomNumber(roomNumber) {
+    this.#roomNumber = roomNumber
   }
 
   /**/
