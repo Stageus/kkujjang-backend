@@ -1,6 +1,6 @@
 import * as uuid from 'uuid'
 import { configDotenv } from 'dotenv'
-import { Game } from './game'
+import { Game } from '#game/game'
 
 configDotenv()
 

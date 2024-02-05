@@ -1,7 +1,7 @@
 // @ts-check
 
-import { GameRoom } from './gameRoom'
-import { User } from './user'
+import { GameRoom } from '#game/gameRoom'
+import { User } from '#game/user'
 
 let curRoomNumber = 100
 const isRoomNumberExist = []
@@ -46,7 +46,7 @@ export class Lobby {
    * @returns {GameRoom | null} 존재하지 않는 방일 경우 `null` 반환
    */
   getRoom(roomId) {
-    if (!roomId) return null``
+    if (!roomId) return null
     return this.#gameRooms[roomId] ?? null
   }
 
