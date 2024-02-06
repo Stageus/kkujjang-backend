@@ -14,7 +14,13 @@ configDotenv()
 const app = express()
 const server = http.createServer(app)
 
-const io = new Server(server)
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:3000',
+    credentials: true,
+  },
+})
+
 setupKkujjangWebSocket(io)
 
 const sslOptions =
@@ -31,11 +37,11 @@ app.use(cookieParser())
 app.use(express.static('public'))
 
 if (sslOptions) {
-  https.createServer(sslOptions, app).listen(process.env.HTTPS_PORT, () => {
-    console.log(`Server is listening on port ${process.env.HTTPS_PORT}`)
+  https.createServer(sslOptions, app).listen(process.env.WSS_PORT, () => {
+    console.log(`Server is listening on port ${process.env.WSS_PORT}`)
   })
 } else {
-  server.listen(process.env.HTTP_PORT, () => {
-    console.log(`Server is listening on port ${process.env.HTTP_PORT}`)
+  server.listen(process.env.WS_PORT, () => {
+    console.log(`Server is listening on port ${process.env.WS_PORT}`)
   })
 }

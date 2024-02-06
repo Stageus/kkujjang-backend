@@ -21,7 +21,7 @@ export const setupKkujjangWebSocket = (io) => {
       const { sessionId } = parseCookie(socket.handshake.headers.cookie)
       if (!sessionId) return null
 
-      const userId = (await authSession.getSession(sessionId))?.userId
+      const userId = (await authSession.get(sessionId))?.userId
       if (userId === undefined) return null
 
       return Number(userId)
@@ -239,7 +239,11 @@ const createRoom = (roomConfig, { onComplete, onError }) => {
 
     onComplete(roomId)
   } catch (e) {
-    onError(errorMessage.invalidRequest)
+    if (e.type === 'already1000RoomExist') {
+      onError(errorMessage.already1000RoomExist)
+    } else {
+      onError(errorMessage.invalidRequest)
+    }
   }
 }
 

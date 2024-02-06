@@ -3,7 +3,7 @@
 import { GameRoom } from '#game/gameRoom'
 import { User } from '#game/user'
 
-let curRoomNumber = 100
+let curRoomNumber = 99
 const isRoomNumberExist = []
 
 export class Lobby {
@@ -106,7 +106,7 @@ export class Lobby {
     })
 
     let is1000RoomExist = false
-    while (isRoomNumberExist[curRoomNumber]) {
+    do {
       curRoomNumber++
       if (1000 <= curRoomNumber && is1000RoomExist === false) {
         curRoomNumber = 100
@@ -114,10 +114,10 @@ export class Lobby {
       }
       if (1000 <= curRoomNumber && is1000RoomExist === true) {
         throw {
-          error: '이미 1천개의 방이 존재해서 방을 만들 수 없습니다',
+          type: 'already1000RoomExist',
         }
       }
-    }
+    } while (isRoomNumberExist[curRoomNumber])
 
     isRoomNumberExist[curRoomNumber] = true
     room.setRoomNumber(curRoomNumber)
@@ -135,6 +135,12 @@ export class Lobby {
    * @param {string} password
    */
   tryJoiningRoom(roomId, userId, password = null) {
+    console.log(this.isUserAtLobby(userId))
+    if (!this.isUserAtLobby(userId)) {
+      throw {
+        error: '이미 게임방에 있습니다',
+      }
+    }
     this.getRoom(roomId).tryJoin(userId, password)
     this.#users[userId].roomId = roomId
   }
