@@ -1,6 +1,7 @@
 // @ts-nocheck
 
 import path from 'path'
+import { fileURLToPath } from 'url'
 import express from 'express'
 import asyncify from 'express-asyncify'
 import { pgQuery } from 'postgres'
@@ -215,5 +216,7 @@ testRouter.post('/regExp', async (req, res) => {
 })
 
 testRouter.get('/socket', function (req, res) {
-  res.sendFile(path.join(__dirname, '..', 'public', 'socket_test.html'))
+  const __filename = fileURLToPath(import.meta.url)
+  const __dirname = path.dirname(__filename)
+  res.sendFile(path.join(__dirname, '..', '..', 'public', 'socket_test.html'))
 })

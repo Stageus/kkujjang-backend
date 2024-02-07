@@ -6,6 +6,15 @@ configDotenv()
 
 export class GameRoom {
   /**
+   * @type {number}
+   */
+  #roomNumber
+
+  get roomNumber() {
+    return this.#roomNumber
+  }
+
+  /**
    * @type {string}
    */
   #id
@@ -109,6 +118,7 @@ export class GameRoom {
 
   get info() {
     return {
+      roomNumber: this.roomNumber,
       id: this.id,
       title: this.#title,
       state: this.state,
@@ -126,6 +136,14 @@ export class GameRoom {
       roundTimeLimit: this.#roundTimeLimit,
       roomOwnerUserId: this.#userlist[this.#roomOwnerUserIndex].userId,
     }
+  }
+
+  /**/
+  /* 로비 */
+  /**/
+
+  setRoomNumber(roomNumber) {
+    this.#roomNumber = roomNumber
   }
 
   /**/

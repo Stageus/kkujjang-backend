@@ -3,6 +3,9 @@
 import { GameRoom } from '#game/gameRoom'
 import { User } from '#game/user'
 
+let curRoomNumber = 99
+const isRoomNumberExist = []
+
 export class Lobby {
   /**
    * @type {Lobby} 싱글톤
@@ -44,7 +47,6 @@ export class Lobby {
    */
   getRoom(roomId) {
     if (!roomId) return null
-
     return this.#gameRooms[roomId] ?? null
   }
 
@@ -102,6 +104,24 @@ export class Lobby {
       maxRound,
       roundTimeLimit,
     })
+
+    let is1000RoomExist = false
+    do {
+      curRoomNumber++
+      if (1000 <= curRoomNumber && is1000RoomExist === false) {
+        curRoomNumber = 100
+        is1000RoomExist = true
+      }
+      if (1000 <= curRoomNumber && is1000RoomExist === true) {
+        throw {
+          type: 'already1000RoomExist',
+        }
+      }
+    } while (isRoomNumberExist[curRoomNumber])
+
+    isRoomNumberExist[curRoomNumber] = true
+    room.setRoomNumber(curRoomNumber)
+
     this.#gameRooms[room.id] = room
     this.#users[roomOwnerUserId].roomId = room.id
 
@@ -115,6 +135,12 @@ export class Lobby {
    * @param {string} password
    */
   tryJoiningRoom(roomId, userId, password = null) {
+    console.log(this.isUserAtLobby(userId))
+    if (!this.isUserAtLobby(userId)) {
+      throw {
+        error: '이미 게임방에 있습니다',
+      }
+    }
     this.getRoom(roomId).tryJoin(userId, password)
     this.#users[userId].roomId = roomId
   }
@@ -162,6 +188,8 @@ export class Lobby {
    */
   destroyRoom(roomId) {
     this.#gameRooms[roomId].state = 'destroyed'
+    const curRoomNumber = this.#gameRooms[roomId].roomNumber
+    isRoomNumberExist[curRoomNumber] = false
     delete this.#gameRooms[roomId]
   }
 
