@@ -110,14 +110,11 @@ export const setupKkujjangWebSocket = (io) => {
 
     socket.on('disconnect', async () => {
       quit(await fetchUserId(), {
-        notifyUserQuit: (roomId, userId) => {
-          io.to(roomId).emit('some user leave room', userId)
+        notifyUserQuit: (roomId, roomStatus) => {
+          io.to(roomId).emit('some user leave room', roomStatus)
         },
         onRoomOwnerChange: (roomId, newRoomOwnerIndex) => {
           io.to(roomId).emit('change room owner')
-        },
-        onError: (message) => {
-          emitError(message)
         },
       })
       socket.emit('disconnected')
@@ -299,21 +296,19 @@ const leaveRoom = (userId, { onComplete, onError, onRoomOwnerChange }) => {
 /**
  * @param {number} userId
  * @param {{
- *   notifyUserQuit: (roomId: string, userId: number) => void;
+ *   notifyUserQuit: (roomId: string, roomStatus: *) => void;
  *   onRoomOwnerChange: (roomId: string, roomStatus: *) => void;
- *   onError: (message: string) => void;
  * }} callbacks
  */
-const quit = (userId, { notifyUserQuit, onRoomOwnerChange, onError }) => {
+const quit = (userId, { notifyUserQuit, onRoomOwnerChange }) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
   if (gameRoom === null) {
-    onError(errorMessage.invalidRequest)
     return
   }
 
+  notifyUserQuit(gameRoom.id, gameRoom.fullInfo)
   Lobby.instance.quitUser(userId, onRoomOwnerChange)
-  notifyUserQuit(gameRoom.id, userId)
 }
 
 /**
