@@ -97,7 +97,7 @@ export const setupKkujjangWebSocket = (io) => {
         onComplete: (roomId, roomStatus) => {
           socket.leave(roomId)
           io.to(roomId).emit('some user leave room', roomStatus)
-          socket.emit('complete leave room', roomStatus)
+          socket.emit('complete leave room')
         },
         onRoomOwnerChange: (roomId, newRoomOwnerIndex) => {
           io.to(roomId).emit('change room owner', newRoomOwnerIndex)
@@ -114,7 +114,7 @@ export const setupKkujjangWebSocket = (io) => {
           io.to(roomId).emit('some user leave room', roomStatus)
         },
         onRoomOwnerChange: (roomId, newRoomOwnerIndex) => {
-          io.to(roomId).emit('change room owner')
+          io.to(roomId).emit('change room owner', newRoomOwnerIndex)
         },
       })
       socket.emit('disconnected')
@@ -297,7 +297,7 @@ const leaveRoom = (userId, { onComplete, onError, onRoomOwnerChange }) => {
  * @param {number} userId
  * @param {{
  *   notifyUserQuit: (roomId: string, roomStatus: *) => void;
- *   onRoomOwnerChange: (roomId: string, roomStatus: *) => void;
+ *   onRoomOwnerChange: (roomId: string, newRoomOwnerIndex: number) => void;
  * }} callbacks
  */
 const quit = (userId, { notifyUserQuit, onRoomOwnerChange }) => {

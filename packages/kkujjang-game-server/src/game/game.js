@@ -138,9 +138,19 @@ export class Game {
    * @param {number} userId
    */
   delUser(userId) {
+    if (this.usersSequence[this.currentTurnUserIndex]?.userId === userId) {
+      this.#finishRound()
+    }
+
     this.usersSequence = this.usersSequence.filter(
       (user) => user.userId !== userId,
     )
+    this.currentTurnUserIndex =
+      this.currentTurnUserIndex % this.usersSequence.length
+
+    if (this.usersSequence.length <= 1) {
+      this.#finishGame()
+    }
   }
 
   /**
@@ -211,7 +221,7 @@ export class Game {
   }
 
   #stopTimer() {
-    clearInterval(this.#timer.intervalTimeout)
+    this.#timer && clearInterval(this.#timer.intervalTimeout)
   }
 
   /**
@@ -283,6 +293,7 @@ export class Game {
   }
 
   #finishRound() {
+    this.#stopTimer()
     this.currentRound += 1
 
     const scoreDelta = gameConfig.failureScoreDelta
@@ -299,17 +310,13 @@ export class Game {
       this.#finishGame()
       return
     }
-
-    this.#timer = null
   }
 
   #finishGame() {
+    this.#stopTimer()
     this.state = 'end'
 
     this.#timer.onGameEnd()
-    clearInterval(this.#timer.intervalTimeout)
-
-    this.#timer = null
   }
 
   /**
