@@ -6,7 +6,6 @@ import { errorMessage } from '#utility/error'
 import { parseCookie } from '#utility/cookie-parser'
 import { GameRoom } from '#game/gameRoom'
 import { Lobby } from '#game/lobby'
-import { isSignedIn } from 'kkujjang-session/src/auth'
 
 /**
  * @param {Server} io
@@ -26,7 +25,7 @@ export const setupKkujjangWebSocket = (io) => {
       return Number(userId)
     }
 
-    if (await isSignedIn(await fetchUserId())) {
+    if (await authSession.isSignedIn(await fetchUserId())) {
       socket.emit('error', 'the user is signed in from other device.')
       socket.disconnect()
       return
