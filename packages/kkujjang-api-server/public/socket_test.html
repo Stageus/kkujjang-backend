@@ -121,7 +121,6 @@
       socket.on('game end', (res) => {
         console.log(`${Date.now()} game end, ranking: ${JSON.stringify(res)}`)
         gameEnded = true
-        socket.disconnect()
       })
 
       socket.on('change room owner', (res) => {

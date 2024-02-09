@@ -290,7 +290,11 @@ export class GameRoom {
        * }} roundResult
        */
       onRoundEnd: (roundResult) => onRoundEnd(this.#id, roundResult),
-      onGameEnd: () => onGameEnd(this.#id, this.#game.ranking),
+      onGameEnd: () => {
+        this.state = 'preparing'
+        onGameEnd(this.#id, this.#game.ranking)
+        this.#game = null
+      },
     })
 
     this.#game.initializeTurn()
