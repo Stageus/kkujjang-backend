@@ -1,6 +1,6 @@
 // @ts-check
 
-import { Server } from 'socket.io'
+import { Server, Socket } from 'socket.io'
 import { authSession } from 'kkujjang-session'
 import { errorMessage } from '#utility/error'
 import { parseCookie } from '#utility/cookie-parser'
@@ -12,35 +12,18 @@ import { Lobby } from '#game/lobby'
  */
 export const setupKkujjangWebSocket = (io) => {
   io.on('connection', async (socket) => {
-    /**
-     * @returns {Promise<number>}
-     */
-    const fetchUserId = async () => {
-      const { sessionId } = parseCookie(socket.handshake.headers.cookie)
-      if (!sessionId) return null
-
-      const userId = (await authSession.get(sessionId))?.userId
-      if (userId === undefined) return null
-
-      return Number(userId)
+    if (!(await isUserSignedInApiServer(socket))) {
+      socket.emit('error', '권한이 없습니다.')
+      return
     }
 
-    if (await authSession.isSignedIn(await fetchUserId())) {
-      socket.emit('error', 'the user is signed in from other device.')
-      socket.disconnect()
+    if (await isUserOnline(socket)) {
+      socket.emit('error', '다른 기기에서 게임에 접속 중입니다.')
       return
     }
 
     socket.join('LOBBY')
-
-    /**
-     * @param {string} message
-     */
-    const emitError = (message) => {
-      socket.emit('error', message)
-    }
-
-    Lobby.instance.enterUser(await fetchUserId())
+    Lobby.instance.enterUser(await fetchUserId(socket))
 
     socket.on('load room list', () => {
       socket.emit('complete load room list', Lobby.instance.roomList)
@@ -49,14 +32,14 @@ export const setupKkujjangWebSocket = (io) => {
     socket.on('load room', async () => {
       socket.emit(
         'complete load room',
-        Lobby.instance.getRoomDetailsByUserId(await fetchUserId()),
+        Lobby.instance.getRoomDetailsByUserId(await fetchUserId(socket)),
       )
     })
 
     socket.on('create room', async (roomConfig) => {
       createRoom(
         {
-          roomOwnerUserId: await fetchUserId(),
+          roomOwnerUserId: await fetchUserId(socket),
           ...roomConfig,
         },
         {
@@ -64,7 +47,7 @@ export const setupKkujjangWebSocket = (io) => {
             socket.join(roomId)
             socket.emit('complete create room')
           },
-          onError: (message) => emitError(message),
+          onError: (message) => emitError(socket, message),
         },
       )
     })
@@ -83,7 +66,7 @@ export const setupKkujjangWebSocket = (io) => {
         joinRoom(
           {
             ...authorization,
-            userId: await fetchUserId(),
+            userId: await fetchUserId(socket),
           },
           {
             onComplete: (roomId, userId) => {
@@ -92,16 +75,17 @@ export const setupKkujjangWebSocket = (io) => {
               socket.join(roomId)
               socket.emit('complete join room', userId)
             },
-            onError: (message) => emitError(message),
+            onError: (message) => emitError(socket, message),
           },
         )
       },
     )
 
     socket.on('leave room', async () => {
-      leaveRoom(await fetchUserId(), {
+      leaveRoom(await fetchUserId(socket), {
         onComplete: (roomId, roomStatus) => {
           socket.leave(roomId)
+          socket.join('LOBBY')
           io.to(roomId).emit('some user leave room', roomStatus)
           socket.emit('complete leave room')
         },
@@ -109,13 +93,13 @@ export const setupKkujjangWebSocket = (io) => {
           io.to(roomId).emit('change room owner', newRoomOwnerIndex)
         },
         onError: (message) => {
-          emitError(message)
+          emitError(socket, message)
         },
       })
     })
 
     socket.on('disconnect', async () => {
-      quit(await fetchUserId(), {
+      quit(await fetchUserId(socket), {
         notifyUserQuit: (roomId, roomStatus) => {
           io.to(roomId).emit('some user leave room', roomStatus)
         },
@@ -123,45 +107,44 @@ export const setupKkujjangWebSocket = (io) => {
           io.to(roomId).emit('change room owner', newRoomOwnerIndex)
         },
       })
-      socket.emit('disconnected')
     })
 
     socket.on('switch ready state', async (state) => {
-      const userId = await fetchUserId()
+      const userId = await fetchUserId(socket)
       switchReadyState(userId, state, {
         onComplete: (roomId, index) => {
           io.to(roomId).emit('complete switch ready state', { index, state })
         },
         onError: (message) => {
-          emitError(message)
+          emitError(socket, message)
         },
       })
     })
 
     socket.on('game start', async () => {
-      await startGame(await fetchUserId(), {
+      await startGame(await fetchUserId(socket), {
         onComplete: (roomId, gameStatus) => {
           io.to(roomId).emit('complete game start', gameStatus)
         },
         onError: (message) => {
-          emitError(message)
+          emitError(socket, message)
         },
       })
     })
 
     socket.on('round start', async () => {
-      startRound(await fetchUserId(), {
+      startRound(await fetchUserId(socket), {
         onComplete: (roomId, gameStatus) => {
           io.to(roomId).emit('complete round start', gameStatus)
         },
         onError: (message) => {
-          emitError(message)
+          emitError(socket, message)
         },
       })
     })
 
     socket.on('turn start', async () => {
-      startTurn(await fetchUserId(), {
+      startTurn(await fetchUserId(socket), {
         onComplete: (roomId, gameStatus) => {
           io.to(roomId).emit('complete turn start', gameStatus)
         },
@@ -184,7 +167,7 @@ export const setupKkujjangWebSocket = (io) => {
     })
 
     socket.on('chat', async (message) => {
-      await chat(await fetchUserId(), message, {
+      await chat(await fetchUserId(socket), message, {
         onOrdinaryChat: (roomId) => {
           io.to(roomId).emit('chat', message)
         },
@@ -199,11 +182,51 @@ export const setupKkujjangWebSocket = (io) => {
           io.to(roomId).emit('say word fail', word)
         },
         onError: (message) => {
-          emitError(message)
+          emitError(socket, message)
         },
       })
     })
   })
+}
+
+/**
+ * @param {Socket} socket
+ * @param {string} message
+ */
+const emitError = (socket, message) => {
+  socket.emit('error', message)
+}
+
+/**
+ * @param {Socket} socket
+ * @returns {Promise<number>}
+ */
+const fetchUserId = async (socket) => {
+  const { sessionId } = parseCookie(socket.handshake.headers.cookie)
+  if (!sessionId) return null
+
+  const userId = (await authSession.get(sessionId))?.userId
+  if (userId === undefined) return null
+
+  return Number(userId)
+}
+
+/**
+ * @param {Socket} socket
+ * @returns {Promise<boolean>}
+ */
+const isUserSignedInApiServer = async (socket) => {
+  const userId = await fetchUserId(socket)
+  return await authSession.isSignedIn(userId)
+}
+
+/**
+ * @param {Socket} socket
+ * @returns {Promise<boolean>}
+ */
+const isUserOnline = async (socket) => {
+  const userId = await fetchUserId(socket)
+  return Lobby.instance.isUserOnline(userId)
 }
 
 // TODO: 로직 파일 분리
@@ -309,11 +332,10 @@ const leaveRoom = (userId, { onComplete, onError, onRoomOwnerChange }) => {
 const quit = (userId, { notifyUserQuit, onRoomOwnerChange }) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
-  if (gameRoom === null) {
-    return
+  if (gameRoom !== null) {
+    notifyUserQuit(gameRoom.id, gameRoom.fullInfo)
   }
 
-  notifyUserQuit(gameRoom.id, gameRoom.fullInfo)
   Lobby.instance.quitUser(userId, onRoomOwnerChange)
 }
 

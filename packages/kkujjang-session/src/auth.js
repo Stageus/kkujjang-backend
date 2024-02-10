@@ -84,5 +84,5 @@ export const isSignedIn = async (userId) => {
 
   console.log(`userId: ${userId}, userIdInSession: ${userIdInSession}`)
 
-  return userIdInSession !== null && userId === userIdInSession
+  return userIdInSession !== null && Number(userId) === Number(userIdInSession)
 }

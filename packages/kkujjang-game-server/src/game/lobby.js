@@ -135,7 +135,6 @@ export class Lobby {
    * @param {string} password
    */
   tryJoiningRoom(roomId, userId, password = null) {
-    console.log(this.isUserAtLobby(userId))
     if (!this.isUserAtLobby(userId)) {
       throw {
         error: '이미 게임방에 있습니다',
@@ -153,6 +152,7 @@ export class Lobby {
   quitUser(userId, onRoomOwnerChange) {
     const roomId = this.leaveRoom(userId, onRoomOwnerChange)
     delete this.#users[userId]
+    JSON.stringify(this.#users)
     return roomId
   }
 
@@ -199,6 +199,22 @@ export class Lobby {
    */
   isUserAtLobby(userId) {
     return this.getRoomByUserId(userId) === null
+  }
+
+  /**
+   * @param {number} userId
+   * @returns {User | null} `null` if user offline
+   */
+  #getUserStatus(userId) {
+    return this.#users[userId] ?? null
+  }
+
+  /**
+   * @param {number} userId
+   * @returns {boolean}
+   */
+  isUserOnline(userId) {
+    return this.#getUserStatus(userId) !== null
   }
 }
 
