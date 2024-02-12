@@ -1,5 +1,8 @@
+// @ts-nocheck
+
 import * as validation from '#utility/validation'
 import { configDotenv } from 'dotenv'
+import { globalConfig } from '#root/global'
 
 configDotenv()
 
@@ -62,8 +65,21 @@ export const validateSignUp = (req, res, next) => {
 }
 
 export const validateUserModification = (req, res, next) => {
-  const { nickname } = req.body
+  const { avatarIndex, nickname } = req.body
   const { authorityLevel } = res.locals.session
+
+  try {
+    validation.check(
+      avatarIndex,
+      `avatarIndex`,
+      validation.checkParsedNumberInRange(0, globalConfig.MAX_AVATAR_INDEX),
+    )
+  } catch (e) {
+    throw {
+      statusCode: 400,
+      message: '존재하지 않는 아바타 인덱스입니다.',
+    }
+  }
 
   validation.check(
     nickname,
@@ -149,7 +165,7 @@ export const validateCheckAccountExistForPasswordReset = (req, res, next) => {
 }
 
 export const validatePasswordReset = (req, res, next) => {
-  const { username, newPassword, phone } = req.body
+  const { username, phone } = req.body
 
   validation.check(
     username,
