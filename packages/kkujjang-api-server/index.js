@@ -26,8 +26,8 @@ const sslOptions =
 
 app.use(express.json())
 app.use(cookieParser())
-
 app.use(express.static('public'))
+
 app.use('/test', testRouter)
 app.use('/user', userRouter)
 app.use('/notice', noticeRouter)
