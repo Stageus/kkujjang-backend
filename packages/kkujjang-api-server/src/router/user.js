@@ -520,13 +520,13 @@ userRouter.put(
   requireSignin,
   validateUserModification,
   async (req, res) => {
-    const { avatarImage, nickname } = req.body
+    const { avatarIndex, nickname } = req.body
     const { userId } = res.locals.session
 
     await pgQuery(
       `UPDATE kkujjang.user 
       SET 
-      avatar_index = '${globalConfig.DEFAULT_AVATAR_INDEX}',
+      avatar_index = ${avatarIndex},
       nickname = $1 || '#' || CAST(id AS VARCHAR)  
       WHERE id = $2`,
       [nickname, userId],
