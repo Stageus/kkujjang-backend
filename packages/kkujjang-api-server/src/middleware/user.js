@@ -68,7 +68,13 @@ export const validateUserModification = (req, res, next) => {
   const { avatarIndex, nickname } = req.body
   const { authorityLevel } = res.locals.session
 
-  if (globalConfig.ALLOWED_AVATAR_INDEX.includes(avatarIndex) === false) {
+  try {
+    validation.check(
+      avatarIndex,
+      `avatarIndex`,
+      validation.checkParsedNumberInRange(0, globalConfig.MAX_AVATAR_INDEX),
+    )
+  } catch (e) {
     throw {
       statusCode: 400,
       message: '존재하지 않는 아바타 인덱스입니다.',
