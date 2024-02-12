@@ -1,5 +1,5 @@
 export const globalConfig = {
   DEFAULT_NICKNAME: '끝짱',
-  DEFAULT_AVATAR_IMAGE: 'normal_hoti.png',
-  DEFAULT_AVATAR_URL: 'http://localhost:3000/avatars/',
+  DEFAULT_AVATAR_INDEX: 0,
+  ALLOWED_AVATAR_INDEX: [0],
 }

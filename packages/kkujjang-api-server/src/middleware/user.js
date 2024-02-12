@@ -1,9 +1,6 @@
 // @ts-nocheck
 
 import * as validation from '#utility/validation'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
 import { configDotenv } from 'dotenv'
 import { globalConfig } from '#root/global'
 
@@ -68,24 +65,13 @@ export const validateSignUp = (req, res, next) => {
 }
 
 export const validateUserModification = (req, res, next) => {
-  const { avatarImage, nickname } = req.body
+  const { avatarIndex, nickname } = req.body
   const { authorityLevel } = res.locals.session
 
-  const __filename = fileURLToPath(import.meta.url)
-  const __dirname = path.dirname(__filename)
-  const avatarUrl = path.join(
-    __dirname,
-    '..',
-    '..',
-    'public',
-    'avatars',
-    avatarImage,
-  )
-  console.log(avatarUrl)
-  if (fs.existsSync(avatarUrl) === false) {
+  if (globalConfig.ALLOWED_AVATAR_INDEX.includes(avatarIndex) === false) {
     throw {
       statusCode: 400,
-      message: '존재하지 않는 아바타입니다.',
+      message: '존재하지 않는 아바타 인덱스입니다.',
     }
   }
 
