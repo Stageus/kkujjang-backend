@@ -450,9 +450,10 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
   const { userId } = req.params
   const { authorityLevel } = res.locals.session
 
-  const foundUsers = (
+  const foundUser = (
     await pgQuery(
-      `SELECT 
+      `SELECT
+        avatar_url AS "avatarUrl",
         level, 
         exp, 
         nickname, 
@@ -473,14 +474,14 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
     )
   ).rows
 
-  if (foundUsers.length === 0) {
+  if (foundUser.length === 0) {
     throw {
       statusCode: 400,
       message: '존재하지 않는 사용자입니다.',
     }
   }
 
-  res.json({ result: foundUsers[0] })
+  res.json({ result: foundUser[0] })
 })
 
 // 회원 탈퇴
@@ -519,12 +520,14 @@ userRouter.put(
   requireSignin,
   validateUserModification,
   async (req, res) => {
-    const { nickname } = req.body
+    const { avatarImage, nickname } = req.body
     const { userId } = res.locals.session
 
     await pgQuery(
       `UPDATE kkujjang.user 
-      SET nickname = $1 || '#' || CAST(id AS VARCHAR)  
+      SET 
+      avatar_url = '${globalConfig.DEFAULT_AVATAR_URL}${avatarImage}',
+      nickname = $1 || '#' || CAST(id AS VARCHAR)  
       WHERE id = $2`,
       [nickname, userId],
     )
@@ -544,17 +547,22 @@ userRouter.post(
   async (req, res) => {
     const { username, password, phone } = req.body
 
+    console.log(
+      `${globalConfig.DEFAULT_AVATAR_URL}${globalConfig.DEFAULT_AVATAR_IMAGE}`,
+    )
+
     const result = (
       await pgQuery(
         `WITH my_serial AS (
           SELECT nextval('kkujjang.user_id_seq'::regclass) AS id
         )
-        INSERT INTO kkujjang.user (id, username, password, phone, nickname)
+        INSERT INTO kkujjang.user (id, username, password, phone, avatar_url, nickname)
         SELECT 
           my_serial.id, 
           $1, 
           crypt($2, gen_salt('bf')), 
           $3, 
+          '${globalConfig.DEFAULT_AVATAR_URL}${globalConfig.DEFAULT_AVATAR_IMAGE}',
           '${globalConfig.DEFAULT_NICKNAME}' || '#' || CAST(my_serial.id AS VARCHAR)
         FROM my_serial
         WHERE NOT EXISTS (
