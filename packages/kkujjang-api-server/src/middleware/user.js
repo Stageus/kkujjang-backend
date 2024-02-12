@@ -159,7 +159,7 @@ export const validateCheckAccountExistForPasswordReset = (req, res, next) => {
 }
 
 export const validatePasswordReset = (req, res, next) => {
-  const { username, newPassword, phone } = req.body
+  const { username, phone } = req.body
 
   validation.check(
     username,
