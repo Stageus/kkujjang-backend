@@ -129,5 +129,12 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-.nx/cache
-docker-compose.yaml
+.nx/cache/
+.vscode/
+.eslintrc.json
+.gitignore
+.git/
+.prettierrc
+Dockerfile**
+docker**
+data/

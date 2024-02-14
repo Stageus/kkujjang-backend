@@ -1,0 +1,85 @@
+version: '0.1'
+
+services:
+  postgres:
+    container_name: kkujjang-postgres
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=kkujjang_test
+    image: postgres:latest
+    volumes:
+      - ./data/postgres/:/docker-entrypoint-initdb.d/
+    restart: always
+    tty: true
+    stdin_open: true
+    ports:
+      - $PGPORT:$PGPORT
+
+  mongodb:
+    env_file:
+      - .env
+    environment:
+      - MONGO_INITDB_DATABASE=kkujjang_test
+    container_name: kkujjang-mongodb
+    volumes:
+      - ./data/mongodb/:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    image: mongo:latest
+    restart: always
+    tty: true
+    stdin_open: true
+    command: mongod --port $MONGODB_PORT
+    ports:
+      - $MONGODB_PORT:$MONGODB_PORT
+
+  redis:
+    env_file:
+      - .env
+    container_name: kkujjang-redis
+    image: redis/redis-stack-server:latest
+    restart: always
+    command: redis-server --requirepass $REDIS_PASSWORD --port $REDIS_PORT
+    tty: true
+    stdin_open: true
+    ports:
+      - $REDIS_PORT:$REDIS_PORT
+
+  api:
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=dev
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: kkujjang-api-server
+    image: kkujjang-api-server:dev
+    restart: always
+    tty: true
+    stdin_open: true
+    expose:
+      - $HTTP_PORT
+      - $HTTPS_PORT
+    ports:
+      - $HTTP_PORT:$HTTP_PORT
+      - $HTTPS_PORT:$HTTPS_PORT
+
+  game:
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=dev
+    build:
+      context: .
+      dockerfile: Dockerfile.game
+    container_name: kkujjang-game-server
+    image: kkujjang-game-server:dev
+    restart: always
+    tty: true
+    stdin_open: true
+    expose:
+      - $WS_PORT
+      - $WSS_PORT
+    ports:
+      - $WS_PORT:$WS_PORT
+      - $WSS_PORT:$WSS_PORT
