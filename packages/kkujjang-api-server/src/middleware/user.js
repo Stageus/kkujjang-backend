@@ -71,8 +71,11 @@ export const validateUserModification = (req, res, next) => {
   try {
     validation.check(
       avatarAccessoryIndex,
-      `avatarAccIndex`,
-      validation.checkParsedNumberInRange(0, globalConfig.MAX_AVATAR_INDEX),
+      `avatarAccessoryIndex`,
+      validation.checkParsedNumberInRange(
+        0,
+        globalConfig.MAX_AVATAR_ACCESSORY_INDEX,
+      ),
     )
   } catch (e) {
     throw {
