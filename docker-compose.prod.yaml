@@ -48,12 +48,12 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=dev
+      - NODE_ENV=production
     build:
       context: .
       dockerfile: Dockerfile.api
     container_name: kkujjang-api-server
-    image: kkujjang-api-server:dev
+    image: kkujjang-api-server:latest
     restart: always
     tty: true
     stdin_open: true
@@ -68,12 +68,12 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=dev
+      - NODE_ENV=production
     build:
       context: .
       dockerfile: Dockerfile.game
     container_name: kkujjang-game-server
-    image: kkujjang-game-server:dev
+    image: kkujjang-game-server:latest
     restart: always
     tty: true
     stdin_open: true
