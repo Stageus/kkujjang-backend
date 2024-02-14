@@ -453,7 +453,7 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
   const foundUser = (
     await pgQuery(
       `SELECT
-        avatar_acc_index AS "avatarAccIndex",
+        avatar_accessory_index AS "avatarAccessoryIndex",
         level, 
         exp, 
         nickname, 
@@ -520,13 +520,13 @@ userRouter.put(
   requireSignin,
   validateUserModification,
   async (req, res) => {
-    const { avatarAccIndex, nickname } = req.body
+    const { avatarAccessoryIndex, nickname } = req.body
     const { userId } = res.locals.session
 
     await pgQuery(
       `UPDATE kkujjang.user 
       SET 
-      avatar_acc_index = ${avatarAccIndex},
+      avatar_accessory_index = ${avatarAccessoryIndex},
       nickname = $1 || '#' || CAST(id AS VARCHAR)  
       WHERE id = $2`,
       [nickname, userId],
@@ -552,7 +552,7 @@ userRouter.post(
         `WITH my_serial AS (
           SELECT nextval('kkujjang.user_id_seq'::regclass) AS id
         )
-        INSERT INTO kkujjang.user (id, username, password, phone, avatar_acc_index, nickname)
+        INSERT INTO kkujjang.user (id, username, password, phone, avatar_accessory_index, nickname)
         SELECT 
           my_serial.id, 
           $1, 

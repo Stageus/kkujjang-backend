@@ -65,12 +65,12 @@ export const validateSignUp = (req, res, next) => {
 }
 
 export const validateUserModification = (req, res, next) => {
-  const { avatarAccIndex, nickname } = req.body
+  const { avatarAccessoryIndex, nickname } = req.body
   const { authorityLevel } = res.locals.session
 
   try {
     validation.check(
-      avatarAccIndex,
+      avatarAccessoryIndex,
       `avatarAccIndex`,
       validation.checkParsedNumberInRange(0, globalConfig.MAX_AVATAR_INDEX),
     )
