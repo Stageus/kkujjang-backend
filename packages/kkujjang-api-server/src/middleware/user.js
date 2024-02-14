@@ -65,19 +65,19 @@ export const validateSignUp = (req, res, next) => {
 }
 
 export const validateUserModification = (req, res, next) => {
-  const { avatarIndex, nickname } = req.body
+  const { avatarAccIndex, nickname } = req.body
   const { authorityLevel } = res.locals.session
 
   try {
     validation.check(
-      avatarIndex,
-      `avatarIndex`,
+      avatarAccIndex,
+      `avatarAccIndex`,
       validation.checkParsedNumberInRange(0, globalConfig.MAX_AVATAR_INDEX),
     )
   } catch (e) {
     throw {
       statusCode: 400,
-      message: '존재하지 않는 아바타 인덱스입니다.',
+      message: '존재하지 않는 아바타 액세서리 인덱스입니다.',
     }
   }
 

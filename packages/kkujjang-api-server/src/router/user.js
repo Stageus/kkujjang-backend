@@ -453,7 +453,7 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
   const foundUser = (
     await pgQuery(
       `SELECT
-        avatar_index AS "avatarIndex",
+        avatar_acc_index AS "avatarAccIndex",
         level, 
         exp, 
         nickname, 
@@ -520,13 +520,13 @@ userRouter.put(
   requireSignin,
   validateUserModification,
   async (req, res) => {
-    const { avatarIndex, nickname } = req.body
+    const { avatarAccIndex, nickname } = req.body
     const { userId } = res.locals.session
 
     await pgQuery(
       `UPDATE kkujjang.user 
       SET 
-      avatar_index = ${avatarIndex},
+      avatar_acc_index = ${avatarAccIndex},
       nickname = $1 || '#' || CAST(id AS VARCHAR)  
       WHERE id = $2`,
       [nickname, userId],
@@ -552,13 +552,13 @@ userRouter.post(
         `WITH my_serial AS (
           SELECT nextval('kkujjang.user_id_seq'::regclass) AS id
         )
-        INSERT INTO kkujjang.user (id, username, password, phone, avatar_index, nickname)
+        INSERT INTO kkujjang.user (id, username, password, phone, avatar_acc_index, nickname)
         SELECT 
           my_serial.id, 
           $1, 
           crypt($2, gen_salt('bf')), 
           $3, 
-          '${globalConfig.DEFAULT_AVATAR_INDEX}',
+          '${globalConfig.DEFAULT_AVATAR_ACCESSORY_INDEX}',
           '${globalConfig.DEFAULT_NICKNAME}' || '#' || CAST(my_serial.id AS VARCHAR)
         FROM my_serial
         WHERE NOT EXISTS (
