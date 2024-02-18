@@ -152,9 +152,27 @@ export class GameRoom {
 
   /**
    * @param {number} occurerUserId
+   * @param {{
+   *   onTimerTick: (roomId: string,timeStatus: {
+   *     roundTimeLeft: number;
+   *     personalTimeLeft: number;
+   *   }) => void
+   *   onTurnEnd: (roomId: string) => void
+   *   onRoundEnd: (roomId: string, roundResult: {
+   *     defeatedUserIndex: number;
+   *     scoreDelta: number;
+   *   }) => void
+   *   onGameEnd: (roomId: string, ranking: {
+   *     userId: number;
+   *     score: number;
+   *   }[]) => void
+   * }} callbacks
    * @returns {Promise<boolean | null>} 방장이 아니거나 시작할 수 없을 경우 `null` 반환, 시작 시 방 ID 반환
    */
-  async startGame(occurerUserId) {
+  async startGame(
+    occurerUserId,
+    { onTimerTick, onTurnEnd, onRoundEnd, onGameEnd },
+  ) {
     if (
       this.#userlist[this.#roomOwnerUserIndex].userId !== occurerUserId ||
       !this.#canStartGame()
@@ -167,6 +185,22 @@ export class GameRoom {
     await this.#game.initializeGame(
       this.#userlist.map(({ userId }) => userId),
       this.#maxRound,
+      {
+        onTimerTick: () => onTimerTick(this.#id, this.#game.timeStatusForTimer),
+        onTurnEnd: () => onTurnEnd(this.#id),
+        /**
+         * @param {{
+         *   defeatedUserIndex: number;
+         *   scoreDelta: number;
+         * }} roundResult
+         */
+        onRoundEnd: (roundResult) => onRoundEnd(this.#id, roundResult),
+        onGameEnd: () => {
+          this.state = 'preparing'
+          onGameEnd(this.#id, this.#game.ranking)
+          this.#game = null
+        },
+      },
     )
 
     return true
@@ -256,23 +290,8 @@ export class GameRoom {
 
   /**
    * @param {number} occurerUserId
-   * @param {{
-   *   onTimerTick: (roomId: string,timeStatus: {
-   *     roundTimeLeft: number;
-   *     personalTimeLeft: number;
-   *   }) => void
-   *   onTurnEnd: (roomId: string) => void
-   *   onRoundEnd: (roomId: string, roundResult: {
-   *     defeatedUserIndex: number;
-   *     scoreDelta: number;
-   *   }) => void
-   *   onGameEnd: (roomId: string, ranking: {
-   *     userId: number;
-   *     score: number;
-   *   }[]) => void
-   * }} callbacks
    */
-  startTurn(occurerUserId, { onTurnEnd, onRoundEnd, onGameEnd, onTimerTick }) {
+  startTurn(occurerUserId) {
     if (
       !this.#game.isTurnOf(occurerUserId) ||
       this.#game.state !== 'round ready'
@@ -280,22 +299,7 @@ export class GameRoom {
       return null
     }
 
-    this.#game.startTimer(this.#roundTimeLimit, {
-      onTimerTick: () => onTimerTick(this.#id, this.#game.timeStatusForTimer),
-      onTurnEnd: () => onTurnEnd(this.#id),
-      /**
-       * @param {{
-       *   defeatedUserIndex: number;
-       *   scoreDelta: number;
-       * }} roundResult
-       */
-      onRoundEnd: (roundResult) => onRoundEnd(this.#id, roundResult),
-      onGameEnd: () => {
-        this.state = 'preparing'
-        onGameEnd(this.#id, this.#game.ranking)
-        this.#game = null
-      },
-    })
+    this.#game.startTimer(this.#roundTimeLimit)
 
     this.#game.initializeTurn()
 

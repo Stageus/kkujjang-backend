@@ -43,12 +43,12 @@
       })
 
       socket.on('some user join room', (userId) => {
-        console.log(`some user join room: ${userId}`)
+        console.log(`some user join room: ${JSON.stringify(userId)}`)
         socket.emit('load room')
       })
 
       socket.on('some user leave room', (userId) => {
-        console.log(`some user leave room: ${userId}`)
+        console.log(`some user leave room: ${JSON.stringify(userId)}`)
         socket.emit('load room')
       })
 
@@ -87,7 +87,7 @@
         console.log(`${Date.now()} ...`)
 
         setTimeout(() => {
-          socket.emit('chat', roundword + 'dddd')
+          socket.emit('chat', roundword)
           console.log(`${Date.now()} send chat ${roundword}`)
         }, 500)
       })

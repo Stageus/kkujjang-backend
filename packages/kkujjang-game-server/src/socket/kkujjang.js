@@ -8,6 +8,16 @@ import { GameRoom } from '#game/gameRoom'
 import { Lobby } from '#game/lobby'
 
 /**
+ * @type {{
+ *   [userId: string]: {
+ *     timeout: NodeJS.Timeout;
+ *     state: 'game' | 'round' | 'turn'
+ *   }
+ * }}
+ */
+const socketTimeouts = {}
+
+/**
  * @param {Server} io
  */
 export const setupKkujjangWebSocket = (io) => {
@@ -98,16 +108,7 @@ export const setupKkujjangWebSocket = (io) => {
       })
     })
 
-    socket.on('disconnect', async () => {
-      quit(await fetchUserId(socket), {
-        notifyUserQuit: (roomId, roomStatus) => {
-          io.to(roomId).emit('some user leave room', roomStatus)
-        },
-        onRoomOwnerChange: (roomId, newRoomOwnerIndex) => {
-          io.to(roomId).emit('change room owner', newRoomOwnerIndex)
-        },
-      })
-    })
+    socket.on('disconnect', () => onDisconnect(io, socket))
 
     socket.on('switch ready state', async (state) => {
       const userId = await fetchUserId(socket)
@@ -122,34 +123,14 @@ export const setupKkujjangWebSocket = (io) => {
     })
 
     socket.on('game start', async () => {
-      await startGame(await fetchUserId(socket), {
+      const userId = await fetchUserId(socket)
+      await startGame(userId, {
         onComplete: (roomId, gameStatus) => {
           io.to(roomId).emit('complete game start', gameStatus)
+          startSocketTimer(io, socket, userId, 'round')
         },
         onError: (message) => {
           emitError(socket, message)
-        },
-      })
-    })
-
-    socket.on('round start', async () => {
-      startRound(await fetchUserId(socket), {
-        onComplete: (roomId, gameStatus) => {
-          io.to(roomId).emit('complete round start', gameStatus)
-        },
-        onError: (message) => {
-          emitError(socket, message)
-        },
-      })
-    })
-
-    socket.on('turn start', async () => {
-      startTurn(await fetchUserId(socket), {
-        onComplete: (roomId, gameStatus) => {
-          io.to(roomId).emit('complete turn start', gameStatus)
-        },
-        onError: (message) => {
-          socket.emit('error', message)
         },
         onTimerTick: (roomId, timeStatus) => {
           io.to(roomId).emit('timer', timeStatus)
@@ -162,6 +143,33 @@ export const setupKkujjangWebSocket = (io) => {
         },
         onGameEnd: (roomId, ranking) => {
           io.to(roomId).emit('game end', ranking)
+        },
+      })
+    })
+
+    socket.on('round start', async () => {
+      const userId = await fetchUserId(socket)
+      startRound(userId, {
+        onComplete: (roomId, gameStatus) => {
+          stopSocketTimer(userId, 'round')
+          io.to(roomId).emit('complete round start', gameStatus)
+          startSocketTimer(io, socket, gameStatus.currentTurnUserId, 'turn')
+        },
+        onError: (message) => {
+          emitError(socket, message)
+        },
+      })
+    })
+
+    socket.on('turn start', async () => {
+      const userId = await fetchUserId(socket)
+      startTurn(userId, {
+        onComplete: (roomId, gameStatus) => {
+          stopSocketTimer(userId, 'turn')
+          io.to(roomId).emit('complete turn start', gameStatus)
+        },
+        onError: (message) => {
+          socket.emit('error', message)
         },
       })
     })
@@ -186,6 +194,65 @@ export const setupKkujjangWebSocket = (io) => {
         },
       })
     })
+  })
+}
+
+/**
+ * @param {Server} io
+ * @param {Socket} socket
+ * @param {number} userId
+ * @param {'game' | 'round' | 'turn'} state
+ */
+const startSocketTimer = (io, socket, userId, state) => {
+  console.log(`start socket timer of user ${userId}`)
+
+  const leftTime = 10 * 1000
+  const timeout = setTimeout(onTimeout(io, socket, userId), leftTime)
+
+  socketTimeouts[userId] = {
+    timeout,
+    state,
+  }
+}
+
+/**
+ * @param {number} userId
+ * @param {'game' | 'round' | 'turn'} state
+ * @returns
+ */
+const stopSocketTimer = (userId, state) => {
+  if (!socketTimeouts[userId] || socketTimeouts[userId].state !== state) {
+    return
+  }
+
+  console.log(`stop socket timer of user ${userId}`)
+
+  clearTimeout(socketTimeouts[userId].timeout)
+  socketTimeouts[userId] = null
+}
+
+/**
+ * @param {Server} io
+ * @param {Socket} socket
+ * @param {number} userId
+ */
+const onTimeout = (io, socket, userId) => async () => {
+  await onDisconnect(io, socket)
+  socket.disconnect(true)
+}
+
+/**
+ * @param {Server} io
+ * @param {Socket} socket
+ */
+const onDisconnect = async (io, socket) => {
+  quit(await fetchUserId(socket), {
+    notifyUserQuit: (roomId, roomStatus) => {
+      io.to(roomId).emit('some user leave room', roomStatus)
+    },
+    onRoomOwnerChange: (roomId, newRoomOwnerIndex) => {
+      io.to(roomId).emit('change room owner', newRoomOwnerIndex)
+    },
   })
 }
 
@@ -369,9 +436,25 @@ const switchReadyState = (userId, state, { onComplete, onError }) => {
  * @param {{
  *   onComplete: (roomId: string, gameStatus: *) => void;
  *   onError: (message: string) => void;
+ *   onTimerTick: (roomId: string, timeStatus: {
+ *     roundTimeLeft: number;
+ *     personalTimeLeft: number;
+ *   }) => void;
+ *   onTurnEnd: (roomId: string) => void;
+ *   onRoundEnd: (roomId: string, roundResult: {
+ *     defeatedUserIndex: number;
+ *     scoreDelta: number;
+ *   }) => void;
+ *   onGameEnd: (roomId: string, ranking: {
+ *     userId: number;
+ *     score: number;
+ *   }[]) => void;
  * }} callbacks
  */
-const startGame = async (userId, { onComplete, onError }) => {
+const startGame = async (
+  userId,
+  { onComplete, onError, onTimerTick, onTurnEnd, onRoundEnd, onGameEnd },
+) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
   if (gameRoom === null || gameRoom.state !== 'preparing') {
@@ -379,7 +462,12 @@ const startGame = async (userId, { onComplete, onError }) => {
     return
   }
 
-  const gameStartResult = await gameRoom.startGame(userId)
+  const gameStartResult = await gameRoom.startGame(userId, {
+    onTimerTick,
+    onTurnEnd,
+    onRoundEnd,
+    onGameEnd,
+  })
 
   if (gameStartResult === null) {
     onError(JSON.stringify(gameRoom.fullInfo))
@@ -419,27 +507,11 @@ const startRound = (userId, { onComplete, onError }) => {
 /**
  * @param {number} userId
  * @param {{
- *   onTimerTick: (roomId: string, timeStatus: {
- *     roundTimeLeft: number;
- *     personalTimeLeft: number;
- *   }) => void;
- *   onTurnEnd: (roomId: string) => void;
- *   onRoundEnd: (roomId: string, roundResult: {
- *     defeatedUserIndex: number;
- *     scoreDelta: number;
- *   }) => void;
- *   onGameEnd: (roomId: string, ranking: {
- *     userId: number;
- *     score: number;
- *   }[]) => void;
  *   onComplete: (roomId: string, gameStatus: *) => void;
  *   onError: (message: string) => void;
  * }} callbacks
  */
-const startTurn = (
-  userId,
-  { onTurnEnd, onTimerTick, onRoundEnd, onGameEnd, onComplete, onError },
-) => {
+const startTurn = (userId, { onComplete, onError }) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
   if (gameRoom === null || gameRoom.state !== 'playing') {
@@ -447,12 +519,7 @@ const startTurn = (
     return
   }
 
-  const startTurnResult = gameRoom.startTurn(userId, {
-    onTimerTick,
-    onTurnEnd,
-    onRoundEnd,
-    onGameEnd,
-  })
+  const startTurnResult = gameRoom.startTurn(userId)
 
   if (startTurnResult === null) {
     return
