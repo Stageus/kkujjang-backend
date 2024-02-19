@@ -54,8 +54,13 @@ export const setupKkujjangWebSocket = (io) => {
         },
         {
           onComplete: (roomId) => {
+            socket.leave('LOBBY')
             socket.join(roomId)
             socket.emit('complete create room')
+            io.to('LOBBY').emit(
+              'load new room',
+              Lobby.instance.getRoom(roomId).info,
+            )
           },
           onError: (message) => emitError(socket, message),
         },
@@ -97,6 +102,9 @@ export const setupKkujjangWebSocket = (io) => {
           socket.leave(roomId)
           socket.join('LOBBY')
           io.to(roomId).emit('some user leave room', roomStatus)
+          if (roomStatus === undefined) {
+            io.to('LOBBY').emit('destroy room', roomId)
+          }
           socket.emit('complete leave room')
         },
         onRoomOwnerChange: (roomId, newRoomOwnerIndex) => {
@@ -253,6 +261,9 @@ const onDisconnect = async (io, socket) => {
     onRoomOwnerChange: (roomId, newRoomOwnerIndex) => {
       io.to(roomId).emit('change room owner', newRoomOwnerIndex)
     },
+    notifyDestroyRoom: (roomId) => {
+      io.to('LOBBY').emit('destroy room', roomId)
+    },
   })
 }
 
@@ -394,9 +405,13 @@ const leaveRoom = (userId, { onComplete, onError, onRoomOwnerChange }) => {
  * @param {{
  *   notifyUserQuit: (roomId: string, roomStatus: *) => void;
  *   onRoomOwnerChange: (roomId: string, newRoomOwnerIndex: number) => void;
+ *   notifyDestroyRoom: (roomId: string) => void;
  * }} callbacks
  */
-const quit = (userId, { notifyUserQuit, onRoomOwnerChange }) => {
+const quit = (
+  userId,
+  { notifyUserQuit, onRoomOwnerChange, notifyDestroyRoom },
+) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
   if (gameRoom !== null) {
@@ -404,6 +419,11 @@ const quit = (userId, { notifyUserQuit, onRoomOwnerChange }) => {
   }
 
   Lobby.instance.quitUser(userId, onRoomOwnerChange)
+
+  const isRoomDestroyed = gameRoom?.state === 'destroyed'
+  if (isRoomDestroyed) {
+    notifyDestroyRoom(gameRoom.id)
+  }
 }
 
 /**
