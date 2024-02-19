@@ -103,7 +103,9 @@ export const setupKkujjangWebSocket = (io) => {
           socket.join('LOBBY')
           io.to(roomId).emit('some user leave room', roomStatus)
           if (roomStatus === undefined) {
-            io.to('LOBBY').emit('destroy room', roomId)
+            io.to('LOBBY').emit('destroy room', {
+              roomId,
+            })
           }
           socket.emit('complete leave room')
         },
@@ -262,7 +264,7 @@ const onDisconnect = async (io, socket) => {
       io.to(roomId).emit('change room owner', newRoomOwnerIndex)
     },
     notifyDestroyRoom: (roomId) => {
-      io.to('LOBBY').emit('destroy room', roomId)
+      io.to('LOBBY').emit('destroy room', { roomId })
     },
   })
 }
