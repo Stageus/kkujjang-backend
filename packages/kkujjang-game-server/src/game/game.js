@@ -163,35 +163,10 @@ export class Game {
 
   /**
    * @param {number} roundTimeLimit
-   * @param {{
-   *   onTimerTick: () => void;
-   *   onTurnEnd: () => void;
-   *   onRoundEnd: (roundResult: {
-   *     defeatedUserIndex: number;
-   *     scoreDelta: number;
-   *   }) => void;
-   *   onGameEnd: () => void;
-   * }} callbacks
    */
-  startTimer(
-    roundTimeLimit,
-    { onTimerTick, onTurnEnd, onRoundEnd, onGameEnd },
-  ) {
-    this.#timer = {
-      onTimerTick,
-      onTurnEnd,
-      onRoundEnd,
-      onGameEnd,
-      startTime: Date.now(),
-      intervalTimeout: null,
-      roundTimeLeft:
-        this.#timer?.roundTimeLeft === undefined
-          ? roundTimeLimit
-          : this.#timer.roundTimeLeft,
-      personalTimeLeft: undefined,
-      currentPersonalTimeLimit: undefined,
-    }
-
+  startTimer(roundTimeLimit) {
+    this.#timer.startTime = Date.now()
+    this.#timer.roundTimeLeft = roundTimeLimit
     this.#timer.personalTimeLeft = roundTimeLimit / 10
     this.#timer.currentPersonalTimeLimit = roundTimeLimit / 10
 
@@ -252,14 +227,39 @@ export class Game {
   /**
    * @param {number[]} userIdList
    * @param {number} maxRound
+   * @param {{
+   *   onTimerTick: () => void
+   *   onTurnEnd: () => void
+   *   onRoundEnd: (roundResult: {
+   *   defeatedUserIndex: number;
+   *   scoreDelta: number;
+   * }) => void
+   *   onGameEnd: () => void
+   * }} callbacks
    */
-  async initializeGame(userIdList, maxRound) {
+  async initializeGame(
+    userIdList,
+    maxRound,
+    { onTimerTick, onTurnEnd, onRoundEnd, onGameEnd },
+  ) {
     this.usersSequence = shuffleArrayByFisherYates(
       userIdList.map((userId) => ({
         userId,
         score: 0,
       })),
     )
+
+    this.#timer = {
+      onTimerTick,
+      onTurnEnd,
+      onRoundEnd,
+      onGameEnd,
+      startTime: -1,
+      roundTimeLeft: -1,
+      personalTimeLeft: -1,
+      intervalTimeout: null,
+      currentPersonalTimeLimit: -1,
+    }
 
     this.maxRound = maxRound
     this.roundWord = await this.#createRoundWord(maxRound)
