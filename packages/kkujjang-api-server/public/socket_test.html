@@ -5,7 +5,7 @@
   </head>
   <body>
     <button id="disconnect" onclick="socket.disconnect()"></button>
-    <script src="http://localhost:7000/socket.io/socket.io.js"></script>
+    <script src="http://localhost:4000/socket.io/socket.io.js"></script>
     <script>
       let gameEnded = false
       let roundword = ''
@@ -29,7 +29,7 @@
         roundTimeLimit: 60 * 1000,
       }
 
-      const socket = io('http://localhost:7000', {
+      const socket = io('http://localhost:4000', {
         withCredentials: true,
       })
 
