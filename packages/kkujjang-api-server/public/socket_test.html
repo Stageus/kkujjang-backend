@@ -37,6 +37,14 @@
         console.log(`load room list: ${JSON.stringify(res)}`)
       })
 
+      socket.on('load new room', (res) => {
+        console.log(`load new room: ${JSON.stringify(res)}`)
+      })
+
+      socket.on('destroy room', (res) => {
+        console.log(`destroy room: ${JSON.stringify(res)}`)
+      })
+
       socket.on('complete create room', () => {
         console.log(`create room`)
         socket.emit('load room list')
