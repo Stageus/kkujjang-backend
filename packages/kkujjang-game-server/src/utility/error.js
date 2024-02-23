@@ -8,4 +8,5 @@ export const errorMessage = {
     '현재 방 인원 수보다 적은 인원수로 방 설정을 변경 할 수 없습니다',
   unknownErrorOnChangeRoomConfig:
     '방 설정 변경 과정에서 알 수 없는 에러가 발생했습니다',
+  notARoomOnwner: '방장이 아닙니다',
 }

@@ -72,6 +72,9 @@ export class GameRoom {
    * @type {number}
    */
   #roomOwnerUserIndex
+  get roomOwnerUserId() {
+    return this.#userlist[this.#roomOwnerUserIndex].userId
+  }
 
   /**
    * @type {number}
@@ -88,7 +91,6 @@ export class GameRoom {
    *   title: string;
    *   password?: string;
    *   maxUserCount: number;
-   *   roomOwnerUserId: number;
    *   maxRound: number,
    *   roundTimeLimit: number,
    * }} roomConfig
@@ -133,7 +135,7 @@ export class GameRoom {
         Number(roundTimeLimit),
         'roundTimeLimit',
         validation.checkExist(),
-        validation.checkMatchedWithElements([150, 120, 90, 60]),
+        validation.checkMatchedWithElements([150000, 120000, 90000, 60000]),
       )
     } catch (e) {
       throw {
@@ -165,7 +167,6 @@ export class GameRoom {
       title,
       password,
       maxUserCount,
-      roomOwnerUserId,
       maxRound,
       roundTimeLimit,
     })
@@ -227,7 +228,6 @@ export class GameRoom {
     title,
     password,
     maxUserCount,
-    roomOwnerUserId,
     maxRound,
     roundTimeLimit,
   }) {
@@ -235,19 +235,17 @@ export class GameRoom {
       title,
       password,
       maxUserCount,
-      roomOwnerUserId,
       maxRound,
       roundTimeLimit,
     })
 
-    if (this.#userlist.length) {
+    if (maxUserCount < this.#userlist.length) {
       throw {
-        type: 'changeMaxUserCountOverCurrentUserCount',
+        type: 'changeOverCurrentUserCount',
       }
     }
     this.#title = title
     this.#maxUserCount = maxUserCount
-    this.#roomOwnerUserIndex = 0
     this.#maxRound = maxRound
     this.#roundTimeLimit = roundTimeLimit
     this.state = 'preparing'

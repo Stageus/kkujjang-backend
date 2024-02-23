@@ -135,18 +135,24 @@ export const setupKkujjangWebSocket = (io) => {
     socket.on('change room config', async (roomConfig) => {
       const userId = await fetchUserId(socket)
 
-      changeRoomConfig(userId, roomConfig),
-        {
-          onComplete: (roomId, roomConfig) => {
-            io.to(roomId).emit(
-              'complete change room config',
-              JSON.stringify(roomConfig),
-            )
-          },
-          onError: (message) => {
-            emitError(socket, message)
-          },
-        }
+      changeRoomConfig(userId, roomConfig, {
+        onComplete: (roomId, roomConfig) => {
+          io.to(roomId).emit(
+            'complete change room config',
+            JSON.stringify(roomConfig),
+          )
+          io.to('LOBBY').emit(
+            'update room config',
+            JSON.stringify({
+              roomId,
+              roomConfig,
+            }),
+          )
+        },
+        onError: (message) => {
+          emitError(socket, message)
+        },
+      })
     })
 
     socket.on('game start', async () => {
@@ -476,18 +482,41 @@ const switchReadyState = (userId, state, { onComplete, onError }) => {
   onComplete(gameRoom.id, gameRoom.fullInfo)
 }
 
+/**
+ * @param {number} userId
+ * @param {{
+ *   title: string;
+ *   password: string;
+ *   maxUserCount: number;
+ *   maxRound: number;
+ *   roundTimeLimit: number;
+ * }} roomConfig
+ * @param {{
+ *   onComplete: (roomId: string, roomStatus: *) => void;
+ *   onError: (message: string) => void;
+ * }} callbacks
+ */
 const changeRoomConfig = (userId, roomConfig, { onComplete, onError }) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
+
+  if (userId !== gameRoom.roomOwnerUserId) {
+    onError(errorMessage.notARoomOnwner)
+    return
+  }
   try {
-    gameRoom.changeRoomConfig(...roomConfig)
+    gameRoom.changeRoomConfig({ ...roomConfig })
   } catch (e) {
     if (e.type === 'invalidRoomConfigData') {
       onError(e.message)
     } else if (e.type === 'changeOverCurrentUserCount') {
       onError(errorMessage.changeOverCurrentUserCount)
+    } else if (e.type === 'notARoomOnwner') {
+      onError(errorMessage.notARoomOnwner)
     } else {
+      console.log(e)
       onError(errorMessage.unknownErrorOnChangeRoomConfig)
     }
+    return
   }
   onComplete(gameRoom.id, roomConfig)
 }
