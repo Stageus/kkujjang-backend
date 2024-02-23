@@ -132,6 +132,23 @@ export const setupKkujjangWebSocket = (io) => {
       })
     })
 
+    socket.on('change room config', async (roomConfig) => {
+      const userId = await fetchUserId(socket)
+
+      changeRoomConfig(userId, roomConfig),
+        {
+          onComplete: (roomId, roomConfig) => {
+            io.to(roomId).emit(
+              'complete change room config',
+              JSON.stringify(roomConfig),
+            )
+          },
+          onError: (message) => {
+            emitError(socket, message)
+          },
+        }
+    })
+
     socket.on('game start', async () => {
       const userId = await fetchUserId(socket)
       await startGame(userId, {
@@ -345,6 +362,12 @@ const createRoom = (roomConfig, { onComplete, onError }) => {
 
     onComplete(roomId)
   } catch (e) {
+    if (e.type === 'invalidRoomConfigData') {
+      onError(e.message)
+    }
+    if (e.type === 'changeOverCurrentUserCount') {
+      onError(errorMessage.changeOverCurrentUserCount)
+    }
     if (e.type === 'already1000RoomExist') {
       onError(errorMessage.already1000RoomExist)
     } else {
@@ -451,6 +474,22 @@ const switchReadyState = (userId, state, { onComplete, onError }) => {
 
   gameRoom.switchReadyState(userId, state)
   onComplete(gameRoom.id, gameRoom.fullInfo)
+}
+
+const changeRoomConfig = (userId, roomConfig, { onComplete, onError }) => {
+  const gameRoom = Lobby.instance.getRoomByUserId(userId)
+  try {
+    gameRoom.changeRoomConfig(...roomConfig)
+  } catch (e) {
+    if (e.type === 'invalidRoomConfigData') {
+      onError(e.message)
+    } else if (e.type === 'changeOverCurrentUserCount') {
+      onError(errorMessage.changeOverCurrentUserCount)
+    } else {
+      onError(errorMessage.unknownErrorOnChangeRoomConfig)
+    }
+  }
+  onComplete(gameRoom.id, roomConfig)
 }
 
 /**

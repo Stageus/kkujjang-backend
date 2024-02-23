@@ -5,7 +5,7 @@
   </head>
   <body>
     <button id="disconnect" onclick="socket.disconnect()"></button>
-    <script src="http://localhost:4000/socket.io/socket.io.js"></script>
+    <script src="http://localhost:7000/socket.io/socket.io.js"></script>
     <script>
       let gameEnded = false
       let roundword = ''
@@ -29,7 +29,15 @@
         roundTimeLimit: 60 * 1000,
       }
 
-      const socket = io('http://localhost:4000', {
+      const newRoomConfig = {
+        title: '변경된 방제목',
+        password: '',
+        maxUserCount: 2,
+        maxRound: 6,
+        roundTimeLimit: 30 * 1000,
+      }
+
+      const socket = io('http://localhost:7000', {
         withCredentials: true,
       })
 
@@ -133,6 +141,10 @@
 
       socket.on('change room owner', (res) => {
         socket.emit('load room')
+      })
+
+      socket.on('complete change room config', (res) => {
+        console.log(`change room config: ${JSON.stringify(res)}`)
       })
 
       socket.on('error', (err) => {

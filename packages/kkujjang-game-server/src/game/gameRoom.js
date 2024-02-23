@@ -1,6 +1,7 @@
 import * as uuid from 'uuid'
 import { configDotenv } from 'dotenv'
 import { Game } from '#game/game'
+import * as validation from '#utility/validation'
 
 configDotenv()
 
@@ -92,6 +93,66 @@ export class GameRoom {
    *   roundTimeLimit: number,
    * }} roomConfig
    */
+
+  validateRoomconfig({
+    title,
+    password,
+    maxUserCount,
+    maxRound,
+    roundTimeLimit,
+  }) {
+    try {
+      validation.check(
+        title,
+        'title',
+        validation.checkExist(),
+        validation.checkLength(1, 20),
+      )
+
+      password !== '' &&
+        validation.check(
+          password,
+          'password',
+          validation.checkExist(),
+          validation.checkRegExp(/^[\x00-\x7F]{1,30}$/),
+        )
+
+      validation.check(
+        maxUserCount,
+        'maxUserCount',
+        validation.checkExist(),
+        validation.checkParsedNumberInRange(2, 8),
+      )
+      validation.check(
+        maxRound,
+        'maxRound',
+        validation.checkExist(),
+        validation.checkParsedNumberInRange(1, 8),
+      )
+      validation.check(
+        Number(roundTimeLimit),
+        'roundTimeLimit',
+        validation.checkExist(),
+        validation.checkMatchedWithElements([150, 120, 90, 60]),
+      )
+    } catch (e) {
+      throw {
+        type: 'invalidRoomConfigData',
+        message: e.message,
+      }
+    }
+  }
+
+  /**
+   * @param {{
+   *   title: string;
+   *   password?: string;
+   *   maxUserCount: number;
+   *   roomOwnerUserId: number;
+   *   maxRound: number,
+   *   roundTimeLimit: number,
+   * }} roomConfig
+   */
   constructor({
     title,
     password = null,
@@ -100,6 +161,15 @@ export class GameRoom {
     maxRound,
     roundTimeLimit,
   }) {
+    this.validateRoomconfig({
+      title,
+      password,
+      maxUserCount,
+      roomOwnerUserId,
+      maxRound,
+      roundTimeLimit,
+    })
+
     this.#id = uuid.v4()
     this.#title = title
     this.#maxUserCount = maxUserCount
@@ -108,7 +178,10 @@ export class GameRoom {
     this.#roundTimeLimit = roundTimeLimit
     this.state = 'preparing'
 
-    if (password) {
+    if (password === '') {
+      this.#password = password
+      this.isSecure = false
+    } else {
       this.#password = password
       this.isSecure = true
     }
@@ -149,6 +222,44 @@ export class GameRoom {
   /**/
   /* 대기실 */
   /**/
+
+  changeRoomConfig({
+    title,
+    password,
+    maxUserCount,
+    roomOwnerUserId,
+    maxRound,
+    roundTimeLimit,
+  }) {
+    this.validateRoomconfig({
+      title,
+      password,
+      maxUserCount,
+      roomOwnerUserId,
+      maxRound,
+      roundTimeLimit,
+    })
+
+    if (this.#userlist.length) {
+      throw {
+        type: 'changeMaxUserCountOverCurrentUserCount',
+      }
+    }
+    this.#title = title
+    this.#maxUserCount = maxUserCount
+    this.#roomOwnerUserIndex = 0
+    this.#maxRound = maxRound
+    this.#roundTimeLimit = roundTimeLimit
+    this.state = 'preparing'
+
+    if (password === '') {
+      this.#password = password
+      this.isSecure = false
+    } else {
+      this.#password = password
+      this.isSecure = true
+    }
+  }
 
   /**
    * @param {number} occurerUserId
