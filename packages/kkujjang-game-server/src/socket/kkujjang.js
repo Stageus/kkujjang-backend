@@ -492,7 +492,15 @@ const switchReadyState = (userId, state, { onComplete, onError }) => {
  *   roundTimeLimit: number;
  * }} roomConfig
  * @param {{
- *   onComplete: (roomId: string, roomStatus: *) => void;
+ *   onComplete: (
+ *   roomId: string,
+ *   roomConfig: {
+ *    title: string;
+ *    password: string;
+ *    maxUserCount: number;
+ *    maxRound: number;
+ *    roundTimeLimit: number;
+ *   }) => void;
  *   onError: (message: string) => void;
  * }} callbacks
  */

@@ -95,7 +95,6 @@ export class GameRoom {
    *   roundTimeLimit: number,
    * }} roomConfig
    */
-
   validateRoomconfig({
     title,
     password,
