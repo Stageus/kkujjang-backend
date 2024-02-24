@@ -196,7 +196,9 @@ export class GameRoom {
       title: this.#title,
       state: this.state,
       isSecure: this.isSecure,
+      maxRound: this.#maxRound,
       maxUserCount: this.#maxUserCount,
+      roundTimeLimit: this.#roundTimeLimit,
       currentUserCount: this.#userlist.length,
     }
   }
@@ -205,8 +207,6 @@ export class GameRoom {
     return {
       ...this.info,
       userList: this.#userlist,
-      maxRound: this.#maxRound,
-      roundTimeLimit: this.#roundTimeLimit,
       roomOwnerUserId: this.#userlist[this.#roomOwnerUserIndex].userId,
     }
   }

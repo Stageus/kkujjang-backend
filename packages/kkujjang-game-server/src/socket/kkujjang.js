@@ -101,11 +101,16 @@ export const setupKkujjangWebSocket = (io) => {
         onComplete: (roomId, roomStatus) => {
           socket.leave(roomId)
           socket.join('LOBBY')
-          io.to(roomId).emit('some user leave room', roomStatus)
           if (roomStatus === undefined) {
             io.to('LOBBY').emit('destroy room', {
               roomId,
             })
+          } else {
+            io.to('LOBBY').emit(
+              'update room member count',
+              roomStatus.currentUserCount,
+            )
+            io.to(roomId).emit('some user leave room', roomStatus)
           }
           socket.emit('complete leave room')
         },
@@ -136,17 +141,14 @@ export const setupKkujjangWebSocket = (io) => {
       const userId = await fetchUserId(socket)
 
       changeRoomConfig(userId, roomConfig, {
-        onComplete: (roomId, roomConfig) => {
+        onComplete: (roomId) => {
           io.to(roomId).emit(
             'complete change room config',
-            JSON.stringify(roomConfig),
+            Lobby.instance.getRoom(roomId).info,
           )
           io.to('LOBBY').emit(
             'update room config',
-            JSON.stringify({
-              roomId,
-              roomConfig,
-            }),
+            Lobby.instance.getRoom(roomId).info,
           )
         },
         onError: (message) => {
@@ -492,22 +494,14 @@ const switchReadyState = (userId, state, { onComplete, onError }) => {
  *   roundTimeLimit: number;
  * }} roomConfig
  * @param {{
- *   onComplete: (
- *   roomId: string,
- *   roomConfig: {
- *    title: string;
- *    password: string;
- *    maxUserCount: number;
- *    maxRound: number;
- *    roundTimeLimit: number;
- *   }) => void;
+ *   onComplete: (roomId: string) => void;
  *   onError: (message: string) => void;
  * }} callbacks
  */
 const changeRoomConfig = (userId, roomConfig, { onComplete, onError }) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
-  if (userId !== gameRoom.roomOwnerUserId) {
+  if (userId === gameRoom.roomOwnerUserId) {
     onError(errorMessage.notARoomOnwner)
     return
   }
@@ -526,7 +520,7 @@ const changeRoomConfig = (userId, roomConfig, { onComplete, onError }) => {
     }
     return
   }
-  onComplete(gameRoom.id, roomConfig)
+  onComplete(gameRoom.id)
 }
 
 /**
