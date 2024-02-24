@@ -89,10 +89,10 @@ export const setupKkujjangWebSocket = (io) => {
               socket.leave('LOBBY')
               socket.join(roomId)
               const gameRoom = Lobby.instance.getRoom(roomId)
-              io.to('LOBBY').emit(
-                'update room member count',
-                gameRoom.info.currentUserCount,
-              )
+              io.to('LOBBY').emit('update room member count', {
+                roomId,
+                currentUserCount: gameRoom.info.currentUserCount,
+              })
               socket.emit('complete join room', userId)
             },
             onError: (message) => emitError(socket, message),
@@ -111,10 +111,10 @@ export const setupKkujjangWebSocket = (io) => {
               roomId,
             })
           } else {
-            io.to('LOBBY').emit(
-              'update room member count',
-              roomStatus.currentUserCount,
-            )
+            io.to('LOBBY').emit('update room member count', {
+              roomId,
+              currentUserCount: roomStatus.currentUserCount,
+            })
             io.to(roomId).emit('some user leave room', roomStatus)
           }
           socket.emit('complete leave room')
