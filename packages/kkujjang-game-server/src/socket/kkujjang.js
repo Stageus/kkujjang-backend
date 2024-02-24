@@ -88,6 +88,11 @@ export const setupKkujjangWebSocket = (io) => {
               io.to(roomId).emit('some user join room', userId)
               socket.leave('LOBBY')
               socket.join(roomId)
+              const gameRoom = Lobby.instance.getRoom(roomId)
+              io.to('LOBBY').emit(
+                'update room member count',
+                gameRoom.info.currentUserCount,
+              )
               socket.emit('complete join room', userId)
             },
             onError: (message) => emitError(socket, message),
