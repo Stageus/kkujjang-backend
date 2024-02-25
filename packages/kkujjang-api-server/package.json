@@ -17,7 +17,8 @@
     "node-schedule": "2.1.1",
     "postgres": "*",
     "redis-cli": "*",
-    "kkujjang-session": "*"
+    "kkujjang-session": "*",
+    "kkujjang-validation": "*"
   },
   "type": "module",
   "imports": {

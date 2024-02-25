@@ -1,7 +1,7 @@
 import * as uuid from 'uuid'
 import { configDotenv } from 'dotenv'
 import { Game } from '#game/game'
-import * as validation from '#utility/validation'
+import * as validation from 'kkujjang-validation'
 
 configDotenv()
 

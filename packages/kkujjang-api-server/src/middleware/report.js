@@ -1,4 +1,4 @@
-import * as validation from '#utility/validation'
+import * as validation from 'kkujjang-validation'
 
 export const validateReport = (req, res, next) => {
   const { reporteeId, isOffensive, isPoorManner, isCheating, note } = req.body

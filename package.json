@@ -27,6 +27,7 @@
   },
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "true"
   ]
 }

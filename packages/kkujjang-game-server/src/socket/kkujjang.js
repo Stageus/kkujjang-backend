@@ -146,15 +146,9 @@ export const setupKkujjangWebSocket = (io) => {
       const userId = await fetchUserId(socket)
 
       changeRoomConfig(userId, roomConfig, {
-        onComplete: (roomId) => {
-          io.to(roomId).emit(
-            'complete change room config',
-            Lobby.instance.getRoom(roomId).info,
-          )
-          io.to('LOBBY').emit(
-            'update room config',
-            Lobby.instance.getRoom(roomId).info,
-          )
+        onComplete: (roomId, roomInfo) => {
+          io.to(roomId).emit('complete change room config', roomInfo)
+          io.to('LOBBY').emit('update room config', roomInfo)
         },
         onError: (message) => {
           emitError(socket, message)
@@ -499,14 +493,14 @@ const switchReadyState = (userId, state, { onComplete, onError }) => {
  *   roundTimeLimit: number;
  * }} roomConfig
  * @param {{
- *   onComplete: (roomId: string) => void;
+ *   onComplete: (roomId: string, roomInfo: *) => void;
  *   onError: (message: string) => void;
  * }} callbacks
  */
 const changeRoomConfig = (userId, roomConfig, { onComplete, onError }) => {
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
-  if (userId === gameRoom.roomOwnerUserId) {
+  if (userId !== gameRoom.roomOwnerUserId) {
     onError(errorMessage.notARoomOnwner)
     return
   }
@@ -525,7 +519,8 @@ const changeRoomConfig = (userId, roomConfig, { onComplete, onError }) => {
     }
     return
   }
-  onComplete(gameRoom.id)
+  const roomInfo = gameRoom.info
+  onComplete(gameRoom.id, roomInfo)
 }
 
 /**

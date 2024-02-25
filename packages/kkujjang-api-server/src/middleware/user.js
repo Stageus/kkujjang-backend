@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import * as validation from '#utility/validation'
+import * as validation from 'kkujjang-validation'
 import { configDotenv } from 'dotenv'
 import { globalConfig } from '#root/global'
 
