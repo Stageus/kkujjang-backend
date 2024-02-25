@@ -1,6 +1,7 @@
 import * as uuid from 'uuid'
 import { configDotenv } from 'dotenv'
 import { Game } from '#game/game'
+import * as validation from 'kkujjang-validation'
 
 configDotenv()
 
@@ -71,6 +72,9 @@ export class GameRoom {
    * @type {number}
    */
   #roomOwnerUserIndex
+  get roomOwnerUserId() {
+    return this.#userlist[this.#roomOwnerUserIndex].userId
+  }
 
   /**
    * @type {number}
@@ -81,6 +85,64 @@ export class GameRoom {
    * @type {number}
    */
   #roundTimeLimit
+
+  /**
+   * @param {{
+   *   title: string;
+   *   password?: string;
+   *   maxUserCount: number;
+   *   maxRound: number,
+   *   roundTimeLimit: number,
+   * }} roomConfig
+   */
+  validateRoomconfig({
+    title,
+    password,
+    maxUserCount,
+    maxRound,
+    roundTimeLimit,
+  }) {
+    try {
+      validation.check(
+        title,
+        'title',
+        validation.checkExist(),
+        validation.checkLength(1, 20),
+      )
+
+      password !== '' &&
+        validation.check(
+          password,
+          'password',
+          validation.checkExist(),
+          validation.checkRegExp(/^[\x00-\x7F]{1,30}$/),
+        )
+
+      validation.check(
+        maxUserCount,
+        'maxUserCount',
+        validation.checkExist(),
+        validation.checkParsedNumberInRange(2, 8),
+      )
+      validation.check(
+        maxRound,
+        'maxRound',
+        validation.checkExist(),
+        validation.checkParsedNumberInRange(1, 8),
+      )
+      validation.check(
+        Number(roundTimeLimit),
+        'roundTimeLimit',
+        validation.checkExist(),
+        validation.checkIncludes([150000, 120000, 90000, 60000]),
+      )
+    } catch (e) {
+      throw {
+        type: 'invalidRoomConfigData',
+        message: e.message,
+      }
+    }
+  }
 
   /**
    * @param {{
@@ -100,6 +162,14 @@ export class GameRoom {
     maxRound,
     roundTimeLimit,
   }) {
+    this.validateRoomconfig({
+      title,
+      password,
+      maxUserCount,
+      maxRound,
+      roundTimeLimit,
+    })
+
     this.#id = uuid.v4()
     this.#title = title
     this.#maxUserCount = maxUserCount
@@ -108,7 +178,10 @@ export class GameRoom {
     this.#roundTimeLimit = roundTimeLimit
     this.state = 'preparing'
 
-    if (password) {
+    if (password === '') {
+      this.#password = password
+      this.isSecure = false
+    } else {
       this.#password = password
       this.isSecure = true
     }
@@ -123,7 +196,9 @@ export class GameRoom {
       title: this.#title,
       state: this.state,
       isSecure: this.isSecure,
+      maxRound: this.#maxRound,
       maxUserCount: this.#maxUserCount,
+      roundTimeLimit: this.#roundTimeLimit,
       currentUserCount: this.#userlist.length,
     }
   }
@@ -132,8 +207,6 @@ export class GameRoom {
     return {
       ...this.info,
       userList: this.#userlist,
-      maxRound: this.#maxRound,
-      roundTimeLimit: this.#roundTimeLimit,
       roomOwnerUserId: this.#userlist[this.#roomOwnerUserIndex].userId,
     }
   }
@@ -149,6 +222,41 @@ export class GameRoom {
   /**/
   /* 대기실 */
   /**/
+
+  changeRoomConfig({
+    title,
+    password,
+    maxUserCount,
+    maxRound,
+    roundTimeLimit,
+  }) {
+    this.validateRoomconfig({
+      title,
+      password,
+      maxUserCount,
+      maxRound,
+      roundTimeLimit,
+    })
+
+    if (maxUserCount < this.#userlist.length) {
+      throw {
+        type: 'changeOverCurrentUserCount',
+      }
+    }
+    this.#title = title
+    this.#maxUserCount = maxUserCount
+    this.#maxRound = maxRound
+    this.#roundTimeLimit = roundTimeLimit
+    this.state = 'preparing'
+
+    if (password === '') {
+      this.#password = password
+      this.isSecure = false
+    } else {
+      this.#password = password
+      this.isSecure = true
+    }
+  }
 
   /**
    * @param {number} occurerUserId

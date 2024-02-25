@@ -88,6 +88,11 @@ export const setupKkujjangWebSocket = (io) => {
               io.to(roomId).emit('some user join room', userId)
               socket.leave('LOBBY')
               socket.join(roomId)
+              const gameRoom = Lobby.instance.getRoom(roomId)
+              io.to('LOBBY').emit('update room member count', {
+                roomId,
+                currentUserCount: gameRoom.info.currentUserCount,
+              })
               socket.emit('complete join room', userId)
             },
             onError: (message) => emitError(socket, message),
@@ -101,11 +106,16 @@ export const setupKkujjangWebSocket = (io) => {
         onComplete: (roomId, roomStatus) => {
           socket.leave(roomId)
           socket.join('LOBBY')
-          io.to(roomId).emit('some user leave room', roomStatus)
           if (roomStatus === undefined) {
             io.to('LOBBY').emit('destroy room', {
               roomId,
             })
+          } else {
+            io.to('LOBBY').emit('update room member count', {
+              roomId,
+              currentUserCount: roomStatus.currentUserCount,
+            })
+            io.to(roomId).emit('some user leave room', roomStatus)
           }
           socket.emit('complete leave room')
         },
@@ -125,6 +135,20 @@ export const setupKkujjangWebSocket = (io) => {
       switchReadyState(userId, state, {
         onComplete: (roomId, index) => {
           io.to(roomId).emit('complete switch ready state', { index, state })
+        },
+        onError: (message) => {
+          emitError(socket, message)
+        },
+      })
+    })
+
+    socket.on('change room config', async (roomConfig) => {
+      const userId = await fetchUserId(socket)
+
+      changeRoomConfig(userId, roomConfig, {
+        onComplete: (roomId, roomInfo) => {
+          io.to(roomId).emit('complete change room config', roomInfo)
+          io.to('LOBBY').emit('update room config', roomInfo)
         },
         onError: (message) => {
           emitError(socket, message)
@@ -345,6 +369,12 @@ const createRoom = (roomConfig, { onComplete, onError }) => {
 
     onComplete(roomId)
   } catch (e) {
+    if (e.type === 'invalidRoomConfigData') {
+      onError(e.message)
+    }
+    if (e.type === 'changeOverCurrentUserCount') {
+      onError(errorMessage.changeOverCurrentUserCount)
+    }
     if (e.type === 'already1000RoomExist') {
       onError(errorMessage.already1000RoomExist)
     } else {
@@ -451,6 +481,46 @@ const switchReadyState = (userId, state, { onComplete, onError }) => {
 
   gameRoom.switchReadyState(userId, state)
   onComplete(gameRoom.id, gameRoom.fullInfo)
+}
+
+/**
+ * @param {number} userId
+ * @param {{
+ *   title: string;
+ *   password: string;
+ *   maxUserCount: number;
+ *   maxRound: number;
+ *   roundTimeLimit: number;
+ * }} roomConfig
+ * @param {{
+ *   onComplete: (roomId: string, roomInfo: *) => void;
+ *   onError: (message: string) => void;
+ * }} callbacks
+ */
+const changeRoomConfig = (userId, roomConfig, { onComplete, onError }) => {
+  const gameRoom = Lobby.instance.getRoomByUserId(userId)
+
+  if (userId !== gameRoom.roomOwnerUserId) {
+    onError(errorMessage.notARoomOnwner)
+    return
+  }
+  try {
+    gameRoom.changeRoomConfig({ ...roomConfig })
+  } catch (e) {
+    if (e.type === 'invalidRoomConfigData') {
+      onError(e.message)
+    } else if (e.type === 'changeOverCurrentUserCount') {
+      onError(errorMessage.changeOverCurrentUserCount)
+    } else if (e.type === 'notARoomOnwner') {
+      onError(errorMessage.notARoomOnwner)
+    } else {
+      console.log(e)
+      onError(errorMessage.unknownErrorOnChangeRoomConfig)
+    }
+    return
+  }
+  const roomInfo = gameRoom.info
+  onComplete(gameRoom.id, roomInfo)
 }
 
 /**

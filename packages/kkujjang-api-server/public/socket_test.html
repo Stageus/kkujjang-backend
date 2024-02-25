@@ -41,6 +41,14 @@
         console.log(`load new room: ${JSON.stringify(res)}`)
       })
 
+      socket.on('update room config', (res) => {
+        console.log(`update room config: ${JSON.stringify(res)}`)
+      })
+
+      socket.on('update room member count', (res) => {
+        console.log(`update room member count: ${JSON.stringify(res)}`)
+      })
+
       socket.on('destroy room', (res) => {
         console.log(`destroy room: ${JSON.stringify(res)}`)
       })
@@ -133,6 +141,10 @@
 
       socket.on('change room owner', (res) => {
         socket.emit('load room')
+      })
+
+      socket.on('complete change room config', (res) => {
+        console.log(`change room config: ${JSON.stringify(res)}`)
       })
 
       socket.on('error', (err) => {

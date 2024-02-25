@@ -1,4 +1,4 @@
-import * as validation from '#utility/validation'
+import * as validation from 'kkujjang-validation'
 
 export const validatePageNumber = (req, res, next) => {
   const { page } = req.query

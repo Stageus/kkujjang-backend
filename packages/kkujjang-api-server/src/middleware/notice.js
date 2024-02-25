@@ -1,4 +1,4 @@
-import * as validation from '#utility/validation'
+import * as validation from 'kkujjang-validation'
 
 export const validateNotice = (req, res, next) => {
   const { title, content } = req.body

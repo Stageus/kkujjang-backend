@@ -1,6 +1,6 @@
 import * as uuid from 'uuid'
 import { pgQuery } from 'postgres'
-import * as validation from '#utility/validation'
+import * as validation from 'kkujjang-validation'
 
 export const validateInquiryGetBySearch = (req, res, next) => {
   const { needAnswer, type } = req.query
