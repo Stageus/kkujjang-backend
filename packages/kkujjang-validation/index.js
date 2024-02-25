@@ -100,15 +100,13 @@ export const checkParsedNumberInRange = curry(
   },
 )
 
-export const checkMatchedWithElements = curry(
-  (elements, target, targetName) => {
-    if (elements.includes(target) === false) {
-      throw {
-        statusCode: 400,
-        message: `배열의 원소들 ${elements}과 일치하지 않습니다. (${targetName}: ${target})`,
-      }
+export const checkIncludes = curry((elements, target, targetName) => {
+  if (elements.includes(target) === false) {
+    throw {
+      statusCode: 400,
+      message: `배열의 원소들 ${elements}과 일치하지 않습니다. (${targetName}: ${target})`,
     }
-  },
-)
+  }
+})
 
 export const check = (...args) => combine(args)

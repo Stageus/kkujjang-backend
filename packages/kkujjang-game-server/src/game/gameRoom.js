@@ -134,7 +134,7 @@ export class GameRoom {
         Number(roundTimeLimit),
         'roundTimeLimit',
         validation.checkExist(),
-        validation.checkMatchedWithElements([150000, 120000, 90000, 60000]),
+        validation.checkIncludes([150000, 120000, 90000, 60000]),
       )
     } catch (e) {
       throw {
