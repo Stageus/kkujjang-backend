@@ -1,0 +1,19 @@
+{
+  "name": "logger",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "mongo-pool": "*",
+    "mongoose": "8.0.3"
+  },
+  "author": "",
+  "license": "ISC",
+  "imports": {
+    "#model/*": "./src/model/*.js"
+  },
+  "type": "module",
+  "description": ""
+}

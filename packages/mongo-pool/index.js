@@ -1,5 +1,5 @@
 import { configDotenv } from 'dotenv'
-import mongoose from 'mongoose'
+import mongoose, { Model, Schema } from 'mongoose'
 
 configDotenv()
 
@@ -27,6 +27,11 @@ console.log(
   `Created MongoDB Pool to mongodb://${dbConfig.user}:[PASSWD]@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}.`,
 )
 
+/**
+ * @param {string} modelName
+ * @param {Schema} schema
+ * @returns {Model}
+ */
 export const useMongoModel = (modelName, schema) => {
   return mongoPool.useDb(dbConfig.database).model(modelName, schema)
 }

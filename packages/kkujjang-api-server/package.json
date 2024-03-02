@@ -18,7 +18,8 @@
     "postgres": "*",
     "redis-cli": "*",
     "kkujjang-session": "*",
-    "kkujjang-validation": "*"
+    "kkujjang-validation": "*",
+    "logger": "*"
   },
   "type": "module",
   "imports": {

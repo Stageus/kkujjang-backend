@@ -10,6 +10,7 @@ import { noticeRouter } from '#router/notice'
 import { reportRouter } from '#router/report'
 import { inquiryRouter } from '#router/inquiry'
 import { rankingRouter } from '#router/ranking'
+import { chatRouter } from '#router/chat'
 
 configDotenv()
 
@@ -34,6 +35,7 @@ app.use('/notice', noticeRouter)
 app.use('/report', reportRouter)
 app.use('/inquiry', inquiryRouter)
 app.use('/ranking', rankingRouter)
+app.use('/chat', chatRouter)
 
 app.use(async (err, req, res, next) => {
   const { statusCode = 500, message = 'undefined error', messages = [] } = err
