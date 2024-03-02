@@ -20,7 +20,11 @@ export const logChat = async (userId, message) => {
  *   dateStart: string;
  *   dateEnd: string;
  * }} params
- * @returns {{}}
+ * @returns {{
+ *   userId: number;
+ *   message: string;
+ *   created_at: string;
+ * }[]}
  */
 export const loadChats = async ({ userId, dateStart, dateEnd }) => {
   return await useMongoModel('chat', chatSchema).find({
