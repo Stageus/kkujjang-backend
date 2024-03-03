@@ -32,8 +32,11 @@ export const logChat = async (userId, message) => {
  *   dateEnd: string;
  * }} params
  * @returns {{
+ *   _id: string;
  *   userId: number;
  *   message: string;
+ *   __v: number;
+ *   updatedAt: string;
  *   created_at: string;
  * }[]}
  */
