@@ -212,9 +212,9 @@ export const setupKkujjangWebSocket = (io) => {
     socket.on('chat', async (message) => {
       const userId = await fetchUserId(socket)
       await chat(userId, message, {
-        onOrdinaryChat: (roomId) => {
+        onOrdinaryChat: async (roomId) => {
           io.to(roomId).emit('chat', message)
-          chatLogger.logChat(userId, message)
+          await chatLogger.logChat(userId, message)
         },
         onValidWord: (roomId, word, userIndex, scoreDelta) => {
           io.to(roomId).emit('say word succeed', {
@@ -661,7 +661,7 @@ const chat = async (
   const { currentTurnUserIndex, currentTurnUserId, wordStartsWith } =
     gameRoom.currentGameStatus
   if (userId !== currentTurnUserId || message.charAt(0) !== wordStartsWith) {
-    onOrdinaryChat(gameRoom.id, message)
+    await onOrdinaryChat(gameRoom.id, message)
     return
   }
 

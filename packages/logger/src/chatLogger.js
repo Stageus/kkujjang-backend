@@ -1,17 +1,28 @@
-import { chatSchema } from '#model/chat'
 import { useMongoModel } from 'mongo-pool'
+import { configDotenv } from 'dotenv'
+import { getModel } from 'mongo-pool'
+
+configDotenv()
 
 /**
  * @param {number} userId
  * @param {string} message
  */
 export const logChat = async (userId, message) => {
-  await useMongoModel('chat', chatSchema).insertMany([
+  console.log('inserting chat...')
+
+  const insertResult = await useMongoModel(
+    'chat',
+    getModel('chat'),
+    'chat',
+  ).insertMany([
     {
       userId,
       message,
     },
   ])
+
+  console.log(`inserted: ${insertResult}`)
 }
 
 /**
@@ -27,11 +38,17 @@ export const logChat = async (userId, message) => {
  * }[]}
  */
 export const loadChats = async ({ userId, dateStart, dateEnd }) => {
-  return await useMongoModel('chat', chatSchema).find({
-    userId,
-    created_at: {
-      $gte: dateStart,
-      $lte: dateEnd,
-    },
-  })
+  const filter = {}
+
+  userId && (filter['userId'] = userId)
+  ;(dateStart || dateEnd) && (filter['created_at'] = {})
+
+  dateStart && (filter['created_at']['$gte'] = dateStart)
+  dateEnd && (filter['created_at']['$lte'] = dateEnd)
+
+  console.log(JSON.stringify(filter))
+
+  return await useMongoModel('chat', getModel('chat'), 'chat')
+    .find(filter)
+    .exec()
 }

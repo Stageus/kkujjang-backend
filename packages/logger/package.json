@@ -6,8 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "mongo-pool": "*",
-    "mongoose": "8.0.3"
+    "mongo-pool": "*"
   },
   "author": "",
   "license": "ISC",
