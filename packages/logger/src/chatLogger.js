@@ -37,17 +37,17 @@ export const logChat = async (userId, message) => {
  *   message: string;
  *   __v: number;
  *   updatedAt: string;
- *   created_at: string;
+ *   createdAt: string;
  * }[]}
  */
 export const loadChats = async ({ userId, dateStart, dateEnd }) => {
   const filter = {}
 
   userId && (filter['userId'] = userId)
-  ;(dateStart || dateEnd) && (filter['created_at'] = {})
+  ;(dateStart || dateEnd) && (filter['createdAt'] = {})
 
-  dateStart && (filter['created_at']['$gte'] = dateStart)
-  dateEnd && (filter['created_at']['$lte'] = dateEnd)
+  dateStart && (filter['createdAt']['$gte'] = dateStart)
+  dateEnd && (filter['createdAt']['$lte'] = dateEnd)
 
   console.log(JSON.stringify(filter))
 

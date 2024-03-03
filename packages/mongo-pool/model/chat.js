@@ -7,7 +7,7 @@ export const chatSchema = new mongoose.Schema(
   },
   {
     timestamps: {
-      createdAt: 'created_at',
+      createdAt: 'createdAt',
     },
   },
 )
