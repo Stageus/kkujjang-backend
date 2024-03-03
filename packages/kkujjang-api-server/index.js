@@ -3,6 +3,7 @@ import https from 'https'
 import asyncify from 'express-asyncify'
 import cookieParser from 'cookie-parser'
 import fs from 'fs'
+import cors from 'cors'
 import { configDotenv } from 'dotenv'
 import { testRouter } from '#router/test'
 import { userRouter } from '#router/user'
@@ -14,6 +15,11 @@ import { rankingRouter } from '#router/ranking'
 configDotenv()
 
 const app = asyncify(express())
+
+const devCorsPolicy = {
+  origin: '*',
+}
+process.env.NODE_ENV === 'dev' && app.use(cors(devCorsPolicy))
 
 const sslOptions =
   process.env.NODE_ENV === 'production'
