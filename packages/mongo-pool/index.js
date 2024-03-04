@@ -1,5 +1,6 @@
 import { configDotenv } from 'dotenv'
-import mongoose from 'mongoose'
+import mongoose, { Model, Schema } from 'mongoose'
+import { chatSchema } from './model/chat.js'
 
 configDotenv()
 
@@ -21,12 +22,28 @@ const mongoPool = mongoose.createConnection(
   },
 )
 
-mongoPool.asPromise().catch((e) => console.error(e))
-
 console.log(
   `Created MongoDB Pool to mongodb://${dbConfig.user}:[PASSWD]@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}.`,
 )
 
-export const useMongoModel = (modelName, schema) => {
-  return mongoPool.useDb(dbConfig.database).model(modelName, schema)
+/**
+ * @param {string} modelName
+ * @param {Schema} schema
+ * @param {string} collectionName
+ * @returns {Model}
+ */
+export const useMongoModel = (modelName, schema, collectionName) => {
+  const connection = mongoPool.useDb(dbConfig.database)
+  return connection.model(modelName, schema, collectionName)
+}
+
+/**
+ * @param {string} modelName
+ */
+export const getModel = (modelName) => {
+  console.log(`getting model ${modelName}`)
+  switch (modelName) {
+    case 'chat':
+      return chatSchema
+  }
 }

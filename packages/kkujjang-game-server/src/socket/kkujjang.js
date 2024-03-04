@@ -6,6 +6,7 @@ import { errorMessage } from '#utility/error'
 import { parseCookie } from '#utility/cookie-parser'
 import { GameRoom } from '#game/gameRoom'
 import { Lobby } from '#game/lobby'
+import { chatLogger } from 'logger'
 
 /**
  * @type {{
@@ -209,9 +210,11 @@ export const setupKkujjangWebSocket = (io) => {
     })
 
     socket.on('chat', async (message) => {
-      await chat(await fetchUserId(socket), message, {
-        onOrdinaryChat: (roomId) => {
+      const userId = await fetchUserId(socket)
+      await chat(userId, message, {
+        onOrdinaryChat: async (roomId) => {
           io.to(roomId).emit('chat', message)
+          await chatLogger.logChat(userId, message)
         },
         onValidWord: (roomId, word, userIndex, scoreDelta) => {
           io.to(roomId).emit('say word succeed', {
@@ -658,7 +661,7 @@ const chat = async (
   const { currentTurnUserIndex, currentTurnUserId, wordStartsWith } =
     gameRoom.currentGameStatus
   if (userId !== currentTurnUserId || message.charAt(0) !== wordStartsWith) {
-    onOrdinaryChat(gameRoom.id, message)
+    await onOrdinaryChat(gameRoom.id, message)
     return
   }
 

@@ -7,7 +7,6 @@ import asyncify from 'express-asyncify'
 import { pgQuery } from 'postgres'
 import { configDotenv } from 'dotenv'
 import { useMongoModel } from 'mongo-pool'
-import { testSchema } from '#model/test'
 import { redisClient } from 'redis-cli'
 import * as uuid from 'uuid'
 import * as validation from 'kkujjang-validation'
@@ -25,16 +24,6 @@ testRouter.get('/postgres/connection', async (req, res) => {
   )
 
   const result = await pgQuery(`SELECT * FROM kkujjang_test.test;`)
-
-  res.send(`connection successful, test result: ${JSON.stringify(result)}`)
-})
-
-testRouter.get('/mongodb/connection', async (req, res) => {
-  console.log(
-    `sending query to ... ${process.env.MONGODB_HOST}:${process.env.MONGODB_PORT}`,
-  )
-
-  const result = await useMongoModel('test', testSchema).find({})
 
   res.send(`connection successful, test result: ${JSON.stringify(result)}`)
 })
