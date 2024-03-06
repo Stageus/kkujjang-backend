@@ -1,7 +1,7 @@
 import * as validation from 'kkujjang-validation'
 
 export const validateRoomSearch = (req, res, next) => {
-  const { roomId } = req.query
+  const roomId = req.params.roomId
 
   validation.check(
     roomId,

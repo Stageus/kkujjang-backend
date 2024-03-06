@@ -9,7 +9,7 @@ configDotenv()
  * @param {*} log
  */
 export const logRoom = async (type, log) => {
-  console.log('inserting room...')
+  console.log(`inserting room : ${type}...`)
 
   const logWithType = {
     type,

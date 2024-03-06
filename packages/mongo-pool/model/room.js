@@ -81,6 +81,7 @@ export const gameEndSchema = new mongoose.Schema(
   {
     ...defaultSchema,
     userList: Array,
+    ranking: Array,
   },
   {
     timestamps: {

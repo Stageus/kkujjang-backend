@@ -7,11 +7,11 @@ import { validateRoomSearch } from '#middleware/room'
 export const roomRouter = asyncify(express.Router())
 
 roomRouter.get(
-  '/',
+  '/:roomId',
   requireAdminAuthority,
   validateRoomSearch,
   async (req, res) => {
-    const { roomId } = req.query
+    const roomId = req.params.roomId
 
     const room = await roomLogger.loadRoom(roomId)
     const roomCreated = {}

@@ -192,7 +192,7 @@ export const setupKkujjangWebSocket = (io) => {
         onGameEnd: async (roomId, ranking) => {
           io.to(roomId).emit('game end', ranking)
           const userList = ranking.map((ranking) => ranking.userId)
-          await roomLogger.logRoom('gameEnd', { roomId, userList })
+          await roomLogger.logRoom('gameEnd', { roomId, userList, ranking })
         },
       })
     })
@@ -421,7 +421,7 @@ const joinRoom = (
     Lobby.instance.tryJoiningRoom(roomId, userId, password)
     const gameRoom = Lobby.instance.getRoom(roomId)
 
-    onComplete(gameRoom.id, gameRoom.fullInfo)
+    onComplete(gameRoom.id, userId)
   } catch (e) {
     onError(e.error)
   }
