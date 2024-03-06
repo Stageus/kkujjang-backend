@@ -140,7 +140,7 @@ userRouter.get(
 
     console.log(JSON.stringify(await authSession.get(sessionId)))
 
-    res.send({ sessionId })
+    res.send({ sessionId, authorityLevel })
   },
 )
 
@@ -238,7 +238,7 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
     authorityLevel,
   })
 
-  res.json({ sessionId })
+  res.json({ sessionId, authorityLevel })
 })
 
 // 특정 조건에 맞는 사용자 검색
