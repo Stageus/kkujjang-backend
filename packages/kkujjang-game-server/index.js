@@ -19,8 +19,8 @@ const io = new Server(
   process.env.NODE_ENV === 'dev'
     ? {
         cors: {
-          origin: '*',
-          credentials: false,
+          origin: 'http://localhost:3000',
+          credentials: true,
         },
       }
     : null,
