@@ -445,6 +445,37 @@ userRouter.post(
   },
 )
 
+userRouter.get('/me', requireSignin, async (req, res) => {
+  const { userId, authorityLevel } = res.locals.session
+
+  const foundUser = (
+    await pgQuery(
+      `SELECT
+        avatar_accessory_index AS "avatarAccessoryIndex",
+        level, 
+        exp, 
+        nickname, 
+        CASE 
+          WHEN wins = 0 AND loses = 0 THEN 0.0
+          WHEN loses = 0 THEN 100.0
+          ELSE ROUND((wins * 1.0 / (wins + loses)) * 100, 2)
+        END AS "winRate"
+      FROM kkujjang.user 
+      WHERE id = $1 AND is_deleted = FALSE`,
+      [userId],
+    )
+  ).rows
+
+  if (foundUser.length === 0) {
+    throw {
+      statusCode: 400,
+      message: '존재하지 않는 사용자입니다.',
+    }
+  }
+
+  res.json({ result: foundUser[0] })
+})
+
 // 인덱스를 이용한 사용자 조회
 userRouter.get('/:userId', requireSignin, async (req, res) => {
   const { userId } = req.params
