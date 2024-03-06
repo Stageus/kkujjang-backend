@@ -140,14 +140,7 @@ userRouter.get(
 
     console.log(JSON.stringify(await authSession.get(sessionId)))
 
-    res
-      .setHeader(
-        'Set-Cookie',
-        `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=7200`,
-      )
-      .send({
-        result: 'success',
-      })
+    res.send({ sessionId })
   },
 )
 
@@ -166,18 +159,11 @@ userRouter.get('/auth-code', validateReceiverNumber, async (req, res) => {
   )
   console.log(sendSmsResult)
 
-  res
-    .setHeader(
-      'Set-Cookie',
-      `smsAuthId=${smsAuthId}; HttpOnly; Path=/; Secure; Max-Age=300`,
-    )
-    .json({
-      result: 'success',
-    })
+  res.json({ smsAuthId })
 })
 
 userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
-  const { smsAuthId } = req.cookies
+  const { smsAuthId } = req.headers
   const { authNumber, phoneNumber } = req.body
 
   const result = {
@@ -202,7 +188,7 @@ userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
 
 // 로그아웃
 userRouter.get('/signout', requireSignin, async (req, res) => {
-  const { sessionId } = req.cookies
+  const { sessionId } = req.headers
   const { session } = res.locals
 
   // 카카오 로그아웃
@@ -213,10 +199,6 @@ userRouter.get('/signout', requireSignin, async (req, res) => {
 
   // 세션과 쿠키 삭제
   await authSession.destroy(sessionId)
-  res.setHeader(
-    'Set-Cookie',
-    `sessionId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
-  )
 
   res.json({
     result: 'success',
@@ -256,14 +238,7 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
     authorityLevel,
   })
 
-  res
-    .setHeader(
-      'Set-Cookie',
-      `sessionId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=7200`,
-    )
-    .json({
-      result: 'success',
-    })
+  res.json({ sessionId })
 })
 
 // 특정 조건에 맞는 사용자 검색
@@ -342,19 +317,12 @@ userRouter.post(
       }
     }
 
-    const sessionId = await passwordChangeSession.create({
+    const passwordChangeAuthId = await passwordChangeSession.create({
       username,
       phone,
     })
 
-    res
-      .setHeader(
-        'Set-Cookie',
-        `passwordChangeAuthId=${sessionId}; Path=/; Secure; HttpOnly; Max-Age=300`,
-      )
-      .json({
-        result: 'success',
-      })
+    res.json({ passwordChangeAuthId })
   },
 )
 
@@ -363,7 +331,7 @@ userRouter.put(
   allowGuestOnly,
   validatePasswordReset,
   async (req, res) => {
-    const { passwordChangeAuthId } = req.cookies
+    const { passwordChangeAuthId } = req.headers
     if (passwordChangeAuthId === undefined) {
       throw {
         statusCode: 400,
@@ -405,20 +373,13 @@ userRouter.put(
 
     await passwordChangeSession.destroy(passwordChangeAuthId)
 
-    res.setHeader(
-      'Set-Cookie',
-      `passwordChangeAuthId=${passwordChangeAuthId}; Path=/; Secure; HttpOnly; Max-Age=0`,
-    )
-
     if (result.length === 0) {
       throw {
         statusCode: 400,
         message: '해당하는 계정 정보가 존재하지 않습니다.',
       }
     }
-    res.json({
-      result: 'success',
-    })
+    res.json({ passwordChangeAuthId })
   },
 )
 
@@ -486,7 +447,7 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
 
 // 회원 탈퇴
 userRouter.delete('/', requireSignin, async (req, res) => {
-  const { sessionId } = req.cookies
+  const { sessionId } = req.headers
   const { userId, kakaoToken } = res.locals.session
 
   if (kakaoToken) {
@@ -504,14 +465,9 @@ userRouter.delete('/', requireSignin, async (req, res) => {
 
   await authSession.destroy(sessionId)
 
-  res
-    .setHeader(
-      'Set-Cookie',
-      `sessionId=none; Path=/; HttpOnly; Secure; Max-Age=0`,
-    )
-    .json({
-      result: 'success',
-    })
+  res.json({
+    result: 'success',
+  })
 })
 
 // 회원 정보 수정

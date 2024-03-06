@@ -125,7 +125,7 @@ export const validateReceiverNumber = (req, res, next) => {
 }
 
 export const validateAuthCodeCheck = (req, res, next) => {
-  const { smsAuthId } = req.cookies
+  const { smsAuthId } = req.headers
   const { authNumber, phoneNumber } = req.body
 
   validation.check(smsAuthId, 'smsAuthId', validation.checkExist())

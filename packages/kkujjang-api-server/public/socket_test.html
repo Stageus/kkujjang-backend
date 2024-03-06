@@ -30,7 +30,7 @@
       }
 
       const socket = io('http://localhost:4000', {
-        withCredentials: true,
+        withCredentials: false,
       })
 
       socket.on('complete load room list', (res) => {
