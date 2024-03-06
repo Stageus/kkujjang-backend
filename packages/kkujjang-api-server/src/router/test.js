@@ -101,26 +101,20 @@ testRouter.post('/tempAuth-code', async (req, res) => {
   )
   // body 값 유효성 검증 끝
 
-  const authId = uuid.v4()
+  const smsAuthId = uuid.v4()
 
   // 휴대폰 인증 성공 세션 생성
-  await redisClient.hSet(`auth-${authId}`, {
+  await redisClient.hSet(`auth-${smsAuthId}`, {
     phoneNumber: phone,
     fulfilled: 'true',
   })
   await redisClient.expire(
-    `auth-${authId}`,
+    `auth-${smsAuthId}`,
     process.env.TEST_PHONE_VALIDATION_EXPIRES_IN,
-  )
-  res.setHeader(
-    'Set-Cookie',
-    `smsAuthId=${authId}; Path=/; Secure; HttpOnly; Max-Age=3600`,
   )
   // 휴대폰 인증 성공 세션 생성 끝
 
-  res.json({
-    result: 'success',
-  })
+  res.json({ smsAuthId })
 })
 
 testRouter.get('/user/signed/:userId', async (req, res) => {
@@ -141,14 +135,7 @@ testRouter.get('/user/session/admin', async (req, res) => {
     authorityLevel: process.env.ADMIN_AUTHORITY,
   })
 
-  res
-    .setHeader(
-      'Set-Cookie',
-      `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=300`,
-    )
-    .json({
-      result: 'success',
-    })
+  res.json({ sessionId })
 })
 
 testRouter.get('/user/session/:userId', async (req, res) => {
@@ -159,14 +146,7 @@ testRouter.get('/user/session/:userId', async (req, res) => {
     authorityLevel: 1,
   })
 
-  res
-    .setHeader(
-      'Set-Cookie',
-      `sessionId=${sessionId}; HttpOnly; Path=/; Secure; Max-Age=7200`,
-    )
-    .json({
-      result: 'success',
-    })
+  res.json({ sessionId })
 })
 
 testRouter.post(

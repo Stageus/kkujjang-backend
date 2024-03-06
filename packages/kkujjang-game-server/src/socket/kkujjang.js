@@ -3,7 +3,6 @@
 import { Server, Socket } from 'socket.io'
 import { authSession } from 'kkujjang-session'
 import { errorMessage } from '#utility/error'
-import { parseCookie } from '#utility/cookie-parser'
 import { GameRoom } from '#game/gameRoom'
 import { Lobby } from '#game/lobby'
 import { chatLogger } from 'logger'
@@ -309,8 +308,10 @@ const emitError = (socket, message) => {
  * @returns {Promise<number>}
  */
 const fetchUserId = async (socket) => {
-  const { sessionId } = parseCookie(socket.handshake.headers.cookie)
-  if (!sessionId) return null
+  /**
+   * @type {string}
+   */
+  const sessionId = `${socket.handshake.headers.sessionId}`
 
   const userId = (await authSession.get(sessionId))?.userId
   if (userId === undefined) return null
