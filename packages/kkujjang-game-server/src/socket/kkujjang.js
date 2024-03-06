@@ -98,7 +98,7 @@ export const setupKkujjangWebSocket = (io) => {
                 roomId,
                 currentUserCount: gameRoom.info.currentUserCount,
               })
-              socket.emit('complete join room', userId)
+              socket.emit('complete join room')
               await roomLogger.logRoom('userEnter', { roomId, userId })
             },
             onError: (message) => emitError(socket, message),
