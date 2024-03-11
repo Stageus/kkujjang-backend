@@ -4,7 +4,7 @@ import { configDotenv } from 'dotenv'
 configDotenv()
 
 export const allowGuestOnly = async (req, res, next) => {
-  if (req.headers.sessionId) {
+  if (req.get('sessionId')) {
     throw {
       statusCode: 400,
       message: '이미 로그인 상태입니다.',
@@ -15,8 +15,8 @@ export const allowGuestOnly = async (req, res, next) => {
 }
 
 export const requireSignin = async (req, res, next) => {
-  console.log(req.headers.sessionId)
-  const session = await authSession.get(req.headers.sessionId)
+  console.log(req.get('sessionId'))
+  const session = await authSession.get(req.get('sessionId'))
 
   if (!session) {
     throw {
@@ -50,7 +50,7 @@ export const requireAdminAuthority = async (req, res, next) => {
 }
 
 export const requireSmsAuth = async (req, res, next) => {
-  const { smsAuthId } = req.headers
+  const smsAuthId = req.get('smsAuthId')
   const { phone } = req.body
 
   const smsAuth = await smsAuthSession.get(smsAuthId)
