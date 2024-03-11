@@ -327,7 +327,8 @@ const fetchUserId = async (socket) => {
   /**
    * @type {string}
    */
-  const sessionId = `${socket.handshake.headers.sessionId}`
+  const sessionId = `${socket.handshake.headers.sessionid}`
+  console.log(sessionId)
 
   const userId = (await authSession.get(sessionId))?.userId
   if (userId === undefined) return null
