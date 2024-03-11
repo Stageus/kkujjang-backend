@@ -16,13 +16,13 @@ export const logRoom = async (type, log) => {
     ...log,
   }
 
-  const insertResult = await useMongoModel(
+  const insertedResult = await useMongoModel(
     'room',
     getModel(type),
     'room',
   ).create(logWithType)
 
-  console.log(`inserted: ${insertResult}`)
+  console.log(`inserted: ${insertedResult}`)
 }
 
 /**
