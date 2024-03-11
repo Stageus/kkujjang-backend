@@ -4,7 +4,7 @@ import { configDotenv } from 'dotenv'
 configDotenv()
 
 export const allowGuestOnly = async (req, res, next) => {
-  if (req.cookies.sessionId) {
+  if (req.get('sessionId')) {
     throw {
       statusCode: 400,
       message: '이미 로그인 상태입니다.',
@@ -15,7 +15,8 @@ export const allowGuestOnly = async (req, res, next) => {
 }
 
 export const requireSignin = async (req, res, next) => {
-  const session = await authSession.get(req.cookies.sessionId)
+  console.log(req.get('sessionId'))
+  const session = await authSession.get(req.get('sessionId'))
 
   if (!session) {
     throw {
@@ -30,7 +31,8 @@ export const requireSignin = async (req, res, next) => {
 }
 
 export const requireAdminAuthority = async (req, res, next) => {
-  const session = await authSession.get(req.cookies.sessionId)
+  console.log(req.get('sessionId'))
+  const session = await authSession.get(req.get('sessionId'))
 
   if (
     !session ||
@@ -48,7 +50,7 @@ export const requireAdminAuthority = async (req, res, next) => {
 }
 
 export const requireSmsAuth = async (req, res, next) => {
-  const { smsAuthId } = req.cookies
+  const smsAuthId = req.get('smsAuthId')
   const { phone } = req.body
 
   const smsAuth = await smsAuthSession.get(smsAuthId)
@@ -66,10 +68,6 @@ export const requireSmsAuth = async (req, res, next) => {
   }
 
   await smsAuthSession.destroy(smsAuthId)
-  res.setHeader(
-    'Set-Cookie',
-    `smsAuthId=none; Path=/; Secure; HttpOnly; Max-Age=0`,
-  )
 
   next()
 }

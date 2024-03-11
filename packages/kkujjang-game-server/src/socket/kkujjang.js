@@ -3,10 +3,10 @@
 import { Server, Socket } from 'socket.io'
 import { authSession } from 'kkujjang-session'
 import { errorMessage } from '#utility/error'
-import { parseCookie } from '#utility/cookie-parser'
 import { GameRoom } from '#game/gameRoom'
 import { Lobby } from '#game/lobby'
 import { chatLogger } from 'logger'
+import { roomLogger } from 'logger'
 
 /**
  * @type {{
@@ -54,7 +54,7 @@ export const setupKkujjangWebSocket = (io) => {
           ...roomConfig,
         },
         {
-          onComplete: (roomId) => {
+          onComplete: async (roomId) => {
             socket.leave('LOBBY')
             socket.join(roomId)
             socket.emit('complete create room')
@@ -62,6 +62,9 @@ export const setupKkujjangWebSocket = (io) => {
               'load new room',
               Lobby.instance.getRoom(roomId).info,
             )
+            const userId = await fetchUserId(socket)
+            await roomLogger.logRoom('createRoom', { roomId })
+            await roomLogger.logRoom('userEnter', { roomId, userId })
           },
           onError: (message) => emitError(socket, message),
         },
@@ -85,7 +88,7 @@ export const setupKkujjangWebSocket = (io) => {
             userId: await fetchUserId(socket),
           },
           {
-            onComplete: (roomId, userId) => {
+            onComplete: async (roomId, userId) => {
               io.to(roomId).emit('some user join room', userId)
               socket.leave('LOBBY')
               socket.join(roomId)
@@ -94,7 +97,8 @@ export const setupKkujjangWebSocket = (io) => {
                 roomId,
                 currentUserCount: gameRoom.info.currentUserCount,
               })
-              socket.emit('complete join room', userId)
+              socket.emit('complete join room')
+              await roomLogger.logRoom('userEnter', { roomId, userId })
             },
             onError: (message) => emitError(socket, message),
           },
@@ -104,13 +108,14 @@ export const setupKkujjangWebSocket = (io) => {
 
     socket.on('leave room', async () => {
       leaveRoom(await fetchUserId(socket), {
-        onComplete: (roomId, roomStatus) => {
+        onComplete: async (roomId, roomStatus) => {
           socket.leave(roomId)
           socket.join('LOBBY')
           if (roomStatus === undefined) {
             io.to('LOBBY').emit('destroy room', {
               roomId,
             })
+            await roomLogger.logRoom('expireRoom', { roomId })
           } else {
             io.to('LOBBY').emit('update room member count', {
               roomId,
@@ -119,6 +124,8 @@ export const setupKkujjangWebSocket = (io) => {
             io.to(roomId).emit('some user leave room', roomStatus)
           }
           socket.emit('complete leave room')
+          const userId = await fetchUserId(socket)
+          await roomLogger.logRoom('userLeave', { roomId, userId })
         },
         onRoomOwnerChange: (roomId, newRoomOwnerIndex) => {
           io.to(roomId).emit('change room owner', newRoomOwnerIndex)
@@ -160,9 +167,14 @@ export const setupKkujjangWebSocket = (io) => {
     socket.on('game start', async () => {
       const userId = await fetchUserId(socket)
       await startGame(userId, {
-        onComplete: (roomId, gameStatus) => {
+        onComplete: async (roomId, gameStatus) => {
           io.to(roomId).emit('complete game start', gameStatus)
           startSocketTimer(io, socket, userId, 'round')
+
+          const userList = gameStatus.usersSequence.map(
+            (usersSequence) => usersSequence.userId,
+          )
+          await roomLogger.logRoom('gameStart', { roomId, userList })
         },
         onError: (message) => {
           emitError(socket, message)
@@ -176,8 +188,10 @@ export const setupKkujjangWebSocket = (io) => {
         onRoundEnd: (roomId, roundResult) => {
           io.to(roomId).emit('round end', roundResult)
         },
-        onGameEnd: (roomId, ranking) => {
+        onGameEnd: async (roomId, ranking) => {
           io.to(roomId).emit('game end', ranking)
+          const userList = ranking.map((ranking) => ranking.userId)
+          await roomLogger.logRoom('gameEnd', { roomId, userList, ranking })
         },
       })
     })
@@ -216,12 +230,13 @@ export const setupKkujjangWebSocket = (io) => {
           io.to(roomId).emit('chat', message)
           await chatLogger.logChat(userId, message)
         },
-        onValidWord: (roomId, word, userIndex, scoreDelta) => {
+        onValidWord: async (roomId, word, userIndex, scoreDelta) => {
           io.to(roomId).emit('say word succeed', {
             word,
             userIndex,
             scoreDelta,
           })
+          await roomLogger.logRoom('sayWord', { roomId, userId, word })
         },
         onInvalidWord: (roomId, word) => {
           io.to(roomId).emit('say word fail', word)
@@ -309,8 +324,10 @@ const emitError = (socket, message) => {
  * @returns {Promise<number>}
  */
 const fetchUserId = async (socket) => {
-  const { sessionId } = parseCookie(socket.handshake.headers.cookie)
-  if (!sessionId) return null
+  /**
+   * @type {string}
+   */
+  const sessionId = `${socket.handshake.headers.sessionId}`
 
   const userId = (await authSession.get(sessionId))?.userId
   if (userId === undefined) return null
@@ -405,7 +422,7 @@ const joinRoom = (
     Lobby.instance.tryJoiningRoom(roomId, userId, password)
     const gameRoom = Lobby.instance.getRoom(roomId)
 
-    onComplete(gameRoom.id, gameRoom.fullInfo)
+    onComplete(gameRoom.id, userId)
   } catch (e) {
     onError(e.error)
   }

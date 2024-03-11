@@ -174,6 +174,25 @@ noticeRouter.put(
   },
 )
 
+noticeRouter.put(
+  '/:noticeId',
+  validateNoticePathIndex,
+  requireAdminAuthority,
+  validateNotice,
+  async (req, res) => {
+    const { noticeId } = req.params
+    const { title, content } = req.body
+
+    await pgQuery(
+      `UPDATE kkujjang.notice SET title=$1, content=$2 
+    WHERE id=$3 AND is_deleted=FALSE`,
+      [title, content, noticeId],
+    )
+
+    res.json({ result: 'success' })
+  },
+)
+
 noticeRouter.delete(
   '/:noticeId',
   requireAdminAuthority,

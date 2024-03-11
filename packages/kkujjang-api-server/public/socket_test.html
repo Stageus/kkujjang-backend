@@ -30,7 +30,7 @@
       }
 
       const socket = io('http://localhost:4000', {
-        withCredentials: true,
+        withCredentials: false,
       })
 
       socket.on('complete load room list', (res) => {
@@ -76,7 +76,7 @@
         console.log(`load room: ${JSON.stringify(res)}`)
       })
 
-      socket.on('complete join room', (res) => {
+      socket.on('complete join room', () => {
         socket.emit('load room')
         socket.emit('switch ready state', true)
       })

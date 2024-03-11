@@ -1,6 +1,16 @@
 import { configDotenv } from 'dotenv'
 import mongoose, { Model, Schema } from 'mongoose'
 import { chatSchema } from './model/chat.js'
+import {
+  userEnterSchema,
+  userLeaveSchema,
+  createRoomSchema,
+  expireRoomSchema,
+  sayWordSchema,
+  gameStartSchema,
+  gameEndSchema,
+  roomSchema,
+} from './model/room.js'
 
 configDotenv()
 
@@ -45,5 +55,29 @@ export const getModel = (modelName) => {
   switch (modelName) {
     case 'chat':
       return chatSchema
+
+    case 'userEnter':
+      return userEnterSchema
+
+    case 'userLeave':
+      return userLeaveSchema
+
+    case 'createRoom':
+      return createRoomSchema
+
+    case 'expireRoom':
+      return expireRoomSchema
+
+    case 'sayWord':
+      return sayWordSchema
+
+    case 'gameStart':
+      return gameStartSchema
+
+    case 'gameEnd':
+      return gameEndSchema
+
+    case 'room':
+      return roomSchema
   }
 }
