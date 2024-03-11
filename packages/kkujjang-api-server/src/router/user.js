@@ -163,7 +163,7 @@ userRouter.get('/auth-code', validateReceiverNumber, async (req, res) => {
 })
 
 userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
-  const { smsAuthId } = req.headers
+  const smsAuthId = req.get('smsAuthId')
   const { authNumber, phoneNumber } = req.body
 
   const result = {
@@ -188,7 +188,7 @@ userRouter.post('/auth-code/check', validateAuthCodeCheck, async (req, res) => {
 
 // 로그아웃
 userRouter.get('/signout', requireSignin, async (req, res) => {
-  const { sessionId } = req.headers
+  const sessionId = req.get('sessionId')
   const { session } = res.locals
 
   // 카카오 로그아웃
@@ -331,7 +331,7 @@ userRouter.put(
   allowGuestOnly,
   validatePasswordReset,
   async (req, res) => {
-    const { passwordChangeAuthId } = req.headers
+    const passwordChangeAuthId = req.get('passwordChangeAuthId')
     if (passwordChangeAuthId === undefined) {
       throw {
         statusCode: 400,
@@ -478,7 +478,7 @@ userRouter.get('/:userId', requireSignin, async (req, res) => {
 
 // 회원 탈퇴
 userRouter.delete('/', requireSignin, async (req, res) => {
-  const { sessionId } = req.headers
+  const sessionId = req.get('sessionId')
   const { userId, kakaoToken } = res.locals.session
 
   if (kakaoToken) {
