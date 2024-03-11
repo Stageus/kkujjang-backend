@@ -12,7 +12,7 @@ export const userEnterSchema = new mongoose.Schema(
   },
   {
     timestamps: {
-      createdAt: 'enteredAt',
+      createdAt: 'createdAt',
     },
   },
 )
@@ -24,7 +24,7 @@ export const userLeaveSchema = new mongoose.Schema(
   },
   {
     timestamps: {
-      createdAt: 'leavedAt',
+      createdAt: 'createdAt',
     },
   },
 )
@@ -46,7 +46,7 @@ export const expireRoomSchema = new mongoose.Schema(
   },
   {
     timestamps: {
-      createdAt: 'expiredAt',
+      createdAt: 'createdAt',
     },
   },
 )
@@ -59,7 +59,7 @@ export const sayWordSchema = new mongoose.Schema(
   },
   {
     timestamps: {
-      createdAt: 'saidAt',
+      createdAt: 'createdAt',
     },
   },
 )
@@ -71,7 +71,7 @@ export const gameStartSchema = new mongoose.Schema(
   },
   {
     timestamps: {
-      createdAt: 'startedAt',
+      createdAt: 'createdAt',
     },
   },
 )
@@ -84,7 +84,7 @@ export const gameEndSchema = new mongoose.Schema(
   },
   {
     timestamps: {
-      createdAt: 'endedAt',
+      createdAt: 'createdAt',
     },
   },
 )

@@ -17,12 +17,12 @@ roomRouter.get(
     const roomLife = {}
 
     roomLife.createdAt = room[0].createdAt
-    roomLife.expiredAt = room[room.length - 2].expiredAt
+    roomLife.expiredAt = room[room.length - 2].createdAt
 
     res.json({
       roomId,
       ...roomLife,
-      room,
+      logs: room,
     })
   },
 )
