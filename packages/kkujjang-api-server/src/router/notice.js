@@ -133,7 +133,7 @@ noticeRouter.get('/:noticeId', validateNoticePathIndex, async (req, res) => {
       `SELECT kkujjang.notice.id, title, content, kkujjang.notice.created_at, views, 
         ARRAY_AGG(key) AS files
       FROM kkujjang.notice 
-        JOIN kkujjang.notice_file file ON file.notice_id = notice.id
+        LEFT JOIN kkujjang.notice_file file ON file.notice_id = notice.id
       WHERE kkujjang.notice.id=$1 AND is_deleted=FALSE
       GROUP BY kkujjang.notice.id
       LIMIT 1`,
@@ -146,6 +146,10 @@ noticeRouter.get('/:noticeId', validateNoticePathIndex, async (req, res) => {
       statusCode: 404,
       message: '공지를 찾을 수 없습니다.',
     }
+  }
+
+  if (result.files[0] === null) {
+    result.files = null
   }
 
   res.json({ result })
