@@ -133,7 +133,7 @@ noticeRouter.get('/:noticeId', validateNoticePathIndex, async (req, res) => {
       `SELECT kkujjang.notice.id, title, content, kkujjang.notice.created_at, views, 
         ARRAY_AGG(key) AS files
       FROM kkujjang.notice 
-        JOIN kkujjang.notice_file file ON file.notice_id = notice.id
+        LEFT JOIN kkujjang.notice_file file ON file.notice_id = notice.id
       WHERE kkujjang.notice.id=$1 AND is_deleted=FALSE
       GROUP BY kkujjang.notice.id
       LIMIT 1`,
@@ -148,8 +148,31 @@ noticeRouter.get('/:noticeId', validateNoticePathIndex, async (req, res) => {
     }
   }
 
+  if (result.files[0] === null) {
+    result.files = null
+  }
+
   res.json({ result })
 })
+
+noticeRouter.put(
+  '/:noticeId',
+  validateNoticePathIndex,
+  requireAdminAuthority,
+  validateNotice,
+  async (req, res) => {
+    const { noticeId } = req.params
+    const { title, content } = req.body
+
+    await pgQuery(
+      `UPDATE kkujjang.notice SET title=$1, content=$2 
+    WHERE id=$3 AND is_deleted=FALSE`,
+      [title, content, noticeId],
+    )
+
+    res.json({ result: 'success' })
+  },
+)
 
 noticeRouter.put(
   '/:noticeId',
