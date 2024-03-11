@@ -40,6 +40,7 @@ export const loadRoom = async (roomId) => {
 
   return await useMongoModel('room', getModel('room'), 'room')
     .find(filter)
+    .select('-_id -roomId -updatedAt -__v')
     .lean()
     .exec()
 }

@@ -64,7 +64,7 @@ export const setupKkujjangWebSocket = (io) => {
               Lobby.instance.getRoom(roomId).info,
             )
             const userId = await fetchUserId(socket)
-            await roomLogger.logRoom('createRoom', { roomId, userId })
+            await roomLogger.logRoom('createRoom', { roomId })
             await roomLogger.logRoom('userEnter', { roomId, userId })
           },
           onError: (message) => emitError(socket, message),

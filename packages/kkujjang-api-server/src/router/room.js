@@ -12,48 +12,17 @@ roomRouter.get(
   validateRoomSearch,
   async (req, res) => {
     const roomId = req.params.roomId
-
     const room = await roomLogger.loadRoom(roomId)
-    const roomCreated = {}
-    const roomExpired = {}
-    const userHistory = []
-    const gameHistory = []
-    for (const log of room) {
-      if (log.type === 'createRoom') {
-        roomCreated.userId = log.userId
-        roomCreated.createdAt = log.createdAt
-        continue
-      }
-      if (log.type === 'expireRoom') {
-        roomExpired.expiredAt = log.expiredAt
-        continue
-      }
 
-      delete log._id
-      delete log.roomId
-      delete log.updatedAt
-      delete log.__v
-      if (log.type === 'userEnter' || log.type === 'userLeave') {
-        userHistory.push(log)
-        continue
-      }
+    const roomLife = {}
 
-      if (
-        log.type === 'gameStart' ||
-        log.type === 'gameEnd' ||
-        log.type === 'sayWord'
-      ) {
-        gameHistory.push(log)
-        continue
-      }
-    }
+    roomLife.createdAt = room[0].createdAt
+    roomLife.expiredAt = room[room.length - 2].expiredAt
 
     res.json({
       roomId,
-      roomCreated,
-      roomExpired,
-      userHistory,
-      gameHistory,
+      ...roomLife,
+      room,
     })
   },
 )

@@ -32,7 +32,6 @@ export const userLeaveSchema = new mongoose.Schema(
 export const createRoomSchema = new mongoose.Schema(
   {
     ...defaultSchema,
-    userId: Number,
   },
   {
     timestamps: {
