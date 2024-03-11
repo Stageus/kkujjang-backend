@@ -13,7 +13,7 @@ chatRouter.get(
   async (req, res) => {
     const { userId, dateStart, dateEnd } = req.query
 
-    const chats = await chatLogger.loadChats({
+    const chats = chatLogger.loadChats({
       userId,
       dateStart,
       dateEnd,
