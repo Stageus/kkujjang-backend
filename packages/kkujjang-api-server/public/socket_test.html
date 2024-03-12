@@ -4,7 +4,11 @@
     <title>끝말잇기의 짱, 끝짱</title>
   </head>
   <body>
-    <button id="disconnect" onclick="socket.disconnect()"></button>
+    <div>
+      <input placeholder="sessionId" id="sessionId" />
+      <button onclick="setUpSocket()">연결</button>
+    </div>
+    <button id="disconnect" onclick="socket.disconnect()">연결해제</button>
     <script src="http://localhost:4000/socket.io/socket.io.js"></script>
     <script>
       let gameEnded = false
@@ -29,130 +33,136 @@
         roundTimeLimit: 60 * 1000,
       }
 
-      const socket = io('http://localhost:4000', {
-        withCredentials: false,
-      })
+      let socket
 
-      socket.on('complete load room list', (res) => {
-        console.log(`load room list: ${JSON.stringify(res)}`)
-      })
+      const setUpSocket = async () => {
+        socket = await io('http://localhost:4000', {
+          extraHeaders: {
+            sessionId: //세션id
+          },
+        })
 
-      socket.on('load new room', (res) => {
-        console.log(`load new room: ${JSON.stringify(res)}`)
-      })
+        socket.on('complete load room list', (res) => {
+          console.log(`load room list: ${JSON.stringify(res)}`)
+        })
 
-      socket.on('update room config', (res) => {
-        console.log(`update room config: ${JSON.stringify(res)}`)
-      })
+        socket.on('load new room', (res) => {
+          console.log(`load new room: ${JSON.stringify(res)}`)
+        })
 
-      socket.on('update room member count', (res) => {
-        console.log(`update room member count: ${JSON.stringify(res)}`)
-      })
+        socket.on('update room config', (res) => {
+          console.log(`update room config: ${JSON.stringify(res)}`)
+        })
 
-      socket.on('destroy room', (res) => {
-        console.log(`destroy room: ${JSON.stringify(res)}`)
-      })
+        socket.on('update room member count', (res) => {
+          console.log(`update room member count: ${JSON.stringify(res)}`)
+        })
 
-      socket.on('complete create room', () => {
-        console.log(`create room`)
+        socket.on('destroy room', (res) => {
+          console.log(`destroy room: ${JSON.stringify(res)}`)
+        })
+
+        socket.on('complete create room', () => {
+          console.log(`create room`)
+          socket.emit('load room list')
+        })
+
+        socket.on('some user join room', (userId) => {
+          console.log(`some user join room: ${JSON.stringify(userId)}`)
+          socket.emit('load room')
+        })
+
+        socket.on('some user leave room', (userId) => {
+          console.log(`some user leave room: ${JSON.stringify(userId)}`)
+          socket.emit('load room')
+        })
+
+        socket.on('complete leave room', () => {
+          console.log('complete leave room')
+        })
+
+        socket.on('complete load room', (res) => {
+          console.log(`load room: ${JSON.stringify(res)}`)
+        })
+
+        socket.on('complete join room', () => {
+          socket.emit('load room')
+          socket.emit('switch ready state', true)
+        })
+
+        socket.on('complete switch ready state', (res) => {
+          console.log(`complete switch ready state: ${JSON.stringify(res)}`)
+          socket.emit('game start')
+        })
+
+        socket.on('complete game start', (game) => {
+          console.log(`${Date.now()} game start: ${JSON.stringify(game)}`)
+          roundword = game?.roundWord
+          socket.emit('round start')
+        })
+
+        socket.on('complete round start', (roundWord) => {
+          console.log(`${Date.now()} round start: ${JSON.stringify(roundWord)}`)
+          socket.emit('turn start')
+        })
+
+        socket.on('complete turn start', (turnObj) => {
+          console.log(`${Date.now()} turn start: ${JSON.stringify(turnObj)}`)
+
+          console.log(`${Date.now()} ...`)
+
+          setTimeout(() => {
+            socket.emit('chat', roundword)
+            console.log(`${Date.now()} send chat ${roundword}`)
+          }, 500)
+        })
+
+        socket.on('round end', () => {
+          console.log(`${Date.now()} round end`)
+          socket.emit('round start')
+        })
+
+        socket.on('timer', (timeObj) => {
+          console.log(`${Date.now()} timer: ${JSON.stringify(timeObj)}`)
+        })
+
+        socket.on('error', (msg) => {
+          console.log(`error: ${msg}`)
+        })
+
+        socket.on('chat', (msg) => {
+          console.log(`${Date.now()} chat: ${JSON.stringify(msg)}`)
+        })
+
+        socket.on('say word succeed', (res) => {
+          console.log(`${Date.now()} say word: ${JSON.stringify(res)}`)
+          socket.emit('turn start')
+        })
+
+        socket.on('say word fail', (res) => {
+          console.log(`${Date.now()} say word fail: ${JSON.stringify(res)}`)
+        })
+
+        socket.on('game end', (res) => {
+          console.log(`${Date.now()} game end, ranking: ${JSON.stringify(res)}`)
+          gameEnded = true
+        })
+
+        socket.on('change room owner', (res) => {
+          socket.emit('load room')
+        })
+
+        socket.on('complete change room config', (res) => {
+          console.log(`change room config: ${JSON.stringify(res)}`)
+        })
+
+        socket.on('error', (err) => {
+          console.log(`error: ${JSON.stringify(err)}`)
+        })
+
         socket.emit('load room list')
-      })
-
-      socket.on('some user join room', (userId) => {
-        console.log(`some user join room: ${JSON.stringify(userId)}`)
-        socket.emit('load room')
-      })
-
-      socket.on('some user leave room', (userId) => {
-        console.log(`some user leave room: ${JSON.stringify(userId)}`)
-        socket.emit('load room')
-      })
-
-      socket.on('complete leave room', () => {
-        console.log('complete leave room')
-      })
-
-      socket.on('complete load room', (res) => {
-        console.log(`load room: ${JSON.stringify(res)}`)
-      })
-
-      socket.on('complete join room', () => {
-        socket.emit('load room')
-        socket.emit('switch ready state', true)
-      })
-
-      socket.on('complete switch ready state', (res) => {
-        console.log(`complete switch ready state: ${JSON.stringify(res)}`)
-        socket.emit('game start')
-      })
-
-      socket.on('complete game start', (game) => {
-        console.log(`${Date.now()} game start: ${JSON.stringify(game)}`)
-        roundword = game?.roundWord
-        socket.emit('round start')
-      })
-
-      socket.on('complete round start', (roundWord) => {
-        console.log(`${Date.now()} round start: ${JSON.stringify(roundWord)}`)
-        socket.emit('turn start')
-      })
-
-      socket.on('complete turn start', (turnObj) => {
-        console.log(`${Date.now()} turn start: ${JSON.stringify(turnObj)}`)
-
-        console.log(`${Date.now()} ...`)
-
-        setTimeout(() => {
-          socket.emit('chat', roundword)
-          console.log(`${Date.now()} send chat ${roundword}`)
-        }, 500)
-      })
-
-      socket.on('round end', () => {
-        console.log(`${Date.now()} round end`)
-        socket.emit('round start')
-      })
-
-      socket.on('timer', (timeObj) => {
-        console.log(`${Date.now()} timer: ${JSON.stringify(timeObj)}`)
-      })
-
-      socket.on('error', (msg) => {
-        console.log(`error: ${msg}`)
-      })
-
-      socket.on('chat', (msg) => {
-        console.log(`${Date.now()} chat: ${JSON.stringify(msg)}`)
-      })
-
-      socket.on('say word succeed', (res) => {
-        console.log(`${Date.now()} say word: ${JSON.stringify(res)}`)
-        socket.emit('turn start')
-      })
-
-      socket.on('say word fail', (res) => {
-        console.log(`${Date.now()} say word fail: ${JSON.stringify(res)}`)
-      })
-
-      socket.on('game end', (res) => {
-        console.log(`${Date.now()} game end, ranking: ${JSON.stringify(res)}`)
-        gameEnded = true
-      })
-
-      socket.on('change room owner', (res) => {
-        socket.emit('load room')
-      })
-
-      socket.on('complete change room config', (res) => {
-        console.log(`change room config: ${JSON.stringify(res)}`)
-      })
-
-      socket.on('error', (err) => {
-        console.log(`error: ${JSON.stringify(err)}`)
-      })
-
-      socket.emit('load room list')
-      socket.emit('create room', roomConfig)
+        socket.emit('create room', roomConfig)
+      }
     </script>
   </body>
 </html>
