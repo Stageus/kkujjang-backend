@@ -168,21 +168,22 @@ export const validateCheckAccountExistForPasswordReset = (req, res, next) => {
 }
 
 export const validatePasswordReset = (req, res, next) => {
-  const { username, phone } = req.body
+  const passwordChangeAuthId = req.get('passwordChangeAuthId')
 
-  validation.check(
-    username,
-    'username',
-    validation.checkExist(),
-    validation.checkLength(7, 30),
-    validation.checkRegExp(/^[a-z0-9]{7,30}$/),
-  )
-  validation.check(
-    phone,
-    'phone',
-    validation.checkExist(),
-    validation.checkRegExp(/^010-\d{4}-\d{4}$/),
-  )
+  if (passwordChangeAuthId === undefined) {
+    throw {
+      statusCode: 400,
+      message: 'passwordChangeAuthId 세션이 존재하지 않습니다',
+    }
+  }
+
+  const { newPassword, newPasswordAgain } = req.body
+  if (newPassword !== newPasswordAgain) {
+    throw {
+      statusCode: 400,
+      message: '비밀번호와 비밀번호 재확인 문자열이 일치하지 않습니다',
+    }
+  }
 
   next()
 }
