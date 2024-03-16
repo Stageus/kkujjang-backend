@@ -332,12 +332,6 @@ userRouter.put(
   validatePasswordReset,
   async (req, res) => {
     const passwordChangeAuthId = req.get('passwordChangeAuthId')
-    if (passwordChangeAuthId === undefined) {
-      throw {
-        statusCode: 400,
-        message: 'passwordChangeAuthId 쿠키가 존재하지 않거나 만료되었습니다',
-      }
-    }
 
     const { username, phone } =
       await passwordChangeSession.get(passwordChangeAuthId)
@@ -379,7 +373,9 @@ userRouter.put(
         message: '해당하는 계정 정보가 존재하지 않습니다.',
       }
     }
-    res.json({ passwordChangeAuthId })
+    res.json({
+      result: 'success',
+    })
   },
 )
 

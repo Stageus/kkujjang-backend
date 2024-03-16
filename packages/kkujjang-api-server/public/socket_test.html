@@ -37,8 +37,9 @@
 
       const setUpSocket = async () => {
         socket = await io('http://localhost:4000', {
+          reconnection: false,
           extraHeaders: {
-            sessionId: //세션id
+            sessionId: sessionId.value,
           },
         })
 
