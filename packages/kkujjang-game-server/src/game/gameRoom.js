@@ -208,6 +208,7 @@ export class GameRoom {
       ...this.info,
       userList: this.#userlist,
       roomOwnerUserId: this.#userlist[this.#roomOwnerUserIndex].userId,
+      roomOwnerUserIndex: this.#roomOwnerUserIndex,
     }
   }
 

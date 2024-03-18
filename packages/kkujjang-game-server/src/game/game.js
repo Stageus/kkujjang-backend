@@ -391,15 +391,23 @@ export class Game {
     ]
 
     try {
-      const words = await dictionary.searchWordsStartWith(
-        starterCandidates[
-          Math.floor(Math.random() * (starterCandidates.length - 1))
-        ],
-        maxRound,
-        maxRound,
-      )
+      const words =
+        (await dictionary.searchWordsStartWith(
+          starterCandidates[
+            Math.floor(Math.random() * (starterCandidates.length - 1))
+          ],
+          maxRound,
+          maxRound,
+        )) ?? []
 
       console.log(`round word list is ${JSON.stringify(words)}`)
+
+      if (words.length === 0) {
+        const repeatCount = maxRound - starterCandidates.length
+        return starterCandidates
+          .join()
+          .repeat(repeatCount < 0 ? 1 : repeatCount)
+      }
 
       return words[Math.floor(Math.random() * (words.length - 1))]
     } catch (err) {
