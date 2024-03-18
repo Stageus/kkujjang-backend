@@ -93,7 +93,6 @@
 
         socket.on('complete switch ready state', (res) => {
           console.log(`complete switch ready state: ${JSON.stringify(res)}`)
-          socket.emit('game start')
         })
 
         socket.on('complete game start', (game) => {
@@ -150,15 +149,11 @@
         })
 
         socket.on('change room owner', (res) => {
-          socket.emit('load room')
+          console.log(`change room owner : ${JSON.stringify(res)}`)
         })
 
         socket.on('complete change room config', (res) => {
           console.log(`change room config: ${JSON.stringify(res)}`)
-        })
-
-        socket.on('error', (err) => {
-          console.log(`error: ${JSON.stringify(err)}`)
         })
 
         socket.emit('load room list')

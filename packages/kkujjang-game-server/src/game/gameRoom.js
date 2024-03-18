@@ -208,6 +208,7 @@ export class GameRoom {
       ...this.info,
       userList: this.#userlist,
       roomOwnerUserId: this.#userlist[this.#roomOwnerUserIndex].userId,
+      roomOwnerUserIndex: this.#roomOwnerUserIndex,
     }
   }
 
@@ -473,5 +474,12 @@ export class GameRoom {
     if (this.#game.state !== 'turn proceeding') return null
 
     return await this.#game.checkIsValidWord(word)
+  }
+
+  /**
+   * @param {number} userId
+   */
+  userIndexByUserId(userId) {
+    return this.#userlist[this.#roomOwnerUserIndex].userId
   }
 }
