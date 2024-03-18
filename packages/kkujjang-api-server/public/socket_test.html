@@ -150,7 +150,7 @@
         })
 
         socket.on('change room owner', (res) => {
-          socket.emit('load room')
+          console.log(`change room owner : ${JSON.stringify(res)}`)
         })
 
         socket.on('complete change room config', (res) => {
