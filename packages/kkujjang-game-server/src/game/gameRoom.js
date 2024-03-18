@@ -475,11 +475,4 @@ export class GameRoom {
 
     return await this.#game.checkIsValidWord(word)
   }
-
-  /**
-   * @param {number} userId
-   */
-  userIndexByUserId(userId) {
-    return this.#userlist[this.#roomOwnerUserIndex].userId
-  }
 }

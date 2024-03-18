@@ -384,7 +384,6 @@ userRouter.post(
   '/find/id',
   allowGuestOnly,
   requireSmsAuth,
-
   async (req, res) => {
     const { phone } = req.body
 
