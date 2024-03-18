@@ -227,7 +227,7 @@ export const setupKkujjangWebSocket = (io) => {
       const userId = await fetchUserId(socket)
       await chat(userId, message, {
         onOrdinaryChat: async (roomId) => {
-          io.to(roomId).emit('chat', message)
+          io.to(roomId).emit('chat', { userId, message })
           await chatLogger.logChat(userId, message)
         },
         onValidWord: async (roomId, word, userIndex, scoreDelta) => {
@@ -500,8 +500,8 @@ const switchReadyState = (userId, state, { onComplete, onError }) => {
     return
   }
 
-  gameRoom.switchReadyState(userId, state)
-  onComplete(gameRoom.id, gameRoom.fullInfo)
+  const changedIndex = gameRoom.switchReadyState(userId, state)
+  onComplete(gameRoom.id, changedIndex)
 }
 
 /**
@@ -583,7 +583,7 @@ const startGame = async (
   })
 
   if (gameStartResult === null) {
-    onError(JSON.stringify(gameRoom.fullInfo))
+    onError(JSON.stringify(errorMessage.canNotStartGame))
     return
   }
 

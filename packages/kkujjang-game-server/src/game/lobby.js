@@ -167,6 +167,7 @@ export class Lobby {
     }
 
     const room = this.getRoomByUserId(userId)
+    const { roomOwnerUserId } = room.fullInfo
 
     room.delUser(userId)
 
@@ -176,7 +177,6 @@ export class Lobby {
       return room.id
     }
 
-    const { roomOwnerUserId } = room.fullInfo
     if (roomOwnerUserId === userId) {
       const newRoomOwnerIndex = room.setNewRoomOwner()
       onRoomOwnerChange(room.id, newRoomOwnerIndex)
