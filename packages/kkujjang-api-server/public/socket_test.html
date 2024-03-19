@@ -149,7 +149,9 @@
           gameEnded = true
         })
 
-        console.log(`change room owner : ${JSON.stringify(res)}`)
+        socket.on('change room owner', (res) => {
+          console.log(`change room owner : ${JSON.stringify(res)}`)
+        })
 
         socket.on('complete change room config', (res) => {
           console.log(`change room config: ${JSON.stringify(res)}`)
