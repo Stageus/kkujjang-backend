@@ -169,7 +169,8 @@ inquiryRouter.get(
             'isAnswer', CASE WHEN usr.authority_level = $2 THEN true ELSE false END,
             'authorId', inq_article.author_id,
             'content', inq_article.content,
-            'file', inq_files.files
+            'file', inq_files.files,
+            'createdAt', inq_article.created_at
           ) ORDER BY inq_article.created_at ASC
         ) AS list
 
