@@ -680,8 +680,12 @@ const chat = async (
 
   const { currentTurnUserIndex, currentTurnUserId, wordStartsWith } =
     gameRoom.currentGameStatus
-  if (userId !== currentTurnUserId || message.charAt(0) !== wordStartsWith) {
-    await onOrdinaryChat(gameRoom.id, message)
+  if (
+    userId !== currentTurnUserId ||
+    message.charAt(0) !== wordStartsWith ||
+    message.length === 1
+  ) {
+    onOrdinaryChat(gameRoom.id, message)
     return
   }
 
