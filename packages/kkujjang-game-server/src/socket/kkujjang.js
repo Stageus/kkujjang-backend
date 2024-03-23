@@ -191,6 +191,8 @@ export const setupKkujjangWebSocket = (io) => {
         onGameEnd: async (roomId, ranking) => {
           io.to(roomId).emit('game end', ranking)
           const userList = ranking.map((ranking) => ranking.userId)
+          const gameRoom = Lobby.instance.getRoomByUserId(userId)
+          gameRoom.resetReadyState()
           await roomLogger.logRoom('gameEnd', { roomId, userList, ranking })
         },
       })
