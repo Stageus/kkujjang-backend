@@ -24,12 +24,12 @@ const socketTimeouts = {}
 export const setupKkujjangWebSocket = (io) => {
   io.on('connection', async (socket) => {
     if (!(await isUserSignedInApiServer(socket))) {
-      socket.emit('error', '권한이 없습니다.')
+      socket.emit('error', errorMessage.unauthorized)
       return
     }
 
     if (await isUserOnline(socket)) {
-      socket.emit('error', '다른 기기에서 게임에 접속 중입니다.')
+      socket.emit('error', errorMessage.isAlreadyLogin)
       return
     }
 
