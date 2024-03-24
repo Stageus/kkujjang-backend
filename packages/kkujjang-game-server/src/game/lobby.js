@@ -1,5 +1,6 @@
 // @ts-check
 
+import { errorMessage } from '#utility/error'
 import { GameRoom } from '#game/gameRoom'
 import { User } from '#game/user'
 
@@ -137,7 +138,7 @@ export class Lobby {
   tryJoiningRoom(roomId, userId, password = null) {
     if (!this.isUserAtLobby(userId)) {
       throw {
-        error: '이미 게임방에 있습니다',
+        error: errorMessage.isAlreadyInRoom,
       }
     }
     this.getRoom(roomId).tryJoin(userId, password)
@@ -169,6 +170,7 @@ export class Lobby {
     const room = this.getRoomByUserId(userId)
     const { roomOwnerUserId } = room.fullInfo
 
+    delete this.#users[userId]['roomId']
     room.delUser(userId)
 
     const { currentUserCount } = room

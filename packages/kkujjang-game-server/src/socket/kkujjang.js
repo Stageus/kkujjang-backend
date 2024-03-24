@@ -24,12 +24,12 @@ const socketTimeouts = {}
 export const setupKkujjangWebSocket = (io) => {
   io.on('connection', async (socket) => {
     if (!(await isUserSignedInApiServer(socket))) {
-      socket.emit('error', '권한이 없습니다.')
+      socket.emit('error', errorMessage.unauthorized)
       return
     }
 
     if (await isUserOnline(socket)) {
-      socket.emit('error', '다른 기기에서 게임에 접속 중입니다.')
+      socket.emit('error', errorMessage.isAlreadyLogin)
       return
     }
 
@@ -191,6 +191,8 @@ export const setupKkujjangWebSocket = (io) => {
         onGameEnd: async (roomId, ranking) => {
           io.to(roomId).emit('game end', ranking)
           const userList = ranking.map((ranking) => ranking.userId)
+          const gameRoom = Lobby.instance.getRoomByUserId(userId)
+          gameRoom.resetReadyState()
           await roomLogger.logRoom('gameEnd', { roomId, userList, ranking })
         },
       })
@@ -575,15 +577,15 @@ const startGame = async (
     return
   }
 
-  const gameStartResult = await gameRoom.startGame(userId, {
+  const { isSuccess, message } = await gameRoom.startGame(userId, {
     onTimerTick,
     onTurnEnd,
     onRoundEnd,
     onGameEnd,
   })
 
-  if (gameStartResult === null) {
-    onError(JSON.stringify(errorMessage.canNotStartGame))
+  if (isSuccess === false) {
+    onError(message)
     return
   }
 
@@ -678,12 +680,22 @@ const chat = async (
 
   const { currentTurnUserIndex, currentTurnUserId, wordStartsWith } =
     gameRoom.currentGameStatus
-  if (userId !== currentTurnUserId || message.charAt(0) !== wordStartsWith) {
-    await onOrdinaryChat(gameRoom.id, message)
+  if (
+    userId !== currentTurnUserId ||
+    message.charAt(0) !== wordStartsWith ||
+    message.length === 1
+  ) {
+    onOrdinaryChat(gameRoom.id, message)
     return
   }
 
   const scoreDelta = await gameRoom.sayWord(message)
+
+  if (scoreDelta === -1) {
+    console.log('error occurred in API Connection')
+    onError(errorMessage.APIConeectionError)
+    return
+  }
 
   if (scoreDelta === null) {
     console.log('invalid word')

@@ -1,4 +1,5 @@
 import { gameConfig } from '#game/config'
+import { errorMessage } from '#utility/error'
 import { shuffleArrayByFisherYates } from '#game/algorithm'
 import * as dictionary from '#game/dictionary'
 
@@ -166,7 +167,9 @@ export class Game {
    */
   startTimer(roundTimeLimit) {
     this.#timer.startTime = Date.now()
-    this.#timer.roundTimeLeft = roundTimeLimit
+    if (this.#timer.roundTimeLeft === undefined) {
+      this.#timer.roundTimeLeft = roundTimeLimit
+    }
     this.#timer.personalTimeLeft = roundTimeLimit / 10
     this.#timer.currentPersonalTimeLimit = roundTimeLimit / 10
 
@@ -242,6 +245,15 @@ export class Game {
     maxRound,
     { onTimerTick, onTurnEnd, onRoundEnd, onGameEnd },
   ) {
+    this.roundWord = await this.#createRoundWord(maxRound)
+
+    if (this.roundWord === null) {
+      return {
+        isSuccess: false,
+        message: errorMessage.APIConeectionError,
+      }
+    }
+
     this.usersSequence = shuffleArrayByFisherYates(
       userIdList.map((userId) => ({
         userId,
@@ -262,8 +274,10 @@ export class Game {
     }
 
     this.maxRound = maxRound
-    this.roundWord = await this.#createRoundWord(maxRound)
     this.state = 'game ready'
+    return {
+      isSuccess: true,
+    }
   }
 
   initializeRound() {
@@ -271,6 +285,7 @@ export class Game {
       this.lastDefeatedUserIndex === null ? 0 : this.lastDefeatedUserIndex
 
     console.log(`this round starts from ${this.currentTurnUserIndex}th user`)
+    this.#timer.roundTimeLeft = undefined
     this.turnElapsed = 1
     this.wordStartsWith = this.roundWord[this.currentRound]
     this.usedWords = {}
@@ -325,8 +340,15 @@ export class Game {
    */
   async checkIsValidWord(word) {
     this.#stopTimer()
-    const definition = await dictionary.searchDefinition(word)
-    this.#resumeTimer()
+
+    let definition
+    try {
+      definition = await dictionary.searchDefinition(word)
+    } catch {
+      return -1
+    } finally {
+      this.#resumeTimer()
+    }
 
     if (definition === null || this.usedWords[word] === true) {
       return null
@@ -400,14 +422,14 @@ export class Game {
           maxRound,
         )) ?? []
 
-      console.log(`round word list is ${JSON.stringify(words)}`)
-
       if (words.length === 0) {
         const repeatCount = maxRound - starterCandidates.length
         return starterCandidates
           .join()
           .repeat(repeatCount < 0 ? 1 : repeatCount)
       }
+
+      console.log(`round word list is ${JSON.stringify(words)}`)
 
       return words[Math.floor(Math.random() * (words.length - 1))]
     } catch (err) {

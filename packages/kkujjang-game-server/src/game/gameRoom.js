@@ -2,6 +2,7 @@ import * as uuid from 'uuid'
 import { configDotenv } from 'dotenv'
 import { Game } from '#game/game'
 import * as validation from 'kkujjang-validation'
+import { errorMessage } from '#utility/error'
 
 configDotenv()
 
@@ -276,22 +277,31 @@ export class GameRoom {
    *     score: number;
    *   }[]) => void
    * }} callbacks
-   * @returns {Promise<boolean | null>} 방장이 아니거나 시작할 수 없을 경우 `null` 반환, 시작 시 방 ID 반환
+   * @returns {Promise<{
+   *  isSuccess: boolean;
+   *  message: string;
+   * }>}
    */
   async startGame(
     occurerUserId,
     { onTimerTick, onTurnEnd, onRoundEnd, onGameEnd },
   ) {
-    if (
-      this.#userlist[this.#roomOwnerUserIndex].userId !== occurerUserId ||
-      !this.#canStartGame()
-    ) {
-      return null
+    if (this.#userlist[this.#roomOwnerUserIndex].userId !== occurerUserId) {
+      return {
+        isSuccess: false,
+        message: errorMessage.notARoomOnwner,
+      }
+    }
+    if (this.#canStartGame() === false) {
+      return {
+        isSuccess: false,
+        message: errorMessage.someoneNotReady,
+      }
     }
 
     this.state = 'playing'
     this.#game = new Game()
-    await this.#game.initializeGame(
+    const { isSuccess, message } = await this.#game.initializeGame(
       this.#userlist.map(({ userId }) => userId),
       this.#maxRound,
       {
@@ -312,7 +322,14 @@ export class GameRoom {
       },
     )
 
-    return true
+    if (isSuccess === false) {
+      this.state = 'preparing'
+    }
+
+    return {
+      isSuccess,
+      message,
+    }
   }
 
   /**
