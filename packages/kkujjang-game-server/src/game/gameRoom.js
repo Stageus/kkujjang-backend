@@ -425,7 +425,6 @@ export class GameRoom {
       return null
     }
 
-    //**상대참조&************ */
     this.#game.startTimer(this.#roundTimeLimit)
 
     this.#game.initializeTurn()
