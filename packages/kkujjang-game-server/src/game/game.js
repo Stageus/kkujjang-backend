@@ -343,9 +343,9 @@ export class Game {
       definition = await dictionary.searchDefinition(word)
     } catch {
       return -1
+    } finally {
+      this.#resumeTimer()
     }
-
-    this.#resumeTimer()
 
     if (definition === null || this.usedWords[word] === true) {
       return null
