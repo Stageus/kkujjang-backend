@@ -10,6 +10,7 @@ export const errorMessage = {
   unknownErrorOnChangeRoomConfig:
     '방 설정 변경 과정에서 알 수 없는 에러가 발생했습니다',
   notARoomOnwner: '방장이 아닙니다',
-  canNotStartGame: '게임을 시작할 수 없습니다',
+  someoneNotReady: '모두 레디하지 않았습니다',
   isAlreadyInRoom: '이미 게임방입니다',
+  APIConeectionError: '사전 API 통신 중 오류가 발생했습니다. 다시 시도해주세요',
 }

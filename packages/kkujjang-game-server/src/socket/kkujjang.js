@@ -577,15 +577,15 @@ const startGame = async (
     return
   }
 
-  const gameStartResult = await gameRoom.startGame(userId, {
+  const { isSuccess, message } = await gameRoom.startGame(userId, {
     onTimerTick,
     onTurnEnd,
     onRoundEnd,
     onGameEnd,
   })
 
-  if (gameStartResult === null) {
-    onError(JSON.stringify(errorMessage.canNotStartGame))
+  if (isSuccess == false) {
+    onError(message)
     return
   }
 
@@ -690,6 +690,12 @@ const chat = async (
   }
 
   const scoreDelta = await gameRoom.sayWord(message)
+
+  if (scoreDelta === -1) {
+    console.log('error occurred in API Connection')
+    onError(errorMessage.APIConeectionError)
+    return
+  }
 
   if (scoreDelta === null) {
     console.log('invalid word')

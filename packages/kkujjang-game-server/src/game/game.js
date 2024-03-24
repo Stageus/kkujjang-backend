@@ -1,4 +1,5 @@
 import { gameConfig } from '#game/config'
+import { errorMessage } from '#utility/error'
 import { shuffleArrayByFisherYates } from '#game/algorithm'
 import * as dictionary from '#game/dictionary'
 
@@ -242,6 +243,15 @@ export class Game {
     maxRound,
     { onTimerTick, onTurnEnd, onRoundEnd, onGameEnd },
   ) {
+    this.roundWord = await this.#createRoundWord(maxRound)
+
+    if (this.roundWord === null) {
+      return {
+        isSuccess: false,
+        message: errorMessage.APIConeectionError,
+      }
+    }
+
     this.usersSequence = shuffleArrayByFisherYates(
       userIdList.map((userId) => ({
         userId,
@@ -262,8 +272,10 @@ export class Game {
     }
 
     this.maxRound = maxRound
-    this.roundWord = await this.#createRoundWord(maxRound)
     this.state = 'game ready'
+    return {
+      isSuccess: true,
+    }
   }
 
   initializeRound() {
@@ -325,8 +337,20 @@ export class Game {
    */
   async checkIsValidWord(word) {
     this.#stopTimer()
-    const definition = await dictionary.searchDefinition(word)
+
+    let definition
+    let errorOccured = false
+    try {
+      definition = await dictionary.searchDefinition(word)
+    } catch {
+      errorOccured = true
+    }
+
     this.#resumeTimer()
+
+    if (errorOccured) {
+      return -1
+    }
 
     if (definition === null || this.usedWords[word] === true) {
       return null
@@ -400,14 +424,14 @@ export class Game {
           maxRound,
         )) ?? []
 
-      console.log(`round word list is ${JSON.stringify(words)}`)
-
       if (words.length === 0) {
         const repeatCount = maxRound - starterCandidates.length
         return starterCandidates
           .join()
           .repeat(repeatCount < 0 ? 1 : repeatCount)
       }
+
+      console.log(`round word list is ${JSON.stringify(words)}`)
 
       return words[Math.floor(Math.random() * (words.length - 1))]
     } catch (err) {
