@@ -584,7 +584,7 @@ const startGame = async (
     onGameEnd,
   })
 
-  if (isSuccess == false) {
+  if (isSuccess === false) {
     onError(message)
     return
   }
