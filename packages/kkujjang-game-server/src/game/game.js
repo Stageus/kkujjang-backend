@@ -167,7 +167,9 @@ export class Game {
    */
   startTimer(roundTimeLimit) {
     this.#timer.startTime = Date.now()
-    this.#timer.roundTimeLeft = roundTimeLimit
+    if (this.#timer.roundTimeLeft === undefined) {
+      this.#timer.roundTimeLeft = roundTimeLimit
+    }
     this.#timer.personalTimeLeft = roundTimeLimit / 10
     this.#timer.currentPersonalTimeLimit = roundTimeLimit / 10
 
@@ -283,6 +285,7 @@ export class Game {
       this.lastDefeatedUserIndex === null ? 0 : this.lastDefeatedUserIndex
 
     console.log(`this round starts from ${this.currentTurnUserIndex}th user`)
+    this.#timer.roundTimeLeft = undefined
     this.turnElapsed = 1
     this.wordStartsWith = this.roundWord[this.currentRound]
     this.usedWords = {}
