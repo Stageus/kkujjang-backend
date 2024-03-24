@@ -339,18 +339,13 @@ export class Game {
     this.#stopTimer()
 
     let definition
-    let errorOccured = false
     try {
       definition = await dictionary.searchDefinition(word)
     } catch {
-      errorOccured = true
+      return -1
     }
 
     this.#resumeTimer()
-
-    if (errorOccured) {
-      return -1
-    }
 
     if (definition === null || this.usedWords[word] === true) {
       return null
