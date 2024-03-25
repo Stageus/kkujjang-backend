@@ -88,11 +88,12 @@ userRouter.get(
           `WITH my_serial AS (
           SELECT nextval('kkujjang.user_id_seq'::regclass) AS id
         )
-        INSERT INTO kkujjang.user (id, nickname, kakao_id)
+        INSERT INTO kkujjang.user (id, nickname, kakao_id, avatar_accessory_index)
         SELECT 
           my_serial.id,
           '${globalConfig.DEFAULT_NICKNAME}' || '#' || CAST(my_serial.id AS VARCHAR),
-          $1
+          $1,
+          ${globalConfig.DEFAULT_AVATAR_ACCESSORY_INDEX}
         FROM my_serial
         WHERE NOT EXISTS (
           SELECT 1
