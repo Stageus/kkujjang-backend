@@ -93,7 +93,7 @@ userRouter.get(
           my_serial.id,
           '${globalConfig.DEFAULT_NICKNAME}' || '#' || CAST(my_serial.id AS VARCHAR),
           $1,
-          0
+          ${globalConfig.DEFAULT_AVATAR_ACCESSORY_INDEX}
         FROM my_serial
         WHERE NOT EXISTS (
           SELECT 1
