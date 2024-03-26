@@ -19,7 +19,7 @@ export const validateInquiryGetBySearch = (req, res, next) => {
       type,
       'type',
       validation.checkExist(),
-      validation.checkParsedNumberInRange(1, 99),
+      validation.checkParsedNumberInRange(0, 99),
     )
   }
 
