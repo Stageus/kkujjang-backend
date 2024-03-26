@@ -170,8 +170,8 @@ export class Game {
     if (this.#timer.roundTimeLeft === undefined) {
       this.#timer.roundTimeLeft = roundTimeLimit
     }
-    this.#timer.personalTimeLeft = roundTimeLimit / 10
-    this.#timer.currentPersonalTimeLimit = roundTimeLimit / 10
+    this.#timer.personalTimeLeft = this.#timer.roundTimeLeft / 10
+    this.#timer.currentPersonalTimeLimit = this.#timer.roundTimeLeft / 10
 
     this.#timer.intervalTimeout = setInterval(
       this.#createOnTimerTick(this),
