@@ -6,7 +6,11 @@ import { errorMessage } from '#utility/error'
 import { GameRoom } from '#game/gameRoom'
 import { Lobby } from '#game/lobby'
 import { setSokcetIdByUserId } from '#utility/socketid-mapper'
-import { setSocketSession, getUserIdBySessionId } from '#utility/session'
+import {
+  setSocketSession,
+  destroySocketSession,
+  getUserIdBySessionId,
+} from '#utility/session'
 import { chatLogger } from 'logger'
 import { roomLogger } from 'logger'
 
@@ -27,21 +31,25 @@ export const setupKkujjangWebSocket = (io) => {
   io.on('connection', async (socket) => {
     if (!(await isUserSignedInApiServer(socket))) {
       emitError(socket, errorMessage.unauthorized)
+      socket.disconnect(true)
       return
     }
 
     if (await isUserOnline(socket)) {
       emitError(socket, errorMessage.isAlreadyLogin)
+      socket.disconnect(true)
       return
     }
 
     if (setSokcetIdByUserId(await fetchUserId(socket), socket.id) === false) {
       emitError(socket, errorMessage.unauthorized)
+      socket.disconnect(true)
       return
     }
 
     if ((await setSocketSession(socket)) === false) {
       emitError(socket, errorMessage.unauthorized)
+      socket.disconnect(true)
       return
     }
 
@@ -55,14 +63,14 @@ export const setupKkujjangWebSocket = (io) => {
     socket.on('load room', async () => {
       socket.emit(
         'complete load room',
-        Lobby.instance.getRoomDetailsByUserId(await fetchUserId(socket)),
+        Lobby.instance.getRoomDetailsByUserId(getUserIdBySessionId(socket)),
       )
     })
 
     socket.on('create room', async (roomConfig) => {
       createRoom(
         {
-          roomOwnerUserId: await fetchUserId(socket),
+          roomOwnerUserId: getUserIdBySessionId(socket),
           ...roomConfig,
         },
         {
@@ -74,7 +82,7 @@ export const setupKkujjangWebSocket = (io) => {
               'load new room',
               Lobby.instance.getRoom(roomId).info,
             )
-            const userId = await fetchUserId(socket)
+            const userId = getUserIdBySessionId(socket)
             await roomLogger.logRoom('createRoom', { roomId })
             await roomLogger.logRoom('userEnter', { roomId, userId })
           },
@@ -97,7 +105,7 @@ export const setupKkujjangWebSocket = (io) => {
         joinRoom(
           {
             ...authorization,
-            userId: await fetchUserId(socket),
+            userId: getUserIdBySessionId(socket),
           },
           {
             onComplete: async (roomId, userId) => {
@@ -119,7 +127,7 @@ export const setupKkujjangWebSocket = (io) => {
     )
 
     socket.on('leave room', async () => {
-      leaveRoom(await fetchUserId(socket), {
+      leaveRoom(getUserIdBySessionId(socket), {
         onComplete: async (roomId, roomStatus) => {
           socket.leave(roomId)
           socket.join('LOBBY')
@@ -136,7 +144,7 @@ export const setupKkujjangWebSocket = (io) => {
             io.to(roomId).emit('some user leave room', roomStatus)
           }
           socket.emit('complete leave room')
-          const userId = await fetchUserId(socket)
+          const userId = getUserIdBySessionId(socket)
           await roomLogger.logRoom('userLeave', { roomId, userId })
         },
         onRoomOwnerChange: (roomId, newRoomOwnerIndex) => {
@@ -151,7 +159,7 @@ export const setupKkujjangWebSocket = (io) => {
     socket.on('disconnect', () => onDisconnect(io, socket))
 
     socket.on('switch ready state', async (state) => {
-      const userId = await fetchUserId(socket)
+      const userId = getUserIdBySessionId(socket)
       switchReadyState(userId, state, {
         onComplete: (roomId, index) => {
           io.to(roomId).emit('complete switch ready state', { index, state })
@@ -163,7 +171,7 @@ export const setupKkujjangWebSocket = (io) => {
     })
 
     socket.on('change room config', async (roomConfig) => {
-      const userId = await fetchUserId(socket)
+      const userId = getUserIdBySessionId(socket)
 
       changeRoomConfig(userId, roomConfig, {
         onComplete: (roomId, roomInfo) => {
@@ -177,7 +185,7 @@ export const setupKkujjangWebSocket = (io) => {
     })
 
     socket.on('game start', async () => {
-      const userId = await fetchUserId(socket)
+      const userId = getUserIdBySessionId(socket)
       await startGame(userId, {
         onComplete: async (roomId, gameStatus) => {
           io.to(roomId).emit('complete game start', gameStatus)
@@ -211,7 +219,7 @@ export const setupKkujjangWebSocket = (io) => {
     })
 
     socket.on('round start', async () => {
-      const userId = await fetchUserId(socket)
+      const userId = getUserIdBySessionId(socket)
       startRound(userId, {
         onComplete: (roomId, gameStatus) => {
           stopSocketTimer(userId, 'round')
@@ -225,7 +233,7 @@ export const setupKkujjangWebSocket = (io) => {
     })
 
     socket.on('turn start', async () => {
-      const userId = await fetchUserId(socket)
+      const userId = getUserIdBySessionId(socket)
       startTurn(userId, {
         onComplete: (roomId, gameStatus) => {
           stopSocketTimer(userId, 'turn')
@@ -238,7 +246,7 @@ export const setupKkujjangWebSocket = (io) => {
     })
 
     socket.on('chat', async (message) => {
-      const userId = await fetchUserId(socket)
+      const userId = getUserIdBySessionId(socket)
       await chat(userId, message, {
         onOrdinaryChat: async (roomId) => {
           io.to(roomId).emit('chat', { userId, message })
@@ -312,7 +320,7 @@ const onTimeout = (io, socket, userId) => async () => {
  * @param {Socket} socket
  */
 const onDisconnect = async (io, socket) => {
-  quit(await fetchUserId(socket), {
+  quit(getUserIdBySessionId(socket), {
     notifyUserQuit: (roomId, roomStatus) => {
       io.to(roomId).emit('some user leave room', roomStatus)
     },
@@ -323,6 +331,8 @@ const onDisconnect = async (io, socket) => {
       io.to('LOBBY').emit('destroy room', { roomId })
     },
   })
+
+  destroySocketSession(socket)
 }
 
 /**
@@ -331,7 +341,6 @@ const onDisconnect = async (io, socket) => {
  */
 const emitError = (socket, message) => {
   socket.emit('error', message)
-  socket.disconnect(true)
 }
 
 /**

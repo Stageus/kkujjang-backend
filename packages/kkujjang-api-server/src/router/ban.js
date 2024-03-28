@@ -16,7 +16,7 @@ banRouter.post('/', async (req, res) => {
     Buffer.from(JSON.stringify({ userId, bannedUntil, bannedReason })),
   )
 
-  // await authSession.destroySessionByUserId(userId)
+  await authSession.destroySessionByUserId(userId)
 
   res.send({ result: 'success' })
 })

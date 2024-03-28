@@ -2,8 +2,6 @@ import { authSession } from 'kkujjang-session'
 
 const sessionIdToUserId = {}
 
-export const isUserIdExist = {}
-
 export const setSocketSession = async (socket) => {
   /**
    * @type {string}
@@ -18,9 +16,6 @@ export const setSocketSession = async (socket) => {
 }
 
 export const getUserIdBySessionId = (socket) => {
-  /**
-   * @type {string}
-   */
   const sessionId = `${socket.handshake.headers.sessionid}`
 
   const userId = sessionIdToUserId[sessionId]
@@ -30,4 +25,13 @@ export const getUserIdBySessionId = (socket) => {
   }
 
   return Number(userId)
+}
+
+export const destroySocketSession = (socket) => {
+  const sessionId = `${socket.handshake.headers.sessionid}`
+  const userId = getUserIdBySessionId(socket)
+  if (userId === null) {
+    return
+  }
+  delete sessionIdToUserId[sessionId]
 }

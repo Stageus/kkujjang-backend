@@ -93,7 +93,6 @@
 
         socket.on('complete switch ready state', (res) => {
           console.log(`complete switch ready state: ${JSON.stringify(res)}`)
-          socket.emit('game start')
         })
 
         socket.on('complete game start', (game) => {
