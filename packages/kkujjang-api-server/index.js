@@ -13,6 +13,7 @@ import { inquiryRouter } from '#router/inquiry'
 import { rankingRouter } from '#router/ranking'
 import { chatRouter } from '#router/chat'
 import { roomRouter } from '#router/room'
+import { banRouter } from '#router/ban'
 
 configDotenv()
 
@@ -44,6 +45,7 @@ app.use('/inquiry', inquiryRouter)
 app.use('/ranking', rankingRouter)
 app.use('/chat', chatRouter)
 app.use('/room', roomRouter)
+app.use('/ban', banRouter)
 
 app.use(async (err, req, res, next) => {
   const { statusCode = 500, message = 'undefined error', messages = [] } = err

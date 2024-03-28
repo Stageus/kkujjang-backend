@@ -5,6 +5,7 @@ import { authSession } from 'kkujjang-session'
 import { errorMessage } from '#utility/error'
 import { GameRoom } from '#game/gameRoom'
 import { Lobby } from '#game/lobby'
+import { setSokcetIdByUserId } from '#utility/socketid-mapper'
 import { chatLogger } from 'logger'
 import { roomLogger } from 'logger'
 
@@ -32,6 +33,8 @@ export const setupKkujjangWebSocket = (io) => {
       socket.emit('error', errorMessage.isAlreadyLogin)
       return
     }
+
+    setSokcetIdByUserId(await fetchUserId(socket), socket.id)
 
     socket.join('LOBBY')
     Lobby.instance.enterUser(await fetchUserId(socket))

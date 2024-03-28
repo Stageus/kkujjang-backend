@@ -161,6 +161,10 @@
           console.log(`error: ${JSON.stringify(err)}`)
         })
 
+        socket.on('banned', (res) => {
+          alert(`사용자님은 밴 되었습니다 ${JSON.stringify(res)}`)
+        })
+
         socket.emit('load room list')
         socket.emit('create room', roomConfig)
       }

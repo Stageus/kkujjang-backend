@@ -18,8 +18,9 @@
   },
   "type": "module",
   "imports": {
-    "#socket/*": "./src/socket/*.js",
     "#game/*": "./src/game/*.js",
-    "#utility/*": "./src/utility/*.js"
+    "#socket/*": "./src/socket/*.js",
+    "#utility/*": "./src/utility/*.js",
+    "#channel/*": "./src/channel/*.js"
   }
 }
