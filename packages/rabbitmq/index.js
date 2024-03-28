@@ -27,7 +27,6 @@ export class RabbitMQ {
       const conn = await this.connect()
       this.banChannel = await createBanChannel(conn)
     }
-    console.log('밴 채널에 연결되었습니다')
     return this.banChannel
   }
 }

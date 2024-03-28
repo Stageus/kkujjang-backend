@@ -15,12 +15,14 @@ export const setUpBanChannel = async (io) => {
     const socketId = getSocketIdByUserID(data.userId)
 
     if (socketId === undefined) {
+      banChannel.ack(msg)
       return
     }
 
     const socket = io.sockets.sockets.get(socketId)
 
-    if (socketId === undefined) {
+    if (socket === undefined) {
+      banChannel.ack(msg)
       return
     }
 

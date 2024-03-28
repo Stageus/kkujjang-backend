@@ -6,6 +6,7 @@ import { errorMessage } from '#utility/error'
 import { GameRoom } from '#game/gameRoom'
 import { Lobby } from '#game/lobby'
 import { setSokcetIdByUserId } from '#utility/socketid-mapper'
+import { setSocketSession, getUserIdBySessionId } from '#utility/session'
 import { chatLogger } from 'logger'
 import { roomLogger } from 'logger'
 
@@ -25,19 +26,27 @@ const socketTimeouts = {}
 export const setupKkujjangWebSocket = (io) => {
   io.on('connection', async (socket) => {
     if (!(await isUserSignedInApiServer(socket))) {
-      socket.emit('error', errorMessage.unauthorized)
+      emitError(socket, errorMessage.unauthorized)
       return
     }
 
     if (await isUserOnline(socket)) {
-      socket.emit('error', errorMessage.isAlreadyLogin)
+      emitError(socket, errorMessage.isAlreadyLogin)
       return
     }
 
-    setSokcetIdByUserId(await fetchUserId(socket), socket.id)
+    if (setSokcetIdByUserId(await fetchUserId(socket), socket.id) === false) {
+      emitError(socket, errorMessage.unauthorized)
+      return
+    }
+
+    if ((await setSocketSession(socket)) === false) {
+      emitError(socket, errorMessage.unauthorized)
+      return
+    }
 
     socket.join('LOBBY')
-    Lobby.instance.enterUser(await fetchUserId(socket))
+    Lobby.instance.enterUser(getUserIdBySessionId(socket))
 
     socket.on('load room list', () => {
       socket.emit('complete load room list', Lobby.instance.roomList)
@@ -223,7 +232,7 @@ export const setupKkujjangWebSocket = (io) => {
           io.to(roomId).emit('complete turn start', gameStatus)
         },
         onError: (message) => {
-          socket.emit('error', message)
+          emitError(socket, message)
         },
       })
     })
@@ -322,6 +331,7 @@ const onDisconnect = async (io, socket) => {
  */
 const emitError = (socket, message) => {
   socket.emit('error', message)
+  socket.disconnect(true)
 }
 
 /**
@@ -470,6 +480,7 @@ const quit = (
   userId,
   { notifyUserQuit, onRoomOwnerChange, notifyDestroyRoom },
 ) => {
+  console.log(userId)
   const gameRoom = Lobby.instance.getRoomByUserId(userId)
 
   if (gameRoom !== null) {
