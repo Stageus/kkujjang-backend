@@ -74,8 +74,8 @@ userRouter.get(
     // 첫 로그인 여부 판단
     const firstSigninValidation = await pgQuery(
       `SELECT count(*) AS count 
-    FROM kkujjang.user 
-    WHERE kakao_id=$1 AND is_deleted=FALSE;`,
+      FROM kkujjang.user 
+      WHERE kakao_id=$1 AND is_deleted=FALSE;`,
       [kakaoId],
     )
 
@@ -113,17 +113,42 @@ userRouter.get(
       }
     }
 
-    const { id: userId, authority_level: authorityLevel } = (
+    const { userId, authorityLevel, isBanned, bannedReason, bannedUntil } = (
       await pgQuery(
-        `SELECT id, authority_level 
-      FROM kkujjang.user 
-      WHERE kakao_id = $1;`,
+        `SELECT 
+          id AS "userId", authority_level AS "authorityLevel",
+          is_banned AS "isBanned", banned_reason AS "bannedReason", banned_until AS "bannedUntil"
+        FROM kkujjang.user 
+        WHERE kakao_id = $1;`,
         [kakaoId],
       )
     ).rows[0]
 
     // 밴 여부 체크
-    // if 밴이라면
+    if (isBanned === true) {
+      if (new Date().getTime() <= new Date(bannedUntil).getTime()) {
+        const yyyy = bannedUntil.getFullYear()
+        const mm = String(bannedUntil.getMonth() + 1).padStart(2, '0')
+        const dd = String(bannedUntil.getDate()).padStart(2, '0')
+        const hh = String(bannedUntil.getHours()).padStart(2, '0')
+        const min = String(bannedUntil.getMinutes()).padStart(2, '0')
+        const ss = String(bannedUntil.getSeconds()).padStart(2, '0')
+        throw {
+          statusCode: 401,
+          message: JSON.stringify({
+            bannedReason,
+            bannedUntil: `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`,
+          }),
+        }
+      }
+      await pgQuery(
+        `UPDATE kkujjang.user
+          SET
+            is_banned = false
+          WHERE kakao_id = $1;`,
+        [kakaoId],
+      )
+    }
 
     // 다른 기기에서 접속중인 계정 확인
     if (await authSession.isSignedIn(userId.toString())) {
@@ -214,9 +239,11 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
   const { username, password } = req.body
 
   const result = await pgQuery(
-    `SELECT id, authority_level 
-    FROM kkujjang.user
-    WHERE username = $1 AND password = crypt($2, password) AND is_deleted=FALSE`,
+    `SELECT 
+        id AS "userId", authority_level AS "authorityLevel",
+        is_banned AS "isBanned", banned_reason AS "bannedReason", banned_until AS "bannedUntil"
+      FROM kkujjang.user
+      WHERE username = $1 AND password = crypt($2, password) AND is_deleted=FALSE`,
     [username, password],
   )
 
@@ -227,10 +254,34 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
     }
   }
 
-  const { id: userId, authority_level: authorityLevel } = result.rows[0]
+  const { userId, authorityLevel, isBanned, bannedReason, bannedUntil } =
+    result.rows[0]
 
   // 밴 여부 체크
-  // if 밴이라면
+  if (isBanned === true) {
+    if (new Date().getTime() <= new Date(bannedUntil).getTime()) {
+      const yyyy = bannedUntil.getFullYear()
+      const mm = String(bannedUntil.getMonth() + 1).padStart(2, '0')
+      const dd = String(bannedUntil.getDate()).padStart(2, '0')
+      const hh = String(bannedUntil.getHours()).padStart(2, '0')
+      const min = String(bannedUntil.getMinutes()).padStart(2, '0')
+      const ss = String(bannedUntil.getSeconds()).padStart(2, '0')
+      throw {
+        statusCode: 401,
+        message: JSON.stringify({
+          bannedReason,
+          bannedUntil: `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`,
+        }),
+      }
+    }
+    await pgQuery(
+      `UPDATE kkujjang.user
+      SET
+        is_banned = false
+        WHERE username = $1`,
+      [username],
+    )
+  }
 
   // 다른 기기에서 접속중인 계정 확인
   if (await authSession.isSignedIn(userId.toString())) {

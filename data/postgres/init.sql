@@ -1,4 +1,4 @@
-CREATE SCHEMA kkujjang
+CREATE SCHEMA kkujjang;
 
 CREATE TABLE kkujjang.inquiry_thread
 (

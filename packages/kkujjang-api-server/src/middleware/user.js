@@ -28,10 +28,7 @@ export const validateSignIn = (req, res, next) => {
     password,
     'password',
     validation.checkExist(),
-    validation.checkRegExp(
-      // 영문 대문자, 소문자, 키보드 내 특수문자,
-      /^(?=.*[a-zA-Z])(?=.*\d)[\x00-\x7F]{7,30}$/,
-    ),
+    validation.checkRegExp(/^(?=.*[a-zA-Z])(?=.*\d)[\x00-\x7F]{7,30}$/),
   )
 
   next()
