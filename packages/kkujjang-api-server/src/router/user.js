@@ -122,6 +122,9 @@ userRouter.get(
       )
     ).rows[0]
 
+    // 밴 여부 체크
+    // if 밴이라면
+
     // 다른 기기에서 접속중인 계정 확인
     if (await authSession.isSignedIn(userId.toString())) {
       kakao.logout(tokenData.access_token)
@@ -225,6 +228,9 @@ userRouter.post('/signin', allowGuestOnly, validateSignIn, async (req, res) => {
   }
 
   const { id: userId, authority_level: authorityLevel } = result.rows[0]
+
+  // 밴 여부 체크
+  // if 밴이라면
 
   // 다른 기기에서 접속중인 계정 확인
   if (await authSession.isSignedIn(userId.toString())) {

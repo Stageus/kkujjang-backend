@@ -13,6 +13,7 @@ import * as validation from 'kkujjang-validation'
 import { authSession } from 'kkujjang-session'
 import { upload } from 'kkujjang-multer'
 import { requireSignin, requireAdminAuthority } from '#middleware/auth'
+import { RabbitMQ } from 'rabbitmq'
 
 configDotenv()
 
@@ -182,6 +183,25 @@ testRouter.post('/regExp', async (req, res) => {
     type: typeof str,
     result: RegExp(regExp).test(str),
   })
+})
+
+testRouter.get('/socket', function (req, res) {
+  const __filename = fileURLToPath(import.meta.url)
+  const __dirname = path.dirname(__filename)
+  res.sendFile(path.join(__dirname, '..', '..', 'public', 'socket_test.html'))
+})
+
+testRouter.post('/ban', async (req, res) => {
+  const { userId, bannedUntil, bannedReason } = req.body
+  const banChannel = await RabbitMQ.instance.connectToBanChannel()
+  await banChannel.sendToQueue(
+    process.env.USER_BANNED_QUEUE_NAME,
+    Buffer.from(JSON.stringify({ userId, bannedUntil, bannedReason })),
+  )
+
+  await authSession.destroySessionByUserId(userId)
+
+  res.send({ result: 'success' })
 })
 
 testRouter.get('/socket', function (req, res) {
