@@ -159,6 +159,12 @@ noticeRouter.put(
   '/:noticeId',
   validateNoticePathIndex,
   requireAdminAuthority,
+  upload('notice', {
+    fileNameType: 'timestamp',
+    fileSize: 1024 * 1024 * 10,
+    maxFileCount: 0,
+    allowedExtensions: ['jpg', 'jpeg', 'png'],
+  }),
   validateNotice,
   async (req, res) => {
     const { noticeId } = req.params
