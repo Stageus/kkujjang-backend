@@ -192,7 +192,7 @@ testRouter.get('/socket', function (req, res) {
   res.sendFile(path.join(__dirname, '..', '..', 'public', 'socket_test.html'))
 })
 
-testRouter.post('/ban', validateBan, async (req, res) => {
+testRouter.put('/ban', validateBan, async (req, res) => {
   const { userId, bannedReason, bannedDays } = req.body
   const banChannel = await RabbitMQ.instance.connectToBanChannel()
   await banChannel.sendToQueue(

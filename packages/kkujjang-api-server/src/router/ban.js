@@ -11,7 +11,7 @@ configDotenv()
 
 export const banRouter = asyncify(express.Router())
 
-banRouter.post('/', requireAdminAuthority, validateBan, async (req, res) => {
+banRouter.put('/', requireAdminAuthority, validateBan, async (req, res) => {
   const { userId, bannedReason, bannedDays } = req.body
   const banChannel = await RabbitMQ.instance.connectToBanChannel()
   await banChannel.sendToQueue(
