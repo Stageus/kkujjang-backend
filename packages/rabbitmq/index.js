@@ -1,6 +1,6 @@
 import { configDotenv } from 'dotenv'
 import amqp from 'amqplib'
-import { createBanChannel } from './src/ban.js'
+import { createBanChannel } from '#src/ban'
 
 configDotenv()
 
@@ -41,7 +41,7 @@ export class RabbitMQ {
   }
 
   /**
-   * @returns {amqp.Channel}
+   * @returns {Promise<amqp.Channel>}
    */
   async connectToBanChannel() {
     if (this.banChannel === null) {
