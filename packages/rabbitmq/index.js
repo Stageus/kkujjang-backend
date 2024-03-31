@@ -5,9 +5,19 @@ import { createBanChannel } from './src/ban.js'
 configDotenv()
 
 export class RabbitMQ {
+  /**
+   * @type {RabbitMQ} 싱글톤
+   */
   static instance
 
+  /**
+   * @type {null | amqp.Connection}
+   */
   conn = null
+
+  /**
+   * @type {null | amqp.Channel}
+   */
   banChannel = null
 
   constructor() {
@@ -18,6 +28,9 @@ export class RabbitMQ {
     }
   }
 
+  /**
+   * @returns {Promise<amqp.Connection>}
+   */
   async connect() {
     if (this.conn === null) {
       this.conn = await amqp.connect(
@@ -27,6 +40,9 @@ export class RabbitMQ {
     return this.conn
   }
 
+  /**
+   * @returns {amqp.Channel}
+   */
   async connectToBanChannel() {
     if (this.banChannel === null) {
       const conn = await this.connect()

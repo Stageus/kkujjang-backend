@@ -1,3 +1,4 @@
+import { Server } from 'socket.io'
 import { configDotenv } from 'dotenv'
 import { RabbitMQ } from 'rabbitmq'
 import { getSocketIdByUserID } from '#utility/socketid-mapper'
@@ -6,6 +7,10 @@ configDotenv()
 
 const queueName = process.env.USER_BANNED_QUEUE_NAME
 
+/**
+ * @param {Server} io
+ * @returns {Promise<void>}
+ */
 export const setUpBanChannel = async (io) => {
   const banChannel = await RabbitMQ.instance.connectToBanChannel()
   banChannel.consume(queueName, (msg) => {
