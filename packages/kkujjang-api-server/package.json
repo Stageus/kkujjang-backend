@@ -18,7 +18,8 @@
     "redis-cli": "*",
     "kkujjang-session": "*",
     "kkujjang-validation": "*",
-    "logger": "*"
+    "logger": "*",
+    "rabbitmq": "*"
   },
   "type": "module",
   "imports": {

@@ -1,4 +1,4 @@
-CREATE SCHEMA kkujjang
+CREATE SCHEMA kkujjang;
 
 CREATE TABLE kkujjang.inquiry_thread
 (
@@ -58,7 +58,7 @@ CREATE TABLE kkujjang.notice_file
   PRIMARY KEY (id)
 );
 
-COMMENT ON COLUMN notice.id IS 'DB 인덱스';
+COMMENT ON COLUMN kkujjang.notice.id IS 'DB 인덱스';
 
 CREATE TABLE kkujjang.report
 (
@@ -130,3 +130,5 @@ ALTER TABLE kkujjang.report
   ADD CONSTRAINT FK_user_TO_report1
     FOREIGN KEY (reportee_id)
     REFERENCES kkujjang.user (id);
+
+CREATE extension pgcrypto;

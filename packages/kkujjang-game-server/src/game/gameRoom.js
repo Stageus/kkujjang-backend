@@ -292,6 +292,12 @@ export class GameRoom {
         message: errorMessage.notARoomOnwner,
       }
     }
+    if (this.currentUserCount === 1) {
+      return {
+        isSuccess: false,
+        message: errorMessage.canNotStartAlone,
+      }
+    }
     if (this.#canStartGame() === false) {
       return {
         isSuccess: false,

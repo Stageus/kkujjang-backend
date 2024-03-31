@@ -12,7 +12,9 @@ import * as uuid from 'uuid'
 import * as validation from 'kkujjang-validation'
 import { authSession } from 'kkujjang-session'
 import { upload } from 'kkujjang-multer'
+import { validateBan } from '#middleware/ban'
 import { requireSignin, requireAdminAuthority } from '#middleware/auth'
+import { RabbitMQ } from 'rabbitmq'
 
 configDotenv()
 
@@ -182,6 +184,35 @@ testRouter.post('/regExp', async (req, res) => {
     type: typeof str,
     result: RegExp(regExp).test(str),
   })
+})
+
+testRouter.get('/socket', function (req, res) {
+  const __filename = fileURLToPath(import.meta.url)
+  const __dirname = path.dirname(__filename)
+  res.sendFile(path.join(__dirname, '..', '..', 'public', 'socket_test.html'))
+})
+
+testRouter.put('/ban', validateBan, async (req, res) => {
+  const { userId, bannedReason, bannedDays } = req.body
+  const banChannel = await RabbitMQ.instance.connectToBanChannel()
+  await banChannel.sendToQueue(
+    process.env.USER_BANNED_QUEUE_NAME,
+    Buffer.from(
+      JSON.stringify({ userId, bannedReason, bannedDays: Number(bannedDays) }),
+    ),
+  )
+  await authSession.destroySessionByUserId(userId)
+
+  const dateMills = Date.now() + Number(bannedDays) * 24 * 60 * 60 * 1000
+  const bannedUntil = new Date(dateMills)
+  await pgQuery(
+    `UPDATE kkujjang.user
+    SET is_banned = TRUE, banned_reason = $1, banned_until = $2
+    WHERE id = $3`,
+    [bannedReason, bannedUntil, userId],
+  )
+
+  res.send({ result: 'success' })
 })
 
 testRouter.get('/socket', function (req, res) {

@@ -93,7 +93,6 @@
 
         socket.on('complete switch ready state', (res) => {
           console.log(`complete switch ready state: ${JSON.stringify(res)}`)
-          socket.emit('game start')
         })
 
         socket.on('complete game start', (game) => {
@@ -159,6 +158,10 @@
 
         socket.on('error', (err) => {
           console.log(`error: ${JSON.stringify(err)}`)
+        })
+
+        socket.on('banned', (res) => {
+          alert(`사용자님은 밴 되었습니다 ${JSON.stringify(res)}`)
         })
 
         socket.emit('load room list')

@@ -7,6 +7,7 @@ services:
       - .env
     environment:
       - POSTGRES_DB=kkujjang_test
+      - TZ=$TIME_ZONE
     image: postgres:latest
     volumes:
       - ./data/postgres/:/docker-entrypoint-initdb.d/
@@ -17,11 +18,12 @@ services:
       - $PGPORT:$PGPORT
 
   mongodb:
+    container_name: kkujjang-mongodb
     env_file:
       - .env
     environment:
       - MONGO_INITDB_DATABASE=kkujjang_test
-    container_name: kkujjang-mongodb
+      - TZ=$TIME_ZONE
     volumes:
       - ./data/mongodb/:/docker-entrypoint-initdb.d/mongo-init.js:ro
     image: mongo:latest
@@ -33,9 +35,11 @@ services:
       - $MONGODB_PORT:$MONGODB_PORT
 
   redis:
+    container_name: kkujjang-redis
     env_file:
       - .env
-    container_name: kkujjang-redis
+    environment:
+      - TZ=$TIME_ZONE
     image: redis/redis-stack-server:latest
     restart: always
     command: redis-server --requirepass $REDIS_PASSWORD --port $REDIS_PORT
@@ -44,15 +48,32 @@ services:
     ports:
       - $REDIS_PORT:$REDIS_PORT
 
+  rabbitmq:
+    container_name: kkujjang-rabbitmq
+    env_file:
+      - .env
+    environment:
+      - RABBITMQ_DEFAULT_USER=$RABBITMQ_DEFAULT_USER
+      - RABBITMQ_DEFAULT_PASS=$RABBITMQ_DEFAULT_PASS
+      - TZ=$TIME_ZONE
+    image: rabbitmq:3.12.4-management-alpine
+    restart: always
+    tty: true
+    stdin_open: true
+    ports:
+      - $RABBITMQ_PORT:5672
+      - $RABBITMQ_MANAGER_PORT:15672
+
   api:
+    container_name: kkujjang-api-server
     env_file:
       - .env
     environment:
       - NODE_ENV=dev
+      - TZ=$TIME_ZONE
     build:
       context: .
       dockerfile: Dockerfile.api
-    container_name: kkujjang-api-server
     image: kkujjang-api-server:dev
     restart: always
     tty: true
@@ -65,14 +86,15 @@ services:
       - $HTTPS_PORT:$HTTPS_PORT
 
   game:
+    container_name: kkujjang-game-server
     env_file:
       - .env
     environment:
       - NODE_ENV=dev
+      - TZ=$TIME_ZONE
     build:
       context: .
       dockerfile: Dockerfile.game
-    container_name: kkujjang-game-server
     image: kkujjang-game-server:dev
     restart: always
     tty: true

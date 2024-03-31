@@ -14,12 +14,12 @@ configDotenv()
  *   kakaoToken?: string;
  * } | null>}
  */
-export const get = async (id) => {
-  if (!id) {
+export const get = async (sessionId) => {
+  if (!sessionId) {
     return null
   }
 
-  const session = await redisClient.hGetAll(`session-${id}`)
+  const session = await redisClient.hGetAll(`session-${sessionId}`)
 
   if (!session || Object.keys(session).length === 0) {
     return null
@@ -70,6 +70,17 @@ export const create = async (userData) => {
 
 export const destroy = async (sessionId) => {
   const { userId } = await get(sessionId)
+
+  await redisClient.del([`session-${sessionId}`])
+  await redisClient.del([`session:${userId}`])
+}
+
+export const destroySessionByUserId = async (userId) => {
+  const sessionId = (await redisClient.get(`session:${userId}`)) ?? null
+
+  if (sessionId === null) {
+    return
+  }
 
   await redisClient.del([`session-${sessionId}`])
   await redisClient.del([`session:${userId}`])
