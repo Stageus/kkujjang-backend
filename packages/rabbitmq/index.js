@@ -1,6 +1,7 @@
 import { configDotenv } from 'dotenv'
 import amqp from 'amqplib'
 import { createBanChannel } from '#src/ban'
+import { createRoomIdUpdateChannel } from '#src/roomIdFind'
 
 configDotenv()
 
@@ -19,6 +20,11 @@ export class RabbitMQ {
    * @type {null | amqp.Channel}
    */
   banChannel = null
+
+  /**
+   * @type {null | amqp.Channel}
+   */
+  roomIdUpdateChannel = null
 
   constructor() {
     if (RabbitMQ.instance) {
@@ -49,6 +55,17 @@ export class RabbitMQ {
       this.banChannel = await createBanChannel(conn)
     }
     return this.banChannel
+  }
+
+  /**
+   * @returns {Promise<amqp.Channel>}
+   */
+  async connectToRoomIdUpdateChannel() {
+    if (this.roomIdUpdateChannel === null) {
+      const conn = await this.connect()
+      this.roomIdUpdateChannel = await createRoomIdUpdateChannel(conn)
+    }
+    return this.roomIdUpdateChannel
   }
 }
 

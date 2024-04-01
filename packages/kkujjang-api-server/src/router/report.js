@@ -2,6 +2,7 @@ import express from 'express'
 import asyncify from 'express-asyncify'
 import { configDotenv } from 'dotenv'
 import { pgQuery } from 'postgres'
+import { RabbitMQ } from 'rabbitmq'
 import { requireAdminAuthority, requireSignin } from '#middleware/auth'
 import {
   validateReport,
@@ -26,16 +27,32 @@ reportRouter.post('/', requireSignin, validateReport, async (req, res) => {
     note = '',
   } = req.body
 
-  await pgQuery(
-    `INSERT INTO kkujjang.report (
+  const id = (
+    await pgQuery(
+      `INSERT INTO kkujjang.report (
       author_id, 
       reportee_id,
       is_offensive,
       is_poor_manner,
       is_cheating,
       note
-    ) VALUES ($1, $2, $3, $4, $5, $6);`,
-    [session.userId, reporteeId, isOffensive, isPoorManner, isCheating, note],
+    ) VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING id;`,
+      [session.userId, reporteeId, isOffensive, isPoorManner, isCheating, note],
+    )
+  ).rows[0].id
+
+  const roomIdUpdateChannel =
+    await RabbitMQ.instance.connectToRoomIdUpdateChannel()
+
+  roomIdUpdateChannel.sendToQueue(
+    process.env.ROOMID_UPDATE_QUEUE_NAME,
+    Buffer.from(
+      JSON.stringify({
+        id,
+        userId: session.userId,
+      }),
+    ),
   )
 
   res.json({ result: 'success' })
@@ -164,7 +181,8 @@ reportRouter.get(
           is_poor_manner as isPoorManner, 
           is_cheating as isCheating, 
           report.created_at as createdAt,
-          note
+          note,
+          room_id as roomId
         FROM kkujjang.report
           JOIN kkujjang.user reporter_user_table ON report.author_id = reporter_user_table.id
           JOIN kkujjang.user reportee_user_table ON report.reportee_id = reportee_user_table.id
