@@ -45,9 +45,21 @@ export const validateReport = (req, res, next) => {
 }
 
 export const validateReportSearch = (req, res, next) => {
-  const { reporterId, reporteeId, isOffensive, isPoorManner, isCheating } =
-    req.query
+  const {
+    page,
+    reporterId,
+    reporteeId,
+    isOffensive,
+    isPoorManner,
+    isCheating,
+  } = req.query
 
+  validation.check(
+    page,
+    'page',
+    validation.checkExist(),
+    validation.checkParsedNumberInRange(1, Infinity),
+  )
   reporterId &&
     validation.check(
       reporterId,
