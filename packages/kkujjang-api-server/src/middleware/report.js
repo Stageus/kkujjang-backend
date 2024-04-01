@@ -46,7 +46,7 @@ export const validateReport = (req, res, next) => {
 
 export const validateReportSearch = (req, res, next) => {
   const { reporterId, reporteeId, isOffensive, isPoorManner, isCheating } =
-    req.body
+    req.query
 
   reporterId &&
     validation.check(
