@@ -10,7 +10,7 @@ const queueName = process.env.ROOMID_UPDATE_QUEUE_NAME
 /**
  * @returns {Promise<void>}
  */
-export const setUpReplyRoomIdUpdateChannel = async () => {
+export const setUpRoomIdUpdateChannel = async () => {
   const roomIdUpdateChannel =
     await RabbitMQ.instance.connectToRoomIdUpdateChannel()
 
