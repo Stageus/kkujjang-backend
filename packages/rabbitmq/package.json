@@ -11,5 +11,8 @@
   "dependencies": {
     "amqplib": "0.10.3"
   },
+  "imports": {
+    "#src/*": "./src/*.js"
+  },
   "type": "module"
 }

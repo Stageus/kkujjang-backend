@@ -186,6 +186,14 @@ testRouter.post('/regExp', async (req, res) => {
   })
 })
 
+testRouter.get('/redisFLUSHAll', async (req, res) => {
+  await redisClient.flushAll()
+
+  res.json({
+    result: 'success',
+  })
+})
+
 testRouter.get('/socket', function (req, res) {
   const __filename = fileURLToPath(import.meta.url)
   const __dirname = path.dirname(__filename)
@@ -195,7 +203,7 @@ testRouter.get('/socket', function (req, res) {
 testRouter.put('/ban', validateBan, async (req, res) => {
   const { userId, bannedReason, bannedDays } = req.body
   const banChannel = await RabbitMQ.instance.connectToBanChannel()
-  await banChannel.sendToQueue(
+  banChannel.sendToQueue(
     process.env.USER_BANNED_QUEUE_NAME,
     Buffer.from(
       JSON.stringify({ userId, bannedReason, bannedDays: Number(bannedDays) }),

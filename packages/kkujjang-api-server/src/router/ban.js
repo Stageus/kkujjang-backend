@@ -14,7 +14,7 @@ export const banRouter = asyncify(express.Router())
 banRouter.put('/', requireAdminAuthority, validateBan, async (req, res) => {
   const { userId, bannedReason, bannedDays } = req.body
   const banChannel = await RabbitMQ.instance.connectToBanChannel()
-  await banChannel.sendToQueue(
+  banChannel.sendToQueue(
     process.env.USER_BANNED_QUEUE_NAME,
     Buffer.from(
       JSON.stringify({ userId, bannedReason, bannedDays: Number(bannedDays) }),
