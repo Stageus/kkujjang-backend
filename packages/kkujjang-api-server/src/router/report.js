@@ -55,6 +55,7 @@ reportRouter.get(
       isOffensive = null,
       isPoorManner = null,
       isCheating = null,
+      isHandled = null,
     } = req.query
 
     // 입력받은 필터에 대해서만 WHERE 조건 추가
@@ -75,7 +76,8 @@ reportRouter.get(
               'reporterId', reporter_id,
               'reporterNickname', reporter_nickname,
               'reporteeId', reportee_id,
-              'reporteeNickname', reportee_nickname
+              'reporteeNickname', reportee_nickname,
+              'isHandled', is_handled
             )
           ) AS list
         FROM (
@@ -88,6 +90,7 @@ reportRouter.get(
             is_offensive, 
             is_poor_manner, 
             is_cheating, 
+            is_handled,
             report.created_at AS report_created_at,
             note,
             COUNT(*) OVER() AS report_count
@@ -100,6 +103,7 @@ reportRouter.get(
             ${isOffensive === null ? `AND $3=$3` : `AND is_offensive=$3`} 
             ${isPoorManner === null ? `AND $4=$4` : `AND is_poor_manner=$4 `} 
             ${isCheating === null ? `AND $5=$5` : `AND is_cheating=$5`}
+            ${isHandled === null ? `AND $6=$6` : `AND is_handled=$6`}
           ORDER BY report_created_at ${order === 'oldest' ? 'DESC' : 'ASC'}
           OFFSET ${(Number(page) - 1) * 10} LIMIT 10
         ) AS sub_table
@@ -110,6 +114,7 @@ reportRouter.get(
           isOffensive ?? 1,
           isPoorManner ?? 1,
           isCheating ?? 1,
+          isHandled ?? 1,
         ],
       )
     ).rows[0] ?? {
