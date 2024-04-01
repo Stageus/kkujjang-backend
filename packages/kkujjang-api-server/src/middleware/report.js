@@ -47,6 +47,7 @@ export const validateReport = (req, res, next) => {
 export const validateReportSearch = (req, res, next) => {
   const {
     page,
+    order,
     reporterId,
     reporteeId,
     isOffensive,
@@ -60,6 +61,12 @@ export const validateReportSearch = (req, res, next) => {
     validation.checkExist(),
     validation.checkParsedNumberInRange(1, Infinity),
   )
+  order &&
+    validation.check(
+      order,
+      'order',
+      validation.checkRegExp('^(latest)|(oldest)'),
+    )
   reporterId &&
     validation.check(
       reporterId,

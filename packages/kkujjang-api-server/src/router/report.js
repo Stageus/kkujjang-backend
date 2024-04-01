@@ -49,6 +49,7 @@ reportRouter.get(
   async (req, res) => {
     const {
       page,
+      order = 'latest',
       reporterId = null,
       reporteeId = null,
       isOffensive = null,
@@ -99,7 +100,7 @@ reportRouter.get(
             ${isOffensive === null ? `AND $3=$3` : `AND is_offensive=$3`} 
             ${isPoorManner === null ? `AND $4=$4` : `AND is_poor_manner=$4 `} 
             ${isCheating === null ? `AND $5=$5` : `AND is_cheating=$5`}
-          ORDER BY report_created_at DESC
+          ORDER BY report_created_at ${order === 'oldest' ? 'DESC' : 'ASC'}
           OFFSET ${(Number(page) - 1) * 10} LIMIT 10
         ) AS sub_table
         GROUP BY report_count`,
