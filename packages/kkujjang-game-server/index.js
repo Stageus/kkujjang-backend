@@ -8,6 +8,7 @@ import { Server } from 'socket.io'
 import cookieParser from 'cookie-parser'
 import { setupKkujjangWebSocket } from '#socket/kkujjang'
 import { setUpBanChannel } from '#channel/ban'
+import { setUpReplyRoomIdUpdateChannel } from '#channel/roomIdFind'
 import fs from 'fs'
 
 configDotenv()
@@ -29,6 +30,7 @@ const io = new Server(
 
 setupKkujjangWebSocket(io)
 setUpBanChannel(io)
+setUpReplyRoomIdUpdateChannel()
 
 const sslOptions =
   process.env.NODE_ENV === 'production'

@@ -9,6 +9,6 @@ export const createBanChannel = async (conn) => {
   await channel.assertQueue(process.env.USER_BANNED_QUEUE_NAME, {
     durable: false,
   })
-  console.log('RabbitMQ 밴채널에 연결되었습니다.')
+  console.log('RabbitMQ | 밴 채널에 연결되었습니다.')
   return channel
 }
