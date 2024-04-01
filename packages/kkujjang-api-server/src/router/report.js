@@ -175,7 +175,8 @@ reportRouter.get(
           is_poor_manner as isPoorManner, 
           is_cheating as isCheating, 
           report.created_at as createdAt,
-          note
+          note,
+          room_id as roomId
         FROM kkujjang.report
           JOIN kkujjang.user reporter_user_table ON report.author_id = reporter_user_table.id
           JOIN kkujjang.user reportee_user_table ON report.reportee_id = reportee_user_table.id
