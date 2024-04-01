@@ -2,16 +2,16 @@ CREATE SCHEMA kkujjang;
 
 CREATE TABLE kkujjang.inquiry_thread
 (
-	id                serial        NOT NULL,
-	need_answer       boolean       NOT NULL,
-	author_id         serial        NOT NULL,
-	start_inquiry_id  serial        NOT NULL,
-	thread_id         uuid          NOT NULL UNIQUE,
-	type              integer       NOT NULL,
-	title             varchar(100)  NOT NULL,
-	created_at        timestamp     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at        timestamp     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (id)
+  id                serial        NOT NULL,
+  need_answer       boolean       NOT NULL,
+  author_id         serial        NOT NULL,
+  start_inquiry_id  serial        NOT NULL,
+  thread_id         uuid          NOT NULL UNIQUE,
+  type              integer       NOT NULL,
+  title             varchar(100)  NOT NULL,
+  created_at        timestamp     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        timestamp     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
 );
 
 CREATE TABLE kkujjang.inquiry_article
@@ -71,6 +71,7 @@ CREATE TABLE kkujjang.report
   note           varchar(500),
   created_at     timestamp    NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	is_handled     boolean      NOT NULL DEFAULT FALSE,
+	room_id        uuid,       
   PRIMARY KEY (id)
 );
 
