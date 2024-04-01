@@ -49,11 +49,11 @@ reportRouter.get(
   async (req, res) => {
     const {
       page,
-      reporterId,
-      reporteeId,
-      isOffensive,
-      isPoorManner,
-      isCheating,
+      reporterId = null,
+      reporteeId = null,
+      isOffensive = null,
+      isPoorManner = null,
+      isCheating = null,
     } = req.query
 
     // 입력받은 필터에 대해서만 WHERE 조건 추가
