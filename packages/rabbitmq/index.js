@@ -20,6 +20,11 @@ export class RabbitMQ {
    */
   banChannel = null
 
+  /**
+   * @type {null | amqp.Channel}
+   */
+  roomIdFindChannel = null
+
   constructor() {
     if (RabbitMQ.instance) {
       return RabbitMQ.instance
@@ -49,6 +54,17 @@ export class RabbitMQ {
       this.banChannel = await createBanChannel(conn)
     }
     return this.banChannel
+  }
+
+  /**
+   * @returns {Promise<amqp.Channel>}
+   */
+  async roomIdFind() {
+    if (this.roomIdFindChannel === null) {
+      const conn = await this.connect()
+      this.roomIdFindChannel = await createRoomIdFindChannel(conn)
+    }
+    return this.roomIdFindChannel
   }
 }
 
