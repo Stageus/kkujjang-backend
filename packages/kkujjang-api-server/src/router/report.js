@@ -85,16 +85,16 @@ reportRouter.get(
           ARRAY_AGG(
             JSON_BUILD_OBJECT(
               'id', id, 
-              'isOffensive', is_offensive,
-              'isPoorManner', is_poor_manner,
-              'isCheating', is_cheating,
-              'note', note,
-              'createdAt', report_created_at,
               'reporterId', reporter_id,
               'reporterNickname', reporter_nickname,
               'reporteeId', reportee_id,
               'reporteeNickname', reportee_nickname,
-              'isHandled', is_handled
+              'isOffensive', is_offensive,
+              'isPoorManner', is_poor_manner,
+              'isCheating', is_cheating,
+              'createdAt', report_created_at,
+              'isHandled', is_handled,
+              'note', note
             )
           ) AS list
         FROM (
@@ -121,7 +121,7 @@ reportRouter.get(
             ${isPoorManner === null ? `AND $4=$4` : `AND is_poor_manner=$4 `} 
             ${isCheating === null ? `AND $5=$5` : `AND is_cheating=$5`}
             ${isHandled === null ? `AND $6=$6` : `AND is_handled=$6`}
-          ORDER BY report_created_at ${order === 'oldest' ? 'DESC' : 'ASC'}
+          ORDER BY report_created_at ${order === 'oldest' ? 'ASC' : 'DESC'}
           OFFSET ${(Number(page) - 1) * 10} LIMIT 10
         ) AS sub_table
         GROUP BY report_count`,
@@ -173,16 +173,17 @@ reportRouter.get(
       await pgQuery(
         `SELECT
           report.id,
-          author_id as reporterId, 
-          reporter_user_table.nickname as reporterNickname,
-          reportee_id as reporteeId, 
-          reportee_user_table.nickname as reporteeNickname,
-          is_offensive as isOffensive, 
-          is_poor_manner as isPoorManner, 
-          is_cheating as isCheating, 
-          report.created_at as createdAt,
+          author_id as "reporterId", 
+          reporter_user_table.nickname as "reporterNickname",
+          reportee_id as "reporteeId", 
+          reportee_user_table.nickname as "reporteeNickname",
+          is_offensive as "isOffensive", 
+          is_poor_manner as "isPoorManner", 
+          is_cheating as "isCheating", 
+          report.created_at as "createdAt",
+          is_handled as "isHandled",
           note,
-          room_id as roomId
+          room_id as "roomId"
         FROM kkujjang.report
           JOIN kkujjang.user reporter_user_table ON report.author_id = reporter_user_table.id
           JOIN kkujjang.user reportee_user_table ON report.reportee_id = reportee_user_table.id
