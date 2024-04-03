@@ -93,7 +93,8 @@ reportRouter.get(
               'isPoorManner', is_poor_manner,
               'isCheating', is_cheating,
               'createdAt', report_created_at,
-              'isHandled', is_handled
+              'isHandled', is_handled,
+              'note'
             )
           ) AS list
         FROM (
@@ -181,8 +182,8 @@ reportRouter.get(
           is_cheating as "isCheating", 
           report.created_at as "createdAt",
           is_handled as "isHandled",
-          room_id as "roomId",
-          note
+          note,
+          room_id as "roomId"
         FROM kkujjang.report
           JOIN kkujjang.user reporter_user_table ON report.author_id = reporter_user_table.id
           JOIN kkujjang.user reportee_user_table ON report.reportee_id = reportee_user_table.id
