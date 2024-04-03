@@ -75,11 +75,11 @@ noticeRouter.get('/list', validatePageNumber, async (req, res) => {
   const result = (
     await pgQuery(
       `SELECT
-        id, title, content, created_at, views,
+        id, title, created_at, views,
         CEIL(notice_count::float / 10) AS "lastPage"
       FROM
         (SELECT
-          id, title, content, created_at, views, is_deleted,
+          id, title, created_at, views, is_deleted,
           COUNT(*) OVER() AS notice_count
         FROM kkujjang.notice 
         WHERE is_deleted=FALSE
