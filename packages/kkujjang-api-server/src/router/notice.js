@@ -112,7 +112,7 @@ noticeRouter.get(
 
     const result = (
       await pgQuery(
-        `SELECT title, content, created_at, views 
+        `SELECT id, title, created_at AS "createdAt", views 
       FROM kkujjang.notice 
       WHERE is_deleted=FALSE
       AND title LIKE '%${keyword}%'

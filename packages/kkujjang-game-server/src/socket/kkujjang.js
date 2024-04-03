@@ -250,7 +250,7 @@ export const setupKkujjangWebSocket = (io) => {
       await chat(userId, message, {
         onOrdinaryChat: async (roomId) => {
           io.to(roomId).emit('chat', { userId, message })
-          await chatLogger.logChat(userId, message)
+          await chatLogger.logChat(userId, roomId, message)
         },
         onValidWord: async (roomId, word, userIndex, scoreDelta) => {
           io.to(roomId).emit('say word succeed', {

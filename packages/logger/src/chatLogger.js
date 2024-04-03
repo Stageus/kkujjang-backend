@@ -6,9 +6,10 @@ configDotenv()
 
 /**
  * @param {number} userId
+ * @param {string} roomId
  * @param {string} message
  */
-export const logChat = async (userId, message) => {
+export const logChat = async (userId, roomId, message) => {
   console.log('inserting chat...')
 
   const insertResult = await useMongoModel(
@@ -18,6 +19,7 @@ export const logChat = async (userId, message) => {
   ).insertMany([
     {
       userId,
+      roomId,
       message,
     },
   ])
@@ -40,7 +42,7 @@ export const logChat = async (userId, message) => {
  *   createdAt: string;
  * }[]}
  */
-export const loadChats = async ({ userId, dateStart, dateEnd }) => {
+export const loadChats = async ({ userId, roomId, dateStart, dateEnd }) => {
   const filter = {}
 
   userId && (filter['userId'] = userId)
@@ -49,9 +51,12 @@ export const loadChats = async ({ userId, dateStart, dateEnd }) => {
   dateStart && (filter['createdAt']['$gte'] = dateStart)
   dateEnd && (filter['createdAt']['$lte'] = dateEnd)
 
+  roomId && (filter['roomId'] = roomId)
+
   console.log(JSON.stringify(filter))
 
   return await useMongoModel('chat', getModel('chat'), 'chat')
     .find(filter)
+    .select('-_id -updatedAt -__v')
     .exec()
 }
