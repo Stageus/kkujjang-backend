@@ -94,7 +94,7 @@ reportRouter.get(
               'isCheating', is_cheating,
               'createdAt', report_created_at,
               'isHandled', is_handled,
-              'note'
+              'note', note
             )
           ) AS list
         FROM (
@@ -121,7 +121,7 @@ reportRouter.get(
             ${isPoorManner === null ? `AND $4=$4` : `AND is_poor_manner=$4 `} 
             ${isCheating === null ? `AND $5=$5` : `AND is_cheating=$5`}
             ${isHandled === null ? `AND $6=$6` : `AND is_handled=$6`}
-          ORDER BY report_created_at ${order === 'oldest' ? 'DESC' : 'ASC'}
+          ORDER BY report_created_at ${order === 'oldest' ? 'ASC' : 'DESC'}
           OFFSET ${(Number(page) - 1) * 10} LIMIT 10
         ) AS sub_table
         GROUP BY report_count`,
