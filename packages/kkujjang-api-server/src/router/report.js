@@ -85,15 +85,14 @@ reportRouter.get(
           ARRAY_AGG(
             JSON_BUILD_OBJECT(
               'id', id, 
-              'isOffensive', is_offensive,
-              'isPoorManner', is_poor_manner,
-              'isCheating', is_cheating,
-              'note', note,
-              'createdAt', report_created_at,
               'reporterId', reporter_id,
               'reporterNickname', reporter_nickname,
               'reporteeId', reportee_id,
               'reporteeNickname', reportee_nickname,
+              'isOffensive', is_offensive,
+              'isPoorManner', is_poor_manner,
+              'isCheating', is_cheating,
+              'createdAt', report_created_at,
               'isHandled', is_handled
             )
           ) AS list
@@ -173,16 +172,17 @@ reportRouter.get(
       await pgQuery(
         `SELECT
           report.id,
-          author_id as reporterId, 
-          reporter_user_table.nickname as reporterNickname,
-          reportee_id as reporteeId, 
-          reportee_user_table.nickname as reporteeNickname,
-          is_offensive as isOffensive, 
-          is_poor_manner as isPoorManner, 
-          is_cheating as isCheating, 
-          report.created_at as createdAt,
-          note,
-          room_id as roomId
+          author_id as "reporterId", 
+          reporter_user_table.nickname as "reporterNickname",
+          reportee_id as "reporteeId", 
+          reportee_user_table.nickname as "reporteeNickname",
+          is_offensive as "isOffensive", 
+          is_poor_manner as "isPoorManner", 
+          is_cheating as "isCheating", 
+          report.created_at as "createdAt",
+          is_handled as "isHandled",
+          room_id as "roomId",
+          note
         FROM kkujjang.report
           JOIN kkujjang.user reporter_user_table ON report.author_id = reporter_user_table.id
           JOIN kkujjang.user reportee_user_table ON report.reportee_id = reportee_user_table.id
