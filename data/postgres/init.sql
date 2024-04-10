@@ -82,7 +82,7 @@ CREATE TABLE kkujjang.user
   username        varchar(20),
   password        varchar(72),
 	phone           varchar(16), 
-	avatar_accessory_index    integer      NOT NULL, 
+	avatar_accessory_index    integer      NOT NULL DEFAULT 0, 
   nickname        varchar(20)  NOT NULL,
 	level           integer      NOT NULL DEFAULT 1,
 	exp             integer      NOT NULL DEFAULT 0,

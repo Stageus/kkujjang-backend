@@ -13,6 +13,9 @@ import {
 } from '#utility/session'
 import { chatLogger } from 'logger'
 import { roomLogger } from 'logger'
+import { gameConfig } from '#game/config'
+import { pgQuery } from 'postgres'
+import { getLevel } from '#game/level'
 
 /**
  * @type {{
@@ -210,6 +213,44 @@ export const setupKkujjangWebSocket = (io) => {
         },
         onGameEnd: async (roomId, ranking) => {
           io.to(roomId).emit('game end', ranking)
+
+          try {
+            ranking.forEach(async (rankingData, index) => {
+              const rank = index + 1
+              const earnedExp =
+                rank * (gameConfig.exp.multiplierBase - rank) +
+                gameConfig.exp.base
+
+              const currentUserData = (
+                await pgQuery(`SELECT exp FROM kkujjang.user WHERE id=$1;`, [
+                  rankingData.userId,
+                ])
+              )?.rows[0]
+
+              if (!currentUserData) {
+                console.log(
+                  `Invalid user data, currentUserData: ${JSON.stringify(
+                    currentUserData,
+                  )}`,
+                )
+                return
+              }
+
+              const { exp: currentExp } = currentUserData
+              const newExp = currentExp + earnedExp
+              const newLevel = getLevel(newExp)
+
+              console.log(JSON.stringify({ newExp, newLevel }))
+
+              const updateResult = await pgQuery(
+                `UPDATE kkujjang.user SET level=$1, exp=$2 WHERE id=$3;`,
+                [newLevel, newExp, rankingData.userId],
+              )
+            })
+          } catch (e) {
+            console.error(e)
+          }
+
           const userList = ranking.map((ranking) => ranking.userId)
           const gameRoom = Lobby.instance.getRoomByUserId(userId)
           gameRoom.resetReadyState()
