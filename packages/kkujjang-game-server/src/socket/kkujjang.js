@@ -212,28 +212,25 @@ export const setupKkujjangWebSocket = (io) => {
           io.to(roomId).emit('round end', roundResult)
         },
         onGameEnd: async (roomId, ranking) => {
-          io.to(roomId).emit('game end', ranking)
-
-          try {
-            ranking.forEach(async (rankingData, index) => {
+          const promises = ranking.map((rankingData, index) =>
+            (async () => {
               const rank = index + 1
               const earnedExp =
                 rank * (gameConfig.exp.multiplierBase - rank) +
                 gameConfig.exp.base
 
-              const currentUserData = (
-                await pgQuery(`SELECT exp FROM kkujjang.user WHERE id=$1;`, [
-                  rankingData.userId,
-                ])
-              )?.rows[0]
-
-              if (!currentUserData) {
-                console.log(
-                  `Invalid user data, currentUserData: ${JSON.stringify(
-                    currentUserData,
-                  )}`,
-                )
-                return
+              let currentUserData
+              try {
+                currentUserData = (
+                  await pgQuery(`SELECT exp FROM kkujjang.user WHERE id=$1;`, [
+                    rankingData.userId,
+                  ])
+                )?.rows[0]
+              } catch (e) {
+                console.error(`Invalid user data: ${e}`)
+                return {
+                  error: 'invalid user data',
+                }
               }
 
               const { exp: currentExp } = currentUserData
@@ -242,14 +239,28 @@ export const setupKkujjangWebSocket = (io) => {
 
               console.log(JSON.stringify({ newExp, newLevel }))
 
-              const updateResult = await pgQuery(
-                `UPDATE kkujjang.user SET level=$1, exp=$2 WHERE id=$3;`,
-                [newLevel, newExp, rankingData.userId],
-              )
-            })
-          } catch (e) {
-            console.error(e)
-          }
+              try {
+                await pgQuery(
+                  `UPDATE kkujjang.user SET level=$1, exp=$2 WHERE id=$3;`,
+                  [newLevel, newExp, rankingData.userId],
+                )
+              } catch (e) {
+                return {
+                  error: 'failed to upload game result data',
+                }
+              }
+
+              return {
+                ...rankingData,
+                earnedExp,
+                newExp,
+                newLevel,
+              }
+            })(),
+          )
+
+          const gameResult = await Promise.all(promises)
+          io.to(roomId).emit('game end', gameResult)
 
           const userList = ranking.map((ranking) => ranking.userId)
           const gameRoom = Lobby.instance.getRoomByUserId(userId)
