@@ -40,7 +40,7 @@ export class RabbitMQ {
   async connect() {
     if (this.conn === null) {
       this.conn = await amqp.connect(
-        `amqp://${process.env.RABBITMQ_DEFAULT_USER}:${process.env.RABBITMQ_DEFAULT_PASS}@${process.env.RABBITMQ_HOST}:5672`,
+        `amqp://${process.env.RABBITMQ_DEFAULT_USER}:${process.env.RABBITMQ_DEFAULT_PASS}@${process.env.RABBITMQ_HOST}:${process.env.RABBITMQ_PORT}`,
       )
     }
     return this.conn
