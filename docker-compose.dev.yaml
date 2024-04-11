@@ -61,8 +61,8 @@ services:
     tty: true
     stdin_open: true
     ports:
-      - $RABBITMQ_PORT:5672
-      - $RABBITMQ_MANAGER_PORT:15672
+      - $RABBITMQ_PORT:$RABBITMQ_PORT
+      - $RABBITMQ_MANAGER_PORT:$RABBITMQ_MANAGER_PORT
 
   api:
     container_name: kkujjang-api-server

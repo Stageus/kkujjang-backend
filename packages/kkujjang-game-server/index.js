@@ -8,7 +8,7 @@ import { Server } from 'socket.io'
 import cookieParser from 'cookie-parser'
 import { setupKkujjangWebSocket } from '#socket/kkujjang'
 import { setUpBanChannel } from '#channel/ban'
-import { setUpRoomIdUpdateChannel } from '#channel/roomIdFind'
+import { setUpRoomIdUpdateChannel } from '#channel/roomIdUpdate'
 import fs from 'fs'
 
 configDotenv()
