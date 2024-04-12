@@ -26,7 +26,7 @@ roomRouter.get(
     roomLife.createdAt = room[0].createdAt
 
     roomLife.expiredAt =
-      3 <= roomLife.length ? room[room.length - 2].createdAt : undefined
+      3 <= room.length ? room[room.length - 2].createdAt : undefined
 
     res.json({
       roomId,
