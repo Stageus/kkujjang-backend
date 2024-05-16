@@ -411,30 +411,37 @@ export class Game {
       '파',
       '하',
     ]
+    const getWords = async () => {
+      try {
+        const words =
+          (await dictionary.searchWordsStartWith(
+            starterCandidates[
+              Math.floor(Math.random() * (starterCandidates.length - 1))
+            ],
+            maxRound,
+            maxRound,
+          )) ?? []
 
-    try {
-      const words =
-        (await dictionary.searchWordsStartWith(
-          starterCandidates[
-            Math.floor(Math.random() * (starterCandidates.length - 1))
-          ],
-          maxRound,
-          maxRound,
-        )) ?? []
+        if (words.length === 0) {
+          const repeatCount = maxRound - starterCandidates.length
+          return starterCandidates
+            .join()
+            .repeat(repeatCount < 0 ? 1 : repeatCount)
+        }
 
-      if (words.length === 0) {
-        const repeatCount = maxRound - starterCandidates.length
-        return starterCandidates
-          .join()
-          .repeat(repeatCount < 0 ? 1 : repeatCount)
+        console.log(`round word list is ${JSON.stringify(words)}`)
+
+        return words[Math.floor(Math.random() * (words.length - 1))]
+      } catch (err) {
+        console.log(err)
+        return null
       }
-
-      console.log(`round word list is ${JSON.stringify(words)}`)
-
-      return words[Math.floor(Math.random() * (words.length - 1))]
-    } catch (err) {
-      console.log(err)
-      return null
     }
+
+    let words = await getWords()
+    if (words === null) {
+      words = await getWords()
+    }
+    return words
   }
 }
