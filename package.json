@@ -8,7 +8,7 @@
     "start:api-server": "npx nx start kkujjang-api-server",
     "start": "npx nx  run-many --target=start",
     "docker-compose:build-dev": "docker compose -f docker-compose.dev.yaml build",
-    "docker-compose:build-prod": "docker compose -f docker-compose.prod.yaml build",
+    "docker-compose:build-prod": "docker compose -f docker-compose.prod.yaml --env-file .env.prod build",
     "docker-compose:dev": "docker compose -f docker-compose.dev.yaml up -d",
     "docker-compose:prod": "docker compose -f docker-compose.prod.yaml up -d",
     "docker-compose:down": "docker compose down"
