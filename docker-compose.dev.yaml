@@ -4,7 +4,7 @@ services:
   postgres:
     container_name: kkujjang-postgres
     env_file:
-      - .env
+      - .env.dev
     environment:
       - POSTGRES_DB=kkujjang_test
       - TZ=$TIME_ZONE
@@ -20,7 +20,7 @@ services:
   mongodb:
     container_name: kkujjang-mongodb
     env_file:
-      - .env
+      - .env.dev
     environment:
       - MONGO_INITDB_DATABASE=kkujjang_test
       - TZ=$TIME_ZONE
@@ -37,7 +37,7 @@ services:
   redis:
     container_name: kkujjang-redis
     env_file:
-      - .env
+      - .env.dev
     environment:
       - TZ=$TIME_ZONE
     image: redis/redis-stack-server:latest
@@ -51,7 +51,7 @@ services:
   rabbitmq:
     container_name: kkujjang-rabbitmq
     env_file:
-      - .env
+      - .env.dev
     environment:
       - RABBITMQ_DEFAULT_USER=$RABBITMQ_DEFAULT_USER
       - RABBITMQ_DEFAULT_PASS=$RABBITMQ_DEFAULT_PASS
@@ -67,7 +67,7 @@ services:
   api:
     container_name: kkujjang-api-server
     env_file:
-      - .env
+      - .env.dev
     environment:
       - NODE_ENV=dev
       - TZ=$TIME_ZONE
@@ -88,7 +88,7 @@ services:
   game:
     container_name: kkujjang-game-server
     env_file:
-      - .env
+      - .env.dev
     environment:
       - NODE_ENV=dev
       - TZ=$TIME_ZONE
