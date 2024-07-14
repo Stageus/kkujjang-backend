@@ -13,25 +13,6 @@ import fs from 'fs'
 
 configDotenv()
 
-const app = express()
-const server = http.createServer(app)
-
-const io = new Server(
-  server,
-  process.env.NODE_ENV === 'dev'
-    ? {
-        cors: {
-          origin: '*',
-          credentials: false,
-        },
-      }
-    : null,
-)
-
-setupKkujjangWebSocket(io)
-setUpBanChannel(io)
-setUpRoomIdUpdateChannel()
-
 const sslOptions =
   process.env.NODE_ENV === 'production'
     ? {
@@ -41,12 +22,35 @@ const sslOptions =
       }
     : null
 
+const app = express()
+const server = http.createServer(app)
+const httpsServer =
+  process.env.NODE_ENV === 'production'
+    ? https.createServer(sslOptions, app)
+    : null
+
+const io = new Server(
+  process.env.NODE_ENV === 'production' ? httpsServer : server,
+  process.env.NODE_ENV === 'dev'
+    ? {
+        cors: {
+          origin: '*',
+          credentials: false,
+        },
+      }
+    : undefined,
+)
+
+setupKkujjangWebSocket(io)
+setUpBanChannel(io)
+setUpRoomIdUpdateChannel()
+
 app.use(express.json())
 app.use(cookieParser())
 app.use(express.static('public'))
 
 if (sslOptions) {
-  https.createServer(sslOptions, app).listen(process.env.WSS_PORT, () => {
+  httpsServer.listen(process.env.WSS_PORT, () => {
     console.log(`Server is listening on port ${process.env.WSS_PORT}`)
   })
 } else {
