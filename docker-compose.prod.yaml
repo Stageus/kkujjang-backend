@@ -75,6 +75,8 @@ services:
       context: .
       dockerfile: Dockerfile.api
     image: kkujjang-api-server:latest
+    volumes:
+      - ./cert:/cert
     restart: always
     tty: true
     stdin_open: true
@@ -96,6 +98,8 @@ services:
       context: .
       dockerfile: Dockerfile.game
     image: kkujjang-game-server:latest
+    volumes:
+      - ./cert:/cert
     restart: always
     tty: true
     stdin_open: true
