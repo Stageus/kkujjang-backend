@@ -2,12 +2,12 @@ version: '0.1'
 
 services:
   postgres:
-    container_name: kkujjang-postgres
     env_file:
       - .env.dev
     environment:
-      - POSTGRES_DB=kkujjang_test
+      - POSTGRES_DB=kkujjang
       - TZ=$TIME_ZONE
+    container_name: $POSTGRES_HOST
     image: postgres:latest
     volumes:
       - ./data/postgres/:/docker-entrypoint-initdb.d/
@@ -18,12 +18,12 @@ services:
       - $PGPORT:$PGPORT
 
   mongodb:
-    container_name: kkujjang-mongodb
     env_file:
       - .env.dev
     environment:
       - MONGO_INITDB_DATABASE=kkujjang_test
       - TZ=$TIME_ZONE
+    container_name: $MONGODB_HOST
     volumes:
       - ./data/mongodb/:/docker-entrypoint-initdb.d/mongo-init.js:ro
     image: mongo:latest
@@ -35,11 +35,11 @@ services:
       - $MONGODB_PORT:$MONGODB_PORT
 
   redis:
-    container_name: kkujjang-redis
     env_file:
       - .env.dev
     environment:
       - TZ=$TIME_ZONE
+    container_name: $REDIS_HOST
     image: redis/redis-stack-server:latest
     restart: always
     command: redis-server --requirepass $REDIS_PASSWORD --port $REDIS_PORT
@@ -49,13 +49,13 @@ services:
       - $REDIS_PORT:$REDIS_PORT
 
   rabbitmq:
-    container_name: kkujjang-rabbitmq
     env_file:
       - .env.dev
     environment:
       - RABBITMQ_DEFAULT_USER=$RABBITMQ_DEFAULT_USER
       - RABBITMQ_DEFAULT_PASS=$RABBITMQ_DEFAULT_PASS
       - TZ=$TIME_ZONE
+    container_name: $RABBITMQ_HOST
     image: rabbitmq:3.12.4-management-alpine
     restart: always
     tty: true
@@ -65,43 +65,39 @@ services:
       - $RABBITMQ_MANAGER_PORT:$RABBITMQ_MANAGER_PORT
 
   api:
-    container_name: kkujjang-api-server
+    container_name: kkujjang-api-server-dev
     env_file:
       - .env.dev
     environment:
       - NODE_ENV=dev
       - TZ=$TIME_ZONE
+    image: kkujjang-api-server:dev
     build:
       context: .
       dockerfile: Dockerfile.api
-    image: kkujjang-api-server:dev
     restart: always
     tty: true
     stdin_open: true
     expose:
       - $HTTP_PORT
-      - $HTTPS_PORT
     ports:
       - $HTTP_PORT:$HTTP_PORT
-      - $HTTPS_PORT:$HTTPS_PORT
 
   game:
-    container_name: kkujjang-game-server
+    container_name: kkujjang-game-server-dev
     env_file:
       - .env.dev
     environment:
       - NODE_ENV=dev
       - TZ=$TIME_ZONE
+    image: kkujjang-game-server:dev
     build:
       context: .
       dockerfile: Dockerfile.game
-    image: kkujjang-game-server:dev
     restart: always
     tty: true
     stdin_open: true
     expose:
       - $WS_PORT
-      - $WSS_PORT
     ports:
       - $WS_PORT:$WS_PORT
-      - $WSS_PORT:$WSS_PORT

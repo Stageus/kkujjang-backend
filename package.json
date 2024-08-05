@@ -11,7 +11,8 @@
     "docker-compose:build-prod": "docker compose -f docker-compose.prod.yaml build",
     "docker-compose:dev": "docker compose -f docker-compose.dev.yaml up -d",
     "docker-compose:prod": "docker compose -f docker-compose.prod.yaml up -d",
-    "docker-compose:down": "docker compose down"
+    "docker-compose:down-dev": "docker compose -f docker-compose.dev.yaml down",
+    "docker-compose:down-prod": "docker compose -f docker-compose.prod.yaml down"
   },
   "author": "Godbell & GulSauce",
   "license": "MIT",
