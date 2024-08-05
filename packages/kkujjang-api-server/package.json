@@ -1,0 +1,32 @@
+{
+  "name": "kkujjang-api-server",
+  "version": "1.0.0",
+  "description": "kkujjang web game api server",
+  "author": "Godbell & GulSauce",
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index"
+  },
+  "dependencies": {
+    "cookie-parser": "1.4.6",
+    "express": "4.18.2",
+    "express-asyncify": "2.1.2",
+    "kkujjang-multer": "*",
+    "node-schedule": "2.1.1",
+    "postgres": "*",
+    "redis-cli": "*",
+    "kkujjang-session": "*",
+    "kkujjang-validation": "*",
+    "logger": "*",
+    "rabbitmq": "*"
+  },
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*.js",
+    "#router/*": "./src/router/*.js",
+    "#utility/*": "./src/utility/*.js",
+    "#middleware/*": "./src/middleware/*.js",
+    "#root/*": "./*.js"
+  }
+}

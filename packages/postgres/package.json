@@ -1,0 +1,23 @@
+{
+  "name": "postgres",
+  "version": "1.0.0",
+  "description": "> TODO: description",
+  "author": "Godbell <12191579@inha.edu>",
+  "homepage": "https://github.com/Godbell/kkujjang-backend#readme",
+  "license": "ISC",
+  "main": "index.js",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Godbell/kkujjang-backend.git"
+  },
+  "scripts": {
+    "start": "node index"
+  },
+  "bugs": {
+    "url": "https://github.com/Godbell/kkujjang-backend/issues"
+  },
+  "dependencies": {
+    "pg": "8.11.3"
+  }
+}

@@ -74,14 +74,10 @@ web_modules/
 
 # dotenv environment variable files
 .env
-.env.dev
-.env.prod
 .env.development.local
 .env.test.local
 .env.production.local
 .env.local
-env.local
-env.docker
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -133,7 +129,12 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-.nx/cache
-docker-compose.yaml
-
-cert/
+.nx/cache/
+.vscode/
+.eslintrc.json
+.gitignore
+.git/
+.prettierrc
+Dockerfile**
+docker**
+data/

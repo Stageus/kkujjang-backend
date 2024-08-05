@@ -1,0 +1,9 @@
+FROM node:lts-bookworm
+
+WORKDIR /app
+
+COPY ./ ./
+
+RUN npm install
+
+CMD npm run start:api-server
