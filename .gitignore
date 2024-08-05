@@ -135,3 +135,5 @@ dist
 
 .nx/cache
 docker-compose.yaml
+
+cert/

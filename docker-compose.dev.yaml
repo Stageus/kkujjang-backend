@@ -5,7 +5,7 @@ services:
     env_file:
       - .env.dev
     environment:
-      - POSTGRES_DB=kkujjang
+      - POSTGRES_DB=kkujjang_test
       - TZ=$TIME_ZONE
     container_name: $POSTGRES_HOST
     image: postgres:latest
